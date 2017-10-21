@@ -428,8 +428,11 @@ you should place your code here."
           (python-shell-send-region 
           (1+ (nth 1 span)) (1- (nth 2 span))))
         ))
-    (evil-leader/set-key-for-mode 'poly-noweb+python-mode
+    ;; TODO: Would be better to have this *only* for `python-mode' in noweb.
+    (evil-leader/set-key-for-mode 'python-mode
       "sc" 'python-shell-send-chunk)
+    ;; (evil-leader/set-key-for-mode 'poly-noweb+python-mode
+    ;;   "sc" 'python-shell-send-chunk)
     ;; (evil-define-key 'normal poly-noweb+python-mode-map
     ;;   "sc" 'python-shell-send-chunk)
     )
