@@ -31,16 +31,17 @@ values."
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
    '(
+     markdown
+     javascript
      latex
      python
      yaml
-     ;; ----------------------------------------------------------------
-     ;; Example of useful layers you may want to use right away.
-     ;; Uncomment some layer names and press <SPC f e R> (Vim style) or
-     ;; <M-m f e R> (Emacs style) to install them.
-     ;; ----------------------------------------------------------------
+     sql
+     (c-c++ :variables
+            c-c++-enable-clang-support t
+            c-c++-default-mode-for-headers 'c++-mode)
      helm
-     ;; auto-completion
+     auto-completion
      ;; better-defaults
      emacs-lisp
      git
@@ -111,7 +112,7 @@ values."
    ;; (default 'vim)
    dotspacemacs-editing-style 'vim
    ;; If non nil output loading progress in `*Messages*' buffer. (default nil)
-   dotspacemacs-verbose-loading nil
+   dotspacemacs-verbose-loading t 
    ;; Specify the startup banner. Default value is `official', it displays
    ;; the official spacemacs logo. An integer value is the index of text
    ;; banner, `random' chooses a random text banner in `core/banners'
@@ -308,6 +309,13 @@ executes.
  This function is mostly useful for variables that need to be set
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
+
+  ;; TODO: Does this actually work?
+  ;; Viper is loaded/installed automatically, but we want it disabled.
+  (setq package-load-list '(all
+                            (viper nil)
+                            ))
+  (setq evil-move-cursor-back nil)
   )
 
 (defun dotspacemacs/user-config ()
@@ -317,8 +325,16 @@ layers configuration.
 This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
+
+  ;; Temp fix.
+  ;; https://github.com/syl20bnr/spacemacs/issues/9549 
+  (require 'helm-bookmark)
+
+  (setq helm-follow-mode-persistent t)
+
   (setq load-path
         (append '("~/.spacemacs.d/") load-path))
+
   (with-eval-after-load 'org
     (require 'ob-python)
     (org-babel-do-load-languages
@@ -327,16 +343,109 @@ you should place your code here."
        (python . t)))
     )
 
-  (evil-leader/set-key-for-mode 'python-mode
-    "sl" 'python-shell-send-line)
-  (evil-leader/set-key-for-mode 'python-mode
-    "sw" 'python-shell-print-region-or-symbol)
+  (use-package python-x
+    :defer t
+    :commands
+    (python-shell-send-line
+     python-shell-print-region-or-symbol)
+    :init
+    (progn
+      (evil-leader/set-key-for-mode 'python-mode
+        "sl" 'python-shell-send-line)
+      (evil-leader/set-key-for-mode 'python-mode
+        "sw" 'python-shell-print-region-or-symbol))
+    )
 
-  (require 'poly-python)
-  (add-to-list 'auto-mode-alist '("\\.texw" . poly-noweb+python-mode))
-  ;; (add-to-list 'auto-mode-alist '("\\.Rnw" . poly-noweb+r-mode))
-  ;; (add-to-list 'auto-mode-alist '("\\.Rmd" . poly-markdown+r-mode))
+  (use-package polymode
+    :defer t
+    :init
+    (progn
+      ;; `polymode-prefix-key` needs to be set *before* the package loads.
+      (setq pm-debug-mode t)
+      (setq polymode-prefix-key "\C-P"))
+    :config
+    (progn
+      ;; TODO: Could try `use-package` again, but with `:mode' set.
+      (require 'poly-python)
+
+      ;; Evil settings.
+      (evilified-state-evilify polymode-minor-mode polymode-mode-map)
+      ;; (define-key evil-normal-state-local-map "Cn" 'polymode-next-chunk)
+      ;; (define-key evil-normal-state-local-map "Cp" 'polymode-previous-chunk)
+      (evil-define-key 'normal polymode-mode-map "gcn" 'polymode-next-chunk)
+      (evil-define-key 'normal polymode-mode-map "gcp" 'polymode-previous-chunk)
+      (evil-define-motion noweb-chunk-forward (count)
+        "Move forward a chunk"
+        :type inclusive
+        (polymode-next-chunk count))
+      (evil-define-motion noweb-chunk-backward (count)
+        "Move backward a chunk."
+        :type inclusive
+        (polymode-previous-chunk count))
+      ;; (evil-define-text-object noweb-chunk-object (count)
+
+      ;; REPL Functions.
+      ;; TODO: Create macro.
+      ;; (defmacro define-polymode-send-chunk (mode sendfunc)
+      ;;   "Creates a send-chunk function for a given MODE and shell/comint SENDFUNC"
+      ;;   (let* ((mode-name (symbol-name mode))
+      ;;          (func-name (concat
+      ;;                      mode-name "shell-send-chunk")))
+      ;;          ()
+      ;;     )
+      ;; ;; (interactive)
+      ;; ;; (let ((span (pm-get-innermost-span)))
+      ;; ;;   (when (eq (nth 0 span) 'body)
+      ;; ;;     (send-func 
+      ;; ;;      (1+ (nth 1 span)) (1- (nth 2 span))))
+      ;; ;;   )
+      ;; )
+      ;; TODO:
+      ;; (defun polymode-send-from-here ()
+      ;;   "Run code from the beginning of the document to the current (cursor) point."
+      ;;   (let ((curend pm-get-innermost-span)
+      ;;         (func comint-input-sender)
+      ;;         )
+      ;;     (pm-map-over-spans func 0 curend)
+      ;;     )
+      ;;   )
+      )
+    :mode
+    ("\\.texw" . poly-noweb+python-mode)
+    ;; ("\\.Rnw" . poly-noweb+r-mode)
+    ;; ("\\.Rmd" . poly-markdown+r-mode)
+    )
+
+  (defun poly-noweb+python-mode-settings ()
+      "Custom settings for noweb"
+    ;; TODO: Use macro.
+    ;; (polymode-send-chunk ("python" python-shell-send-region))
+    (defun python-shell-send-chunk ()
+      "Send chunk under cursor to a mode-specified REPL server."
+      (interactive)
+      (let ((span (pm-get-innermost-span)))
+        (when (eq (nth 0 span) 'body)
+          (python-shell-send-region 
+          (1+ (nth 1 span)) (1- (nth 2 span))))
+        ))
+    (evil-leader/set-key-for-mode 'poly-noweb+python-mode
+      "sc" 'python-shell-send-chunk)
+    ;; (evil-define-key 'normal poly-noweb+python-mode-map
+    ;;   "sc" 'python-shell-send-chunk)
+    )
+  (add-hook 'poly-noweb+python-mode-hook 'poly-noweb+python-mode-settings)
+
+  (defun clang-format-bindings ()
+    (define-key c++-mode-map [tab] 'clang-format-buffer)
+    (global-set-key [C-M-tab] 'clang-format-region))
+  (add-hook 'c++-mode-hook 'clang-format-bindings)
+
+  (defun tex-mode-settings ()
+    (setq latex-directory "")
+    (setq latex-run-command ""))
+  (add-hook 'tex-mode-hook 'tex-mode-settings)
   )
+
 
 ;; Do not write anything past this comment. This is where Emacs will
 ;; auto-generate custom variable definitions.
@@ -345,9 +454,10 @@ you should place your code here."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(helm-source-names-using-follow (quote ("completion-at-point" "Actions")))
  '(package-selected-packages
    (quote
-    (auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
+    (mmm-mode markdown-toc markdown-mode gh-md web-beautify livid-mode skewer-mode simple-httpd json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc company-tern tern coffee-mode sql-indent disaster company-c-headers cmake-mode clang-format helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company-anaconda company auto-yasnippet yasnippet ac-ispell auto-complete auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
  '(paradox-github-token t))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
