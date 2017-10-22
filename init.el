@@ -39,7 +39,9 @@ values."
      sql
      (c-c++ :variables
             c-c++-enable-clang-support t
-            c-c++-default-mode-for-headers 'c++-mode)
+            c-c++-default-mode-for-headers 'c++-mode
+            ;; company-c-headers-path-user '("../include" "./include" "." "../../include" "../inc" "../../inc")
+            )
      helm
      auto-completion
      ;; better-defaults
@@ -61,6 +63,7 @@ values."
    dotspacemacs-additional-packages '(python-x
                                       polymode
                                       ob-ipython
+                                      conda
                                       ;; org-mime
                                       ;; org-jira
                                       )
@@ -326,6 +329,9 @@ This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
 
+  (setq compilation-scroll-output t)
+  (setq compilation-scroll-output #'first-error)
+
   ;; Temp fix.
   ;; https://github.com/syl20bnr/spacemacs/issues/9549 
   (require 'helm-bookmark)
@@ -343,12 +349,46 @@ you should place your code here."
        (python . t)))
     )
 
+  (use-package conda
+    :config
+    (progn
+      (conda-env-initialize-interactive-shells)
+      (conda-env-initialize-eshell)
+      ;; TODO: Remove annoying error messages.
+      ;; TODO: Better yet, implement our own auto-activation using projectile.
+      ;; See `projectile-before-switch-project-hook' and
+      ;; `projectile-after-switch-project-hook'.
+      (conda-env-autoactivate-mode t)
+      (custom-set-variables
+       '(conda-anaconda-home "~/apps/anaconda3"))
+
+      ;; XXX: Hijacks existing segment.  Should add cases for both envs.
+      (spaceline-define-segment python-pyenv
+        "The current python env.  Works with `conda'."
+        (when (and active
+                   ;; TODO: Consider not restricting to `python-mode', because
+                   ;; conda envs can apply to more than just python operations
+                   ;; (e.g. libraries, executables).
+                   (eq 'python-mode major-mode)
+                   (boundp 'conda-env-current-name)
+                   (stringp conda-env-current-name)
+                   )
+          (propertize conda-env-current-name
+                      'face 'spaceline-python-venv
+                      'help-echo "Virtual environment (via conda)"))
+        )
+      (spaceline-compile)
+     ))
+
+  ;; Stop python from complaining when opening a REPL
+  (setq python-shell-prompt-detect-failure-warning nil)
+
   (use-package python-x
     :defer t
     :commands
     (python-shell-send-line
      python-shell-print-region-or-symbol)
-    :init
+    :config
     (progn
       (evil-leader/set-key-for-mode 'python-mode
         "sl" 'python-shell-send-line)
@@ -443,10 +483,10 @@ you should place your code here."
     (global-set-key [C-M-tab] 'clang-format-region))
   (add-hook 'c++-mode-hook 'clang-format-bindings)
 
-  (defun tex-mode-settings ()
-    (setq latex-directory "")
-    (setq latex-run-command ""))
-  (add-hook 'tex-mode-hook 'tex-mode-settings)
+  ;; (defun tex-mode-settings ()
+  ;;   (setq latex-directory "")
+  ;;   (setq latex-run-command ""))
+  ;; (add-hook 'tex-mode-hook 'tex-mode-settings)
   )
 
 
@@ -460,7 +500,7 @@ you should place your code here."
  '(helm-source-names-using-follow (quote ("completion-at-point" "Actions")))
  '(package-selected-packages
    (quote
-    (mmm-mode markdown-toc markdown-mode gh-md web-beautify livid-mode skewer-mode simple-httpd json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc company-tern tern coffee-mode sql-indent disaster company-c-headers cmake-mode clang-format helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company-anaconda company auto-yasnippet yasnippet ac-ispell auto-complete auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
+    (conda mmm-mode markdown-toc markdown-mode gh-md web-beautify livid-mode skewer-mode simple-httpd json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc company-tern tern coffee-mode sql-indent disaster company-c-headers cmake-mode clang-format helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company-anaconda company auto-yasnippet yasnippet ac-ispell auto-complete auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
  '(paradox-github-token t))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
