@@ -359,13 +359,8 @@ you should place your code here."
     (progn
       (conda-env-initialize-interactive-shells)
       (conda-env-initialize-eshell)
-      ;; TODO: Remove annoying error messages.
-      ;; TODO: Better yet, implement our own auto-activation using projectile.
-      ;; See `projectile-before-switch-project-hook' and
-      ;; `projectile-after-switch-project-hook'.
-      ;; (conda-env-autoactivate-mode t)
 
-      (defun -conda--get-name-from-env-yml (filename)
+      (defun conda--get-name-from-env-yml (filename)
         "Pull the `name` property out of the YAML file at FILENAME."
         (when filename
           (let ((env-yml-contents (f-read-text filename)))
@@ -374,19 +369,26 @@ you should place your code here."
                 (match-string 1 env-yml-contents)
               nil))))
 
-      (defun conda-env-activate-project ()
-        (message "checking conda env in project...")
+      (defun conda--env-activate-project (&optional warn-msg)
         (let* ((project-root (ignore-errors (projectile-project-root)))
                (env-file (conda--find-env-yml project-root))
-               (env-name (-conda--get-name-from-env-yml env-file)))
-          (message "in let* body")
+               (env-name (conda--get-name-from-env-yml env-file)))
           (if (not env-name)
               (progn
-                (message "No conda environment for project at %S: %S %S" project-root env-file env-name)
+                (when warn-msg
+                  (message "No conda environment for project at %S: %S %S"
+                           project-root env-file env-name))
                 (conda-env-deactivate))
             (conda-env-activate env-name)))
         )
-      (add-hook 'projectile-after-switch-project-hook 'conda-env-activate-project)
+      (add-hook 'projectile-after-switch-project-hook 'conda--env-activate-project)
+      ;; (add-hook 'projectile-before-switch-project-hook 'conda--env-activate-project)
+
+      ;; TODO: Might need something like this, too.
+      ;; (advice--add 'switch-to-buffer :after #'conda--env-activate-project)
+      ;; TODO: Alternatively, we could wrap/advise the existing autoactivate-mode.
+      ;; (advice--add 'conda--switch-buffer-auto-activate :after #'conda--env-activate-project)
+      ;; (conda-env-autoactivate-mode t)
 
       (custom-set-variables
        '(conda-anaconda-home "~/apps/anaconda3"))
