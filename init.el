@@ -329,6 +329,11 @@ This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
 
+  ;; Always start in normal state.
+  (setq evil-emacs-state-modes nil)
+  (setq evil-insert-state-modes nil)
+  (setq evil-motion-state-modes nil)
+
   (setq compilation-scroll-output t)
   (setq compilation-scroll-output #'first-error)
 
@@ -358,7 +363,31 @@ you should place your code here."
       ;; TODO: Better yet, implement our own auto-activation using projectile.
       ;; See `projectile-before-switch-project-hook' and
       ;; `projectile-after-switch-project-hook'.
-      (conda-env-autoactivate-mode t)
+      ;; (conda-env-autoactivate-mode t)
+
+      (defun -conda--get-name-from-env-yml (filename)
+        "Pull the `name` property out of the YAML file at FILENAME."
+        (when filename
+          (let ((env-yml-contents (f-read-text filename)))
+            ;; We generalized the regex to include `-`.
+            (if (string-match "name:[ ]*\\([[:word:]-]+\\)[ ]*$" env-yml-contents)
+                (match-string 1 env-yml-contents)
+              nil))))
+
+      (defun conda-env-activate-project ()
+        (message "checking conda env in project...")
+        (let* ((project-root (ignore-errors (projectile-project-root)))
+               (env-file (conda--find-env-yml project-root))
+               (env-name (-conda--get-name-from-env-yml env-file)))
+          (message "in let* body")
+          (if (not env-name)
+              (progn
+                (message "No conda environment for project at %S: %S %S" project-root env-file env-name)
+                (conda-env-deactivate))
+            (conda-env-activate env-name)))
+        )
+      (add-hook 'projectile-after-switch-project-hook 'conda-env-activate-project)
+
       (custom-set-variables
        '(conda-anaconda-home "~/apps/anaconda3"))
 
@@ -369,7 +398,7 @@ you should place your code here."
                    ;; TODO: Consider not restricting to `python-mode', because
                    ;; conda envs can apply to more than just python operations
                    ;; (e.g. libraries, executables).
-                   (eq 'python-mode major-mode)
+                   ;; (eq 'python-mode major-mode)
                    (boundp 'conda-env-current-name)
                    (stringp conda-env-current-name)
                    )
@@ -422,6 +451,8 @@ you should place your code here."
         "Move backward a chunk."
         :type inclusive
         (polymode-previous-chunk count))
+      (evil-add-command-properties #'polymode-next-chunk :jump t)
+      (evil-add-command-properties #'polymode-previous-chunk :jump t)
       ;; (evil-define-text-object noweb-chunk-object (count)
 
       ;; REPL Functions.
@@ -471,10 +502,8 @@ you should place your code here."
     ;; TODO: Would be better to have this *only* for `python-mode' in noweb.
     (evil-leader/set-key-for-mode 'python-mode
       "sc" 'python-shell-send-chunk)
-    ;; (evil-leader/set-key-for-mode 'poly-noweb+python-mode
-    ;;   "sc" 'python-shell-send-chunk)
-    ;; (evil-define-key 'normal poly-noweb+python-mode-map
-    ;;   "sc" 'python-shell-send-chunk)
+    ;; (evil-define-minor-mode-key 'normal 'poly-noweb+python-mode
+    ;;   (kbd (concat dotspacemacs-major-mode-loader-key " s c")) 'python-shell-send-chunk)
     )
   (add-hook 'poly-noweb+python-mode-hook 'poly-noweb+python-mode-settings)
 
