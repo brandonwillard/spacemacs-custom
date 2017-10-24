@@ -43,18 +43,27 @@ values."
             ;; company-c-headers-path-user '("../include" "./include" "." "../../include" "../inc" "../../inc")
             )
      helm
-     auto-completion
-     ;; better-defaults
+     (auto-completion :variables
+                      auto-completion-return-key-behavior nil
+                      auto-completion-tab-key-behavior nil
+                      auto-completion-complete-with-key-sequence "C-y"
+                      auto-completion-enable-snippets-in-popup t
+                      auto-completion-enable-help-tooltip 'manual
+                      auto-completion-enable-sort-by-usage t
+                      :packages
+                      (not auto-complete ac-ispell)
+                      )
      emacs-lisp
      git
-     ;; markdown
      org
      (shell :variables
             shell-default-height 30
             shell-default-position 'bottom)
-     ;; spell-checking
-     ;; syntax-checking
-     ;; version-control
+     spell-checking
+     syntax-checking
+     ;; FIXME: We get `semantic-idle-scheduler-function' errors in `polymode' modes.
+     ;; (semantic :enabled-for emacs-lisp common-lisp)
+     common-lisp
      )
    ;; List of additional packages that will be installed without being
    ;; wrapped in a layer. If you need some configuration for these
@@ -115,7 +124,7 @@ values."
    ;; (default 'vim)
    dotspacemacs-editing-style 'vim
    ;; If non nil output loading progress in `*Messages*' buffer. (default nil)
-   dotspacemacs-verbose-loading t 
+   dotspacemacs-verbose-loading t
    ;; Specify the startup banner. Default value is `official', it displays
    ;; the official spacemacs logo. An integer value is the index of text
    ;; banner, `random' chooses a random text banner in `core/banners'
@@ -134,7 +143,7 @@ values."
    ;; True if the home buffer should respond to resize events.
    dotspacemacs-startup-buffer-responsive t
    ;; Default major mode of the scratch buffer (default `text-mode')
-   dotspacemacs-scratch-mode 'text-mode
+   dotspacemacs-scratch-mode 'lisp-interaction-mode
    ;; List of themes, the first of the list is loaded when spacemacs starts.
    ;; Press <SPC> T n to cycle to the next theme in the list (works great
    ;; with 2 themes variants, one dark and one light)
@@ -145,7 +154,7 @@ values."
    ;; Default font, or prioritized list of fonts. `powerline-scale' allows to
    ;; quickly tweak the mode-line size to make separators look not too crappy.
    dotspacemacs-default-font '("Noto Mono"
-                               :size 16
+                               :size 16.0
                                :weight normal
                                :width normal
                                :powerline-scale 1.1)
@@ -158,13 +167,13 @@ values."
    dotspacemacs-ex-command-key ":"
    ;; The leader key accessible in `emacs state' and `insert state'
    ;; (default "M-m")
-   dotspacemacs-emacs-leader-key "s-m"
+   dotspacemacs-emacs-leader-key (concat "C-" dotspacemacs-leader-key)
    ;; Major mode leader key is a shortcut key which is the equivalent of
    ;; pressing `<leader> m`. Set it to `nil` to disable it. (default ",")
    dotspacemacs-major-mode-leader-key ","
    ;; Major mode leader key accessible in `emacs state' and `insert state'.
    ;; (default "C-M-m")
-   dotspacemacs-major-mode-emacs-leader-key "|"
+   dotspacemacs-major-mode-emacs-leader-key (concat "C-" dotspacemacs-major-mode-leader-key)
    ;; These variables control whether separate commands are bound in the GUI to
    ;; the key pairs C-i, TAB and C-m, RET.
    ;; Setting it to a non-nil value, allows for separate commands under <C-i>
@@ -176,7 +185,7 @@ values."
    dotspacemacs-remap-Y-to-y$ nil
    ;; If non-nil, the shift mappings `<' and `>' retain visual state if used
    ;; there. (default t)
-   dotspacemacs-retain-visual-state-on-shift t
+    dotspacemacs-retain-visual-state-on-shift t
    ;; If non-nil, J and K move lines up and down when in visual mode.
    ;; (default nil)
    dotspacemacs-visual-line-move-text nil
@@ -341,10 +350,19 @@ you should place your code here."
   ;; https://github.com/syl20bnr/spacemacs/issues/9549 
   (require 'helm-bookmark)
 
-  (setq helm-follow-mode-persistent t)
+  (with-eval-after-load 'company
+    (setq company-idle-delay nil)
+    (define-key company-active-map (kbd "C-w") 'evil-delete-backward-word)
+    (define-key company-active-map (kbd "C-y") 'company-complete-selection)
+    (define-key evil-insert-state-map (kbd "C-n") #'company-select-next)
+    (define-key evil-insert-state-map (kbd "C-p") #'company-select-previous))
 
-  (setq load-path
-        (append '("~/.spacemacs.d/") load-path))
+  (with-eval-after-load 'helm
+    (setq helm-follow-mode-persistent t)
+    (define-key helm-map (kbd "C-w") 'evil-delete-backward-word)
+    )
+
+  (setq load-path (append '("~/.spacemacs.d/") load-path))
 
   (with-eval-after-load 'org
     (require 'ob-python)
@@ -411,15 +429,48 @@ you should place your code here."
       (spaceline-compile)
      ))
 
-  ;; Stop python from complaining when opening a REPL
-  (setq python-shell-prompt-detect-failure-warning nil)
+  (with-eval-after-load 'python
+    ;; Stop python from complaining when opening a REPL
+    (setq python-shell-prompt-detect-failure-warning nil)
+
+    (defun python-shell-append-to-output (string)
+      (let ((buffer (current-buffer)))
+        (set-buffer (process-buffer (python-shell-get-process)))
+        (let ((oldpoint (point)))
+          (goto-char (process-mark (python-shell-get-process)))
+          (insert string)
+          (set-marker (process-mark (python-shell-get-process)) (point))
+          (goto-char oldpoint))
+        (set-buffer buffer)))
+
+    (defadvice python-shell-send-string
+        (around advice-python-shell-send-string activate)
+      (interactive)
+      (let* ((append-string1
+              (if (string-match "import codecs, os;__pyfile = codecs.open.*$" string)
+                  (replace-match "" nil nil string)
+                string))
+             (append-string2
+              (if (string-match "^# -\\*- coding: utf-8 -\\*-\n*$" append-string1)
+                  (replace-match "" nil nil append-string1)
+                append-string1))
+             (append-string
+              (if (string-match "^\n*$" append-string2)
+                  (replace-match "" nil nil append-string2)
+                append-string2)))  
+        (python-shell-append-to-output
+         (concat (string-trim-right append-string) "\n")))
+      (if (called-interactively-p 'any)
+          (call-interactively (ad-get-orig-definition 'python-shell-send-string))
+        ad-do-it))
+    )
 
   (use-package python-x
     :defer t
     :commands
     (python-shell-send-line
      python-shell-print-region-or-symbol)
-    :config
+    :init
     (progn
       (evil-leader/set-key-for-mode 'python-mode
         "sl" 'python-shell-send-line)
@@ -436,29 +487,62 @@ you should place your code here."
       (setq polymode-prefix-key "\C-P"))
     :config
     (progn
-      ;; TODO: Could try `use-package` again, but with `:mode' set.
+      ;; TODO: Could try `use-package` again.  Perhaps as follows:
+      ;; (use-package poly-python
+      ;;   :commands (poly-noweb+python-mode)
+      ;;   ;; :functions (poly-noweb+python-mode)
+      ;;   )
       (require 'poly-python)
 
       ;; Evil settings.
       (evilified-state-evilify polymode-minor-mode polymode-mode-map)
-      ;; (define-key evil-normal-state-local-map "Cn" 'polymode-next-chunk)
-      ;; (define-key evil-normal-state-local-map "Cp" 'polymode-previous-chunk)
-      (evil-define-key 'normal polymode-mode-map "gcn" 'polymode-next-chunk)
-      (evil-define-key 'normal polymode-mode-map "gcp" 'polymode-previous-chunk)
+      (evil-define-key 'normal polymode-mode-map "]c" 'polymode-next-chunk-same-type)
+      (evil-define-key 'normal polymode-mode-map "]C" 'polymode-next-chunk)
+      (evil-define-key 'normal polymode-mode-map "[c" 'polymode-previous-chunk-same-type)
+      (evil-define-key 'normal polymode-mode-map "[C" 'polymode-previous-chunk)
+      ;; See https://github.com/noctuid/evil-guide#why-dont-keys-defined-with-evil-define-key-work-immediately
+      (add-hook 'polymode-init-host-hook #'evil-normalize-keymaps)
+      (add-hook 'polymode-init-inner-hook #'evil-normalize-keymaps)
+
+      (add-hook 'polymode-init-inner-hook #'(lambda () (message "***********entered polymode-minor-mode (inner)!")))
+      (add-hook 'polymode-init-host-hook #'(lambda () (message "***********entered polymode-minor-mode (host)!")))
+
+      ;; TODO: Would be great to have this working, but I don't know how best to determine
+      ;; a generic[-enough] minor mode that works for all polymode mode subclasses/instances.
+      ;; (evil-define-minor-mode-key 'normal 'polymode-minor-mode
+      ;;   (kbd "] c") 'polymode-next-chunk-same-type
+      ;;   (kbd "] C") 'polymode-next-chunk
+      ;;   (kbd "[ c") 'polymode-previous-chunk-same-type
+      ;;   (kbd "[ C") 'polymode-previous-chunk
+      ;;   )
+
       (evil-define-motion noweb-chunk-forward (count)
         "Move forward a chunk"
         :type inclusive
         (polymode-next-chunk count))
+      (evil-define-motion noweb-chunk-forward-same-type (count)
+        "Move forward a chunk (same type of chunk as current location)"
+        :type inclusive
+        (polymode-next-chunk-same-type count))
       (evil-define-motion noweb-chunk-backward (count)
         "Move backward a chunk."
         :type inclusive
         (polymode-previous-chunk count))
+      (evil-define-motion noweb-chunk-backward-same-type (count)
+        "Move backward a chunk (same type of chunk as current location)."
+        :type inclusive
+        (polymode-previous-chunk-same-type count))
       (evil-add-command-properties #'polymode-next-chunk :jump t)
+      (evil-add-command-properties #'polymode-next-chunk-same-type :jump t)
       (evil-add-command-properties #'polymode-previous-chunk :jump t)
-      ;; (evil-define-text-object noweb-chunk-object (count)
+      (evil-add-command-properties #'polymode-previous-chunk-same-type :jump t)
+      ;; TODO
+      ;; (evil-define-text-object noweb-chunk-object (count) ...)
 
-      ;; REPL Functions.
-      ;; TODO: Create macro.
+      ;; TODO: Create a macro that works for any REPL-send function.
+      ;; Might want to follow `polymode-register-weaver' and `polymode-set-weaver' so that
+      ;; the REPL-send function is available where-/whenever.
+      ;;
       ;; (defmacro define-polymode-send-chunk (mode sendfunc)
       ;;   "Creates a send-chunk function for a given MODE and shell/comint SENDFUNC"
       ;;   (let* ((mode-name (symbol-name mode))
@@ -473,15 +557,42 @@ you should place your code here."
       ;; ;;      (1+ (nth 1 span)) (1- (nth 2 span))))
       ;; ;;   )
       ;; )
-      ;; TODO:
-      ;; (defun polymode-send-from-here ()
+
+      ;; TODO
+      ;; (defun polymode-send-code-from-here ()
       ;;   "Run code from the beginning of the document to the current (cursor) point."
-      ;;   (let ((curend pm-get-innermost-span)
-      ;;         (func comint-input-sender)
-      ;;         )
-      ;;     (pm-map-over-spans func 0 curend)
-      ;;     )
-      ;;   )
+      ;;   (interactive "p")
+      ;;   (let* ((sofar 0)
+      ;;          (beg (point-min))
+      ;;          (end (point)))
+      ;;     (condition-case nil
+      ;;         (pm-map-over-spans
+      ;;          (lambda ()
+      ;;            (unless (memq (car *span*) '(head tail))
+      ;;              ;; TODO: `this-class` needs to be whatever signifies a "code" chunk.
+      ;;              (when (and (equal this-class
+      ;;                                (eieio-object-name (car (last *span*))))
+      ;;                         (eq this-type (car *span*)))
+      ;;                (setq sofar (1+ sofar)))
+      ;;              (unless this-class
+      ;;                (setq this-class (eieio-object-name (car (last *span*)))
+      ;;                      this-type (car *span*)))
+      ;;              ;; (when (>= sofar N)
+      ;;              ;;   (signal 'quit nil))
+      ;;              ))
+      ;;          beg end nil nil nil t)
+      ;;       (quit (when (looking-at "\\s *$")
+      ;;               (forward-line)))
+      ;;       (pm-switch-to-buffer))
+      ;;     sofar))
+
+      ;; TODO
+      ;; (defun polymode-goto-chunk (chunk-num)
+      ;;   ())
+
+      ;; TODO
+      ;; (defun polymode-next-code-chunk (num)
+      ;;   (...))
       )
     :mode
     ("\\.texw" . poly-noweb+python-mode)
@@ -490,22 +601,28 @@ you should place your code here."
     )
 
   (defun poly-noweb+python-mode-settings ()
-      "Custom settings for noweb"
-    ;; TODO: Use macro.
-    ;; (polymode-send-chunk ("python" python-shell-send-region))
+    "Custom settings for noweb"
+
+    ;; FYI: mode information is kept in `pm/polymode'.
+
+    ;; TODO: Use macro or something.
+    ;; TODO: This is more-or-less what R's polymode does (via `ess-mode').
+    ;; (when (fboundp 'advice-add)
+    ;;   (advice-add 'python-shell-send-buffer :around 'pm-execute-narrowed-to-span))
+    ;; (evil-leader/set-key-for-mode 'python-mode
+    ;;   "sc" 'python-shell-send-buffer)
+
     (defun python-shell-send-chunk ()
       "Send chunk under cursor to a mode-specified REPL server."
       (interactive)
-      (let ((span (pm-get-innermost-span)))
+      (let ((span (pm-get-innermost-span nil t)))
         (when (eq (nth 0 span) 'body)
           (python-shell-send-region 
-          (1+ (nth 1 span)) (1- (nth 2 span))))
+           (1+ (nth 1 span)) (1- (nth 2 span))))
         ))
-    ;; TODO: Would be better to have this *only* for `python-mode' in noweb.
+
     (evil-leader/set-key-for-mode 'python-mode
       "sc" 'python-shell-send-chunk)
-    ;; (evil-define-minor-mode-key 'normal 'poly-noweb+python-mode
-    ;;   (kbd (concat dotspacemacs-major-mode-loader-key " s c")) 'python-shell-send-chunk)
     )
   (add-hook 'poly-noweb+python-mode-hook 'poly-noweb+python-mode-settings)
 
@@ -531,7 +648,7 @@ you should place your code here."
  '(helm-source-names-using-follow (quote ("completion-at-point" "Actions")))
  '(package-selected-packages
    (quote
-    (conda mmm-mode markdown-toc markdown-mode gh-md web-beautify livid-mode skewer-mode simple-httpd json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc company-tern tern coffee-mode sql-indent disaster company-c-headers cmake-mode clang-format helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company-anaconda company auto-yasnippet yasnippet ac-ispell auto-complete auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
+    (company-quickhelp stickyfunc-enhance srefactor flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck auto-dictionary slime-company slime common-lisp-snippets conda mmm-mode markdown-toc markdown-mode gh-md web-beautify livid-mode skewer-mode simple-httpd json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc company-tern tern coffee-mode sql-indent disaster company-c-headers cmake-mode clang-format helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company-anaconda company auto-yasnippet yasnippet ac-ispell auto-complete auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
  '(paradox-github-token t))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
