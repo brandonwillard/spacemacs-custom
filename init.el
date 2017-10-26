@@ -73,6 +73,7 @@ values."
                                       polymode
                                       ob-ipython
                                       conda
+                                      editorconfig
                                       ;; org-mime
                                       ;; org-jira
                                       )
@@ -341,6 +342,19 @@ This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
 
+  (use-package editorconfig
+    :ensure t
+    :config
+    (progn
+      (editorconfig-mode 1)
+      (add-hook 'editorconfig-custom-hooks
+                '(lambda (props)
+                   (progn
+                     (let ((env-name (gethash 'conda_env_name props)))
+                       (when env-name
+                         (conda-env-activate env-name)))))))
+    )
+
   ;; Always start in normal state.
   (with-eval-after-load 'evil
     (setq evil-emacs-state-modes nil)
@@ -390,6 +404,7 @@ you should place your code here."
       (conda-env-initialize-interactive-shells)
       (conda-env-initialize-eshell)
 
+      ;; TODO: Get env name from editorconfig settings.
       (defun conda--get-name-from-env-yml (filename)
         "Pull the `name` property out of the YAML file at FILENAME."
         (when filename
@@ -411,6 +426,9 @@ you should place your code here."
                 (conda-env-deactivate))
             (conda-env-activate env-name)))
         )
+
+      ;; FIXME: This doesn't always work.  Seems like files need to be opened in a subset of
+      ;; ways in order to activate projects and/or this hook.
       (add-hook 'projectile-after-switch-project-hook 'conda--env-activate-project)
       ;; (add-hook 'projectile-before-switch-project-hook 'conda--env-activate-project)
 
@@ -420,8 +438,7 @@ you should place your code here."
       ;; (advice--add 'conda--switch-buffer-auto-activate :after #'conda--env-activate-project)
       ;; (conda-env-autoactivate-mode t)
 
-      (custom-set-variables
-       '(conda-anaconda-home "~/apps/anaconda3"))
+      (custom-set-variables '(conda-anaconda-home "~/apps/anaconda3"))
 
       ;; XXX: Hijacks existing segment.  Should add cases for both envs.
       (spaceline-define-segment python-pyenv
@@ -664,7 +681,7 @@ you should place your code here."
  '(helm-source-names-using-follow (quote ("completion-at-point" "Actions")))
  '(package-selected-packages
    (quote
-    (company-quickhelp stickyfunc-enhance srefactor flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck auto-dictionary slime-company slime common-lisp-snippets conda mmm-mode markdown-toc markdown-mode gh-md web-beautify livid-mode skewer-mode simple-httpd json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc company-tern tern coffee-mode sql-indent disaster company-c-headers cmake-mode clang-format helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company-anaconda company auto-yasnippet yasnippet ac-ispell auto-complete auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
+    (editorconfig company-quickhelp stickyfunc-enhance srefactor flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck auto-dictionary slime-company slime common-lisp-snippets conda mmm-mode markdown-toc markdown-mode gh-md web-beautify livid-mode skewer-mode simple-httpd json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc company-tern tern coffee-mode sql-indent disaster company-c-headers cmake-mode clang-format helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company-anaconda company auto-yasnippet yasnippet ac-ispell auto-complete auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
  '(paradox-github-token t))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
