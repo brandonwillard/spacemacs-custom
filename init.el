@@ -322,6 +322,9 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
 
+  (setq scroll-margin 10)
+  (setq sentence-end-double-space t)
+
   ;; TODO: Does this actually work?
   ;; Viper is loaded/installed automatically, but we want it disabled.
   (setq package-load-list '(all
@@ -339,9 +342,18 @@ explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
 
   ;; Always start in normal state.
-  (setq evil-emacs-state-modes nil)
-  (setq evil-insert-state-modes nil)
-  (setq evil-motion-state-modes nil)
+  (with-eval-after-load 'evil
+    (setq evil-emacs-state-modes nil)
+    (setq evil-insert-state-modes nil)
+    (setq evil-motion-state-modes nil)
+    ;; Make evil-mode up/down operate in screen lines instead of logical lines
+    (define-key evil-motion-state-map "j" 'evil-next-visual-line)
+    (define-key evil-motion-state-map "k" 'evil-previous-visual-line)
+    ;; Also in visual mode
+    (define-key evil-visual-state-map "j" 'evil-next-visual-line)
+    (define-key evil-visual-state-map "k" 'evil-previous-visual-line)
+    ;; https://emacs.stackexchange.com/questions/9583/how-to-treat-underscore-as-part-of-the-word
+    (defalias #'forward-evil-word #'forward-evil-symbol))
 
   (setq compilation-scroll-output t)
   (setq compilation-scroll-output #'first-error)
@@ -351,14 +363,14 @@ you should place your code here."
   (require 'helm-bookmark)
 
   (with-eval-after-load 'company
-    (setq company-idle-delay nil)
+    (setq-default company-idle-delay nil)
     (define-key company-active-map (kbd "C-w") 'evil-delete-backward-word)
     (define-key company-active-map (kbd "C-y") 'company-complete-selection)
     (define-key evil-insert-state-map (kbd "C-n") #'company-select-next)
     (define-key evil-insert-state-map (kbd "C-p") #'company-select-previous))
 
   (with-eval-after-load 'helm
-    (setq helm-follow-mode-persistent t)
+    (setq-default helm-follow-mode-persistent t)
     (define-key helm-map (kbd "C-w") 'evil-delete-backward-word)
     )
 
@@ -431,17 +443,20 @@ you should place your code here."
 
   (with-eval-after-load 'python
     ;; Stop python from complaining when opening a REPL
-    (setq python-shell-prompt-detect-failure-warning nil)
+    (setq-default python-shell-prompt-detect-failure-warning nil)
 
     (defun python-shell-append-to-output (string)
-      (let ((buffer (current-buffer)))
-        (set-buffer (process-buffer (python-shell-get-process)))
-        (let ((oldpoint (point)))
-          (goto-char (process-mark (python-shell-get-process)))
-          (insert string)
-          (set-marker (process-mark (python-shell-get-process)) (point))
-          (goto-char oldpoint))
-        (set-buffer buffer)))
+      (let ((buffer (current-buffer))
+            (py-buffer (process-buffer (python-shell-get-process))))
+        (unless (eq buffer py-buffer)
+          (with-current-buffer py-buffer
+            (let ((oldpoint (point)))
+              (goto-char (process-mark (python-shell-get-process)))
+              (insert string)
+              (set-marker (process-mark (python-shell-get-process)) (point))
+              (goto-char oldpoint))
+            )
+          )))
 
     (defadvice python-shell-send-string
         (around advice-python-shell-send-string activate)
@@ -457,7 +472,7 @@ you should place your code here."
              (append-string
               (if (string-match "^\n*$" append-string2)
                   (replace-match "" nil nil append-string2)
-                append-string2)))  
+                append-string2)))
         (python-shell-append-to-output
          (concat (string-trim-right append-string) "\n")))
       (if (called-interactively-p 'any)
@@ -540,6 +555,7 @@ you should place your code here."
       ;; (evil-define-text-object noweb-chunk-object (count) ...)
 
       ;; TODO: Create a macro that works for any REPL-send function.
+      ;; Also, consider using `pm-execute-narrowed-to-span'.
       ;; Might want to follow `polymode-register-weaver' and `polymode-set-weaver' so that
       ;; the REPL-send function is available where-/whenever.
       ;;
@@ -617,7 +633,7 @@ you should place your code here."
       (interactive)
       (let ((span (pm-get-innermost-span nil t)))
         (when (eq (nth 0 span) 'body)
-          (python-shell-send-region 
+          (python-shell-send-region
            (1+ (nth 1 span)) (1- (nth 2 span))))
         ))
 
