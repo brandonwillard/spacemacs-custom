@@ -342,6 +342,13 @@ This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
 
+  ;; Make terminals and REPLs read-only.
+  ;; https://emacs.stackexchange.com/a/2897
+  (setq-default comint-prompt-read-only t)
+  (defun my-comint-preoutput-turn-buffer-read-only (text)
+    (propertize text 'read-only t))
+  (add-hook 'comint-preoutput-filter-functions 'my-comint-preoutput-turn-buffer-read-only)
+
   (use-package editorconfig
     :ensure t
     :config
@@ -532,12 +539,10 @@ you should place your code here."
       (evil-define-key 'normal polymode-mode-map "]C" 'polymode-next-chunk)
       (evil-define-key 'normal polymode-mode-map "[c" 'polymode-previous-chunk-same-type)
       (evil-define-key 'normal polymode-mode-map "[C" 'polymode-previous-chunk)
+
       ;; See https://github.com/noctuid/evil-guide#why-dont-keys-defined-with-evil-define-key-work-immediately
       (add-hook 'polymode-init-host-hook #'evil-normalize-keymaps)
       (add-hook 'polymode-init-inner-hook #'evil-normalize-keymaps)
-
-      (add-hook 'polymode-init-inner-hook #'(lambda () (message "***********entered polymode-minor-mode (inner)!")))
-      (add-hook 'polymode-init-host-hook #'(lambda () (message "***********entered polymode-minor-mode (host)!")))
 
       ;; TODO: Would be great to have this working, but I don't know how best to determine
       ;; a generic[-enough] minor mode that works for all polymode mode subclasses/instances.
@@ -564,6 +569,7 @@ you should place your code here."
         "Move backward a chunk (same type of chunk as current location)."
         :type inclusive
         (polymode-previous-chunk-same-type count))
+
       (evil-add-command-properties #'polymode-next-chunk :jump t)
       (evil-add-command-properties #'polymode-next-chunk-same-type :jump t)
       (evil-add-command-properties #'polymode-previous-chunk :jump t)
@@ -571,53 +577,36 @@ you should place your code here."
       ;; TODO
       ;; (evil-define-text-object noweb-chunk-object (count) ...)
 
-      ;; TODO: Create a macro that works for any REPL-send function.
-      ;; Also, consider using `pm-execute-narrowed-to-span'.
-      ;; Might want to follow `polymode-register-weaver' and `polymode-set-weaver' so that
-      ;; the REPL-send function is available where-/whenever.
-      ;;
-      ;; (defmacro define-polymode-send-chunk (mode sendfunc)
-      ;;   "Creates a send-chunk function for a given MODE and shell/comint SENDFUNC"
-      ;;   (let* ((mode-name (symbol-name mode))
-      ;;          (func-name (concat
-      ;;                      mode-name "shell-send-chunk")))
-      ;;          ()
-      ;;     )
-      ;; ;; (interactive)
-      ;; ;; (let ((span (pm-get-innermost-span)))
-      ;; ;;   (when (eq (nth 0 span) 'body)
-      ;; ;;     (send-func 
-      ;; ;;      (1+ (nth 1 span)) (1- (nth 2 span))))
-      ;; ;;   )
-      ;; )
+      (defun pm-mode-for-span (span)
+        "Return the major mode that handles SPAN."
+        (let ((obj (car (last span))))
+          (pm--get-chunkmode-mode
+           (case (eieio-object-class obj)
+             ('pm-polymode-multi-auto (pm--get-multi-chunk obj span))
+             ('pm-hbtchunkmode-auto (pm--get-multi-chunk obj span))
+             ('pm-bchunkmode obj)
+             ('pm-hbtchunkmode obj))
+           'body)))
 
-      ;; TODO
-      ;; (defun polymode-send-code-from-here ()
-      ;;   "Run code from the beginning of the document to the current (cursor) point."
-      ;;   (interactive "p")
-      ;;   (let* ((sofar 0)
-      ;;          (beg (point-min))
-      ;;          (end (point)))
-      ;;     (condition-case nil
-      ;;         (pm-map-over-spans
-      ;;          (lambda ()
-      ;;            (unless (memq (car *span*) '(head tail))
-      ;;              ;; TODO: `this-class` needs to be whatever signifies a "code" chunk.
-      ;;              (when (and (equal this-class
-      ;;                                (eieio-object-name (car (last *span*))))
-      ;;                         (eq this-type (car *span*)))
-      ;;                (setq sofar (1+ sofar)))
-      ;;              (unless this-class
-      ;;                (setq this-class (eieio-object-name (car (last *span*)))
-      ;;                      this-type (car *span*)))
-      ;;              ;; (when (>= sofar N)
-      ;;              ;;   (signal 'quit nil))
-      ;;              ))
-      ;;          beg end nil nil nil t)
-      ;;       (quit (when (looking-at "\\s *$")
-      ;;               (forward-line)))
-      ;;       (pm-switch-to-buffer))
-      ;;     sofar))
+      (defun pm-eval-from-here (func) 
+        "Evaluate FUNC over all 'body' spans up to the current point.
+
+Based on https://github.com/yamad/polymode/blob/25f4a2c67cc7d3390454ebf592fe19c4970506cd/polymode-methods.el"
+        (interactive "a")
+        (save-excursion
+          (pm-map-over-spans
+           '(lambda ()
+              (save-restriction
+                (progn
+                  (pm-narrow-to-span *span*)
+                  ;; Could also filter on types like `python-mode'.
+                  ;; (when (memq (pm-mode-for-span *span*) types)
+                  (when (eq 'body (nth 0 *span*))
+                    (funcall func)
+                    )
+                  )))
+           (point-min) (point) nil nil nil t))
+        )
 
       ;; TODO
       ;; (defun polymode-goto-chunk (chunk-num)
@@ -656,6 +645,16 @@ you should place your code here."
 
     (evil-leader/set-key-for-mode 'python-mode
       "sc" 'python-shell-send-chunk)
+
+    (defun python-shell-send-chunks-from-here ()
+      (interactive)
+      (pm-eval-from-here
+       #'(lambda () (python-shell-send-region
+                     (1+ (point-min))
+                     (1- (point-max))))))
+
+    (evil-leader/set-key-for-mode 'python-mode
+      "sC" 'python-shell-send-chunks-from-here)
     )
   (add-hook 'poly-noweb+python-mode-hook 'poly-noweb+python-mode-settings)
 
