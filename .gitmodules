@@ -1,0 +1,3 @@
+[submodule "local/polymode"]
+	path = local/polymode
+	url = git@github.com:brandonwillard/polymode.git
