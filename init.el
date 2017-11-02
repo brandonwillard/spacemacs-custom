@@ -70,7 +70,7 @@ values."
    ;; packages, then consider creating a layer. You can also put the
    ;; configuration in `dotspacemacs/user-config'.
    dotspacemacs-additional-packages '(python-x
-                                      polymode
+                                      (polymode :location local)
                                       ob-ipython
                                       conda
                                       editorconfig
@@ -323,8 +323,8 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
 
-  (setq scroll-margin 10)
-  (setq sentence-end-double-space t)
+  (setq-default scroll-margin 10)
+  (setq-default sentence-end-double-space t)
 
   ;; TODO: Does this actually work?
   ;; Viper is loaded/installed automatically, but we want it disabled.
@@ -344,10 +344,17 @@ you should place your code here."
 
   ;; Make terminals and REPLs read-only.
   ;; https://emacs.stackexchange.com/a/2897
-  (setq-default comint-prompt-read-only t)
   (defun my-comint-preoutput-turn-buffer-read-only (text)
     (propertize text 'read-only t))
-  (add-hook 'comint-preoutput-filter-functions 'my-comint-preoutput-turn-buffer-read-only)
+
+  (with-eval-after-load 'comint
+    (setq-default comint-prompt-read-only t)
+    (setq-default comint-use-prompt-regexp nil)
+    (setq-default inhibit-field-text-motion nil)
+
+    (add-hook 'comint-output-filter-functions
+              #'my-comint-preoutput-turn-buffer-read-only
+              'append))
 
   (use-package editorconfig
     :ensure t
@@ -385,6 +392,7 @@ you should place your code here."
 
   (with-eval-after-load 'company
     (setq-default company-idle-delay nil)
+
     (define-key company-active-map (kbd "C-w") 'evil-delete-backward-word)
     (define-key company-active-map (kbd "C-y") 'company-complete-selection)
     (define-key evil-insert-state-map (kbd "C-n") #'company-select-next)
@@ -467,20 +475,45 @@ you should place your code here."
 
   (with-eval-after-load 'python
     ;; Stop python from complaining when opening a REPL
-    (setq-default python-shell-prompt-detect-failure-warning nil)
+    (setq python-shell-completion-native-disabled-interpreters
+          (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython"))
+    (setq python-shell-completion-native-output-timeout 3.0)
+
+    ;; TODO: Make all output
+    (add-hook 'inferior-python-mode-hook
+              (lambda ()
+                ;; FIXME: Just stop the Python Spacemacs layer from setting this.
+                (setq-local company-idle-delay nil))
+              ;; TODO: `local' as well?
+              'append)
 
     (defun python-shell-append-to-output (string)
+      "Append STRING to comint."
       (let ((buffer (current-buffer))
             (py-buffer (process-buffer (python-shell-get-process))))
         (unless (eq buffer py-buffer)
           (with-current-buffer py-buffer
             (let ((oldpoint (point)))
               (goto-char (process-mark (python-shell-get-process)))
-              (insert string)
+              (insert (propertize string 'read-only t))
               (set-marker (process-mark (python-shell-get-process)) (point))
               (goto-char oldpoint))
             )
           )))
+
+    (defadvice python-shell-send-region
+        (around advice-python-shell-send-region activate)
+      ;; (interactive
+      ;;  (list (region-beginning) (region-end) current-prefix-arg t))
+      (let* ((original-string (buffer-substring-no-properties start end)))
+        (python-shell-append-to-output
+         (concat (string-trim-right original-string) "\n")))
+      (ad-deactivate 'python-shell-send-string)
+      (if (called-interactively-p 'any)
+          (call-interactively (ad-get-orig-definition 'python-shell-send-region))
+        ad-do-it)
+      (ad-activate 'python-shell-send-string))
+    ;; (advice-remove 'python-shell-send-region 'ad-Advice-python-shell-send-region)
 
     (defadvice python-shell-send-string
         (around advice-python-shell-send-string activate)
@@ -502,6 +535,7 @@ you should place your code here."
       (if (called-interactively-p 'any)
           (call-interactively (ad-get-orig-definition 'python-shell-send-string))
         ad-do-it))
+    ;; (advice-remove 'python-shell-send-string 'ad-Advice-python-shell-send-string)
     )
 
   (use-package python-x
@@ -519,14 +553,15 @@ you should place your code here."
 
   (use-package polymode
     :defer t
+    :load-path ("~/.emacs.d/private/local/polymode/modes")
     :init
     (progn
-      ;; `polymode-prefix-key` needs to be set *before* the package loads.
       (setq pm-debug-mode t)
+      ;; `polymode-prefix-key' needs to be set *before* the package loads.
       (setq polymode-prefix-key "\C-P"))
     :config
     (progn
-      ;; TODO: Could try `use-package` again.  Perhaps as follows:
+      ;; TODO: Could try `use-package' again.  Perhaps as follows:
       ;; (use-package poly-python
       ;;   :commands (poly-noweb+python-mode)
       ;;   ;; :functions (poly-noweb+python-mode)
@@ -540,6 +575,7 @@ you should place your code here."
       (evil-define-key 'normal polymode-mode-map "[c" 'polymode-previous-chunk-same-type)
       (evil-define-key 'normal polymode-mode-map "[C" 'polymode-previous-chunk)
 
+      ;; FIXME: Still doesn't work well.
       ;; See https://github.com/noctuid/evil-guide#why-dont-keys-defined-with-evil-define-key-work-immediately
       (add-hook 'polymode-init-host-hook #'evil-normalize-keymaps)
       (add-hook 'polymode-init-inner-hook #'evil-normalize-keymaps)
@@ -576,45 +612,6 @@ you should place your code here."
       (evil-add-command-properties #'polymode-previous-chunk-same-type :jump t)
       ;; TODO
       ;; (evil-define-text-object noweb-chunk-object (count) ...)
-
-      (defun pm-mode-for-span (span)
-        "Return the major mode that handles SPAN."
-        (let ((obj (car (last span))))
-          (pm--get-chunkmode-mode
-           (case (eieio-object-class obj)
-             ('pm-polymode-multi-auto (pm--get-multi-chunk obj span))
-             ('pm-hbtchunkmode-auto (pm--get-multi-chunk obj span))
-             ('pm-bchunkmode obj)
-             ('pm-hbtchunkmode obj))
-           'body)))
-
-      (defun pm-eval-from-here (func) 
-        "Evaluate FUNC over all 'body' spans up to the current point.
-
-Based on https://github.com/yamad/polymode/blob/25f4a2c67cc7d3390454ebf592fe19c4970506cd/polymode-methods.el"
-        (interactive "a")
-        (save-excursion
-          (pm-map-over-spans
-           '(lambda ()
-              (save-restriction
-                (progn
-                  (pm-narrow-to-span *span*)
-                  ;; Could also filter on types like `python-mode'.
-                  ;; (when (memq (pm-mode-for-span *span*) types)
-                  (when (eq 'body (nth 0 *span*))
-                    (funcall func)
-                    )
-                  )))
-           (point-min) (point) nil nil nil t))
-        )
-
-      ;; TODO
-      ;; (defun polymode-goto-chunk (chunk-num)
-      ;;   ())
-
-      ;; TODO
-      ;; (defun polymode-next-code-chunk (num)
-      ;;   (...))
       )
     :mode
     ("\\.texw" . poly-noweb+python-mode)
@@ -624,6 +621,8 @@ Based on https://github.com/yamad/polymode/blob/25f4a2c67cc7d3390454ebf592fe19c4
 
   (defun poly-noweb+python-mode-settings ()
     "Custom settings for noweb"
+
+    (evilified-state-evilify poly-noweb+python-mode poly-noweb+python-mode-map)
 
     ;; FYI: mode information is kept in `pm/polymode'.
 
@@ -648,6 +647,7 @@ Based on https://github.com/yamad/polymode/blob/25f4a2c67cc7d3390454ebf592fe19c4
 
     (defun python-shell-send-chunks-from-here ()
       (interactive)
+      ;; TODO: Check chunk header for enabled.
       (pm-eval-from-here
        #'(lambda () (python-shell-send-region
                      (1+ (point-min))
