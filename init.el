@@ -31,12 +31,14 @@ values."
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
    '(
+     html
      markdown
      javascript
      latex
      python
      yaml
      sql
+     noweb
      (c-c++ :variables
             c-c++-enable-clang-support t
             c-c++-default-mode-for-headers 'c++-mode
@@ -50,8 +52,7 @@ values."
                       auto-completion-enable-snippets-in-popup t
                       auto-completion-enable-help-tooltip 'manual
                       auto-completion-enable-sort-by-usage t
-                      :packages
-                      (not auto-complete ac-ispell)
+                      ;; :packages (not auto-complete ac-ispell)
                       )
      emacs-lisp
      git
@@ -69,10 +70,9 @@ values."
    ;; wrapped in a layer. If you need some configuration for these
    ;; packages, then consider creating a layer. You can also put the
    ;; configuration in `dotspacemacs/user-config'.
-   dotspacemacs-additional-packages '(python-x
-                                      (polymode :location local)
+   dotspacemacs-additional-packages '(
+                                      ;; (polymode :location local)
                                       ob-ipython
-                                      conda
                                       editorconfig
                                       ;; org-mime
                                       ;; org-jira
@@ -281,7 +281,7 @@ values."
    ;;                       text-mode
    ;;   :size-limit-kb 1000)
    ;; (default nil)
-   dotspacemacs-line-numbers t 
+   dotspacemacs-line-numbers t
    ;; Code folding method. Possible values are `evil' and `origami'.
    ;; (default 'evil)
    dotspacemacs-folding-method 'evil
@@ -312,7 +312,7 @@ values."
    ;; `trailing' to delete only the whitespace at end of lines, `changed'to
    ;; delete only whitespace for changed lines or `nil' to disable cleanup.
    ;; (default nil)
-   dotspacemacs-whitespace-cleanup nil
+   dotspacemacs-whitespace-cleanup 'trailing
    ))
 
 (defun dotspacemacs/user-init ()
@@ -323,6 +323,8 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
 
+  (setq load-path (append '("~/.spacemacs.d/") load-path))
+
   (setq-default scroll-margin 10)
   (setq-default sentence-end-double-space t)
 
@@ -331,7 +333,6 @@ before packages are loaded. If you are unsure, you should try in setting them in
   (setq package-load-list '(all
                             (viper nil)
                             ))
-  (setq evil-move-cursor-back nil)
   )
 
 (defun dotspacemacs/user-config ()
@@ -356,6 +357,7 @@ you should place your code here."
               #'my-comint-preoutput-turn-buffer-read-only
               'append))
 
+  ;; Set conda env based on editorconfig settings.
   (use-package editorconfig
     :ensure t
     :config
@@ -369,11 +371,13 @@ you should place your code here."
                          (conda-env-activate env-name)))))))
     )
 
-  ;; Always start in normal state.
   (with-eval-after-load 'evil
-    (setq evil-emacs-state-modes nil)
-    (setq evil-insert-state-modes nil)
-    (setq evil-motion-state-modes nil)
+    (setq-default evil-move-cursor-back nil)
+    (setq-default evil-escape-key-sequence nil)
+    (setq-default evil-emacs-state-modes nil)
+    (setq-default evil-insert-state-modes '(magit-popup-mode))
+    ;; (setq-default evil-motion-state-modes nil)
+
     ;; Make evil-mode up/down operate in screen lines instead of logical lines
     (define-key evil-motion-state-map "j" 'evil-next-visual-line)
     (define-key evil-motion-state-map "k" 'evil-previous-visual-line)
@@ -387,7 +391,7 @@ you should place your code here."
   (setq compilation-scroll-output #'first-error)
 
   ;; Temp fix.
-  ;; https://github.com/syl20bnr/spacemacs/issues/9549 
+  ;; https://github.com/syl20bnr/spacemacs/issues/9549
   (require 'helm-bookmark)
 
   (with-eval-after-load 'company
@@ -396,14 +400,41 @@ you should place your code here."
     (define-key company-active-map (kbd "C-w") 'evil-delete-backward-word)
     (define-key company-active-map (kbd "C-y") 'company-complete-selection)
     (define-key evil-insert-state-map (kbd "C-n") #'company-select-next)
-    (define-key evil-insert-state-map (kbd "C-p") #'company-select-previous))
+    (define-key evil-insert-state-map (kbd "C-p") #'company-select-previous)
+
+    ;; TODO: Move this to python layer (when it works).
+    (defun company-transform-python (candidates)
+      "De-prioritize internal variables (i.e. '_blah') in completion list ordering.
+
+See `company-transformers'.
+
+From URL `https://emacs.stackexchange.com/a/12403'"
+      (let ((deleted))
+        (mapcar #'(lambda (c)
+                    (if (or (string-prefix-p "_" c) (string-prefix-p "._" c))
+                        (progn
+                          (add-to-list 'deleted c)
+                          (setq candidates (delete c candidates)))))
+                candidates)
+        (append candidates (nreverse deleted))))
+
+    (defun my-python-conf()
+      (setq-local company-transformers
+                  (append company-transformers '(company-transform-python))))
+
+    (add-hook 'python-mode-hook 'my-python-conf)
+
+    (add-hook 'inferior-python-mode-hook
+              (lambda ()
+                ;; FIXME: Just stop the Python Spacemacs layer from setting this.
+                (setq-local company-idle-delay nil))
+              ;; TODO: `local' as well?
+              'append))
 
   (with-eval-after-load 'helm
     (setq-default helm-follow-mode-persistent t)
     (define-key helm-map (kbd "C-w") 'evil-delete-backward-word)
     )
-
-  (setq load-path (append '("~/.spacemacs.d/") load-path))
 
   (with-eval-after-load 'org
     (require 'ob-python)
@@ -413,79 +444,11 @@ you should place your code here."
        (python . t)))
     )
 
-  (use-package conda
-    :config
-    (progn
-      (conda-env-initialize-interactive-shells)
-      (conda-env-initialize-eshell)
-
-      ;; TODO: Get env name from editorconfig settings.
-      (defun conda--get-name-from-env-yml (filename)
-        "Pull the `name` property out of the YAML file at FILENAME."
-        (when filename
-          (let ((env-yml-contents (f-read-text filename)))
-            ;; We generalized the regex to include `-`.
-            (if (string-match "name:[ ]*\\([[:word:]-]+\\)[ ]*$" env-yml-contents)
-                (match-string 1 env-yml-contents)
-              nil))))
-
-      (defun conda--env-activate-project (&optional warn-msg)
-        (let* ((project-root (ignore-errors (projectile-project-root)))
-               (env-file (conda--find-env-yml project-root))
-               (env-name (conda--get-name-from-env-yml env-file)))
-          (if (not env-name)
-              (progn
-                (when warn-msg
-                  (message "No conda environment for project at %S: %S %S"
-                           project-root env-file env-name))
-                (conda-env-deactivate))
-            (conda-env-activate env-name)))
-        )
-
-      ;; FIXME: This doesn't always work.  Seems like files need to be opened in a subset of
-      ;; ways in order to activate projects and/or this hook.
-      (add-hook 'projectile-after-switch-project-hook 'conda--env-activate-project)
-      ;; (add-hook 'projectile-before-switch-project-hook 'conda--env-activate-project)
-
-      ;; TODO: Might need something like this, too.
-      ;; (advice--add 'switch-to-buffer :after #'conda--env-activate-project)
-      ;; TODO: Alternatively, we could wrap/advise the existing autoactivate-mode.
-      ;; (advice--add 'conda--switch-buffer-auto-activate :after #'conda--env-activate-project)
-      ;; (conda-env-autoactivate-mode t)
-
-      (custom-set-variables '(conda-anaconda-home "~/apps/anaconda3"))
-
-      ;; XXX: Hijacks existing segment.  Should add cases for both envs.
-      (spaceline-define-segment python-pyenv
-        "The current python env.  Works with `conda'."
-        (when (and active
-                   ;; TODO: Consider not restricting to `python-mode', because
-                   ;; conda envs can apply to more than just python operations
-                   ;; (e.g. libraries, executables).
-                   ;; (eq 'python-mode major-mode)
-                   (boundp 'conda-env-current-name)
-                   (stringp conda-env-current-name)
-                   )
-          (propertize conda-env-current-name
-                      'face 'spaceline-python-venv
-                      'help-echo "Virtual environment (via conda)"))
-        )
-      (spaceline-compile)
-     ))
-
   (with-eval-after-load 'python
     ;; Stop python from complaining when opening a REPL
     (setq python-shell-completion-native-disabled-interpreters
           (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython"))
     (setq python-shell-completion-native-output-timeout 3.0)
-
-    ;; TODO: Make all output
-    (add-hook 'inferior-python-mode-hook
-              (lambda ()
-                ;; FIXME: Just stop the Python Spacemacs layer from setting this.
-                (setq-local company-idle-delay nil))
-              ;; TODO: `local' as well?
-              'append)
 
     (defun python-shell-append-to-output (string)
       "Append STRING to comint."
@@ -538,125 +501,112 @@ you should place your code here."
     ;; (advice-remove 'python-shell-send-string 'ad-Advice-python-shell-send-string)
     )
 
-  (use-package python-x
-    :defer t
-    :commands
-    (python-shell-send-line
-     python-shell-print-region-or-symbol)
-    :init
-    (progn
-      (evil-leader/set-key-for-mode 'python-mode
-        "sl" 'python-shell-send-line)
-      (evil-leader/set-key-for-mode 'python-mode
-        "sw" 'python-shell-print-region-or-symbol))
-    )
+  ;; (use-package polymode
+  ;;   :defer t
+  ;;   :load-path ("~/.emacs.d/private/local/polymode/modes")
+  ;;   :init
+  ;;   (progn
+  ;;     (setq pm-debug-mode t)
+  ;;     ;; `polymode-prefix-key' needs to be set *before* the package loads.
+  ;;     (setq polymode-prefix-key "\C-P"))
+  ;;   :config
+  ;;   (progn
+  ;;     ;; TODO: Could try `use-package' again.  Perhaps as follows:
+  ;;     ;; (use-package poly-python
+  ;;     ;;   :commands (poly-noweb+python-mode)
+  ;;     ;;   ;; :functions (poly-noweb+python-mode)
+  ;;     ;;   )
+  ;;     (require 'poly-python)
 
-  (use-package polymode
-    :defer t
-    :load-path ("~/.emacs.d/private/local/polymode/modes")
-    :init
-    (progn
-      (setq pm-debug-mode t)
-      ;; `polymode-prefix-key' needs to be set *before* the package loads.
-      (setq polymode-prefix-key "\C-P"))
-    :config
-    (progn
-      ;; TODO: Could try `use-package' again.  Perhaps as follows:
-      ;; (use-package poly-python
-      ;;   :commands (poly-noweb+python-mode)
-      ;;   ;; :functions (poly-noweb+python-mode)
-      ;;   )
-      (require 'poly-python)
+  ;;     ;; Evil settings.
+  ;;     (evilified-state-evilify polymode-minor-mode polymode-mode-map)
+  ;;     (evil-define-key 'normal polymode-mode-map "]c" 'polymode-next-chunk-same-type)
+  ;;     (evil-define-key 'normal polymode-mode-map "]C" 'polymode-next-chunk)
+  ;;     (evil-define-key 'normal polymode-mode-map "[c" 'polymode-previous-chunk-same-type)
+  ;;     (evil-define-key 'normal polymode-mode-map "[C" 'polymode-previous-chunk)
 
-      ;; Evil settings.
-      (evilified-state-evilify polymode-minor-mode polymode-mode-map)
-      (evil-define-key 'normal polymode-mode-map "]c" 'polymode-next-chunk-same-type)
-      (evil-define-key 'normal polymode-mode-map "]C" 'polymode-next-chunk)
-      (evil-define-key 'normal polymode-mode-map "[c" 'polymode-previous-chunk-same-type)
-      (evil-define-key 'normal polymode-mode-map "[C" 'polymode-previous-chunk)
+  ;;     ;; FIXME: Still doesn't work well.
+  ;;     ;; See https://github.com/noctuid/evil-guide#why-dont-keys-defined-with-evil-define-key-work-immediately
+  ;;     (add-hook 'polymode-init-host-hook #'evil-normalize-keymaps)
+  ;;     (add-hook 'polymode-init-inner-hook #'evil-normalize-keymaps)
 
-      ;; FIXME: Still doesn't work well.
-      ;; See https://github.com/noctuid/evil-guide#why-dont-keys-defined-with-evil-define-key-work-immediately
-      (add-hook 'polymode-init-host-hook #'evil-normalize-keymaps)
-      (add-hook 'polymode-init-inner-hook #'evil-normalize-keymaps)
+  ;;     ;; TODO: Would be great to have this working, but I don't know how best to determine
+  ;;     ;; a generic[-enough] minor mode that works for all polymode mode subclasses/instances.
+  ;;     ;; (evil-define-minor-mode-key 'normal 'polymode-minor-mode
+  ;;     ;;   (kbd "] c") 'polymode-next-chunk-same-type
+  ;;     ;;   (kbd "] C") 'polymode-next-chunk
+  ;;     ;;   (kbd "[ c") 'polymode-previous-chunk-same-type
+  ;;     ;;   (kbd "[ C") 'polymode-previous-chunk
+  ;;     ;;   )
 
-      ;; TODO: Would be great to have this working, but I don't know how best to determine
-      ;; a generic[-enough] minor mode that works for all polymode mode subclasses/instances.
-      ;; (evil-define-minor-mode-key 'normal 'polymode-minor-mode
-      ;;   (kbd "] c") 'polymode-next-chunk-same-type
-      ;;   (kbd "] C") 'polymode-next-chunk
-      ;;   (kbd "[ c") 'polymode-previous-chunk-same-type
-      ;;   (kbd "[ C") 'polymode-previous-chunk
-      ;;   )
+  ;;     (evil-define-motion noweb-chunk-forward (count)
+  ;;       "Move forward a chunk"
+  ;;       :type inclusive
+  ;;       (polymode-next-chunk count))
+  ;;     (evil-define-motion noweb-chunk-forward-same-type (count)
+  ;;       "Move forward a chunk (same type of chunk as current location)"
+  ;;       :type inclusive
+  ;;       (polymode-next-chunk-same-type count))
+  ;;     (evil-define-motion noweb-chunk-backward (count)
+  ;;       "Move backward a chunk."
+  ;;       :type inclusive
+  ;;       (polymode-previous-chunk count))
+  ;;     (evil-define-motion noweb-chunk-backward-same-type (count)
+  ;;       "Move backward a chunk (same type of chunk as current location)."
+  ;;       :type inclusive
+  ;;       (polymode-previous-chunk-same-type count))
 
-      (evil-define-motion noweb-chunk-forward (count)
-        "Move forward a chunk"
-        :type inclusive
-        (polymode-next-chunk count))
-      (evil-define-motion noweb-chunk-forward-same-type (count)
-        "Move forward a chunk (same type of chunk as current location)"
-        :type inclusive
-        (polymode-next-chunk-same-type count))
-      (evil-define-motion noweb-chunk-backward (count)
-        "Move backward a chunk."
-        :type inclusive
-        (polymode-previous-chunk count))
-      (evil-define-motion noweb-chunk-backward-same-type (count)
-        "Move backward a chunk (same type of chunk as current location)."
-        :type inclusive
-        (polymode-previous-chunk-same-type count))
+  ;;     (evil-add-command-properties #'polymode-next-chunk :jump t)
+  ;;     (evil-add-command-properties #'polymode-next-chunk-same-type :jump t)
+  ;;     (evil-add-command-properties #'polymode-previous-chunk :jump t)
+  ;;     (evil-add-command-properties #'polymode-previous-chunk-same-type :jump t)
+  ;;     ;; TODO
+  ;;     ;; (evil-define-text-object noweb-chunk-object (count) ...)
+  ;;     )
+  ;;   :mode
+  ;;   ("\\.texw" . poly-noweb+python-mode)
+  ;;   ;; ("\\.Rnw" . poly-noweb+r-mode)
+  ;;   ;; ("\\.Rmd" . poly-markdown+r-mode)
+  ;;   )
 
-      (evil-add-command-properties #'polymode-next-chunk :jump t)
-      (evil-add-command-properties #'polymode-next-chunk-same-type :jump t)
-      (evil-add-command-properties #'polymode-previous-chunk :jump t)
-      (evil-add-command-properties #'polymode-previous-chunk-same-type :jump t)
-      ;; TODO
-      ;; (evil-define-text-object noweb-chunk-object (count) ...)
-      )
-    :mode
-    ("\\.texw" . poly-noweb+python-mode)
-    ;; ("\\.Rnw" . poly-noweb+r-mode)
-    ;; ("\\.Rmd" . poly-markdown+r-mode)
-    )
+  ;; (defun poly-noweb+python-mode-settings ()
+  ;;   "Custom settings for noweb"
 
-  (defun poly-noweb+python-mode-settings ()
-    "Custom settings for noweb"
+  ;;   (evilified-state-evilify poly-noweb+python-mode poly-noweb+python-mode-map)
 
-    (evilified-state-evilify poly-noweb+python-mode poly-noweb+python-mode-map)
+  ;;   ;; FYI: mode information is kept in `pm/polymode'.
 
-    ;; FYI: mode information is kept in `pm/polymode'.
+  ;;   ;; TODO: Use macro or something.
+  ;;   ;; TODO: This is more-or-less what R's polymode does (via `ess-mode').
+  ;;   ;; (when (fboundp 'advice-add)
+  ;;   ;;   (advice-add 'python-shell-send-buffer :around 'pm-execute-narrowed-to-span))
+  ;;   ;; (evil-leader/set-key-for-mode 'python-mode
+  ;;   ;;   "sc" 'python-shell-send-buffer)
 
-    ;; TODO: Use macro or something.
-    ;; TODO: This is more-or-less what R's polymode does (via `ess-mode').
-    ;; (when (fboundp 'advice-add)
-    ;;   (advice-add 'python-shell-send-buffer :around 'pm-execute-narrowed-to-span))
-    ;; (evil-leader/set-key-for-mode 'python-mode
-    ;;   "sc" 'python-shell-send-buffer)
+  ;;   (defun python-shell-send-chunk ()
+  ;;     "Send chunk under cursor to a mode-specified REPL server."
+  ;;     (interactive)
+  ;;     (let ((span (pm-get-innermost-span nil t)))
+  ;;       (when (eq (nth 0 span) 'body)
+  ;;         (python-shell-send-region
+  ;;          (1+ (nth 1 span)) (1- (nth 2 span))))
+  ;;       ))
 
-    (defun python-shell-send-chunk ()
-      "Send chunk under cursor to a mode-specified REPL server."
-      (interactive)
-      (let ((span (pm-get-innermost-span nil t)))
-        (when (eq (nth 0 span) 'body)
-          (python-shell-send-region
-           (1+ (nth 1 span)) (1- (nth 2 span))))
-        ))
+  ;;   (evil-leader/set-key-for-mode 'python-mode
+  ;;     "sc" 'python-shell-send-chunk)
 
-    (evil-leader/set-key-for-mode 'python-mode
-      "sc" 'python-shell-send-chunk)
+  ;;   (defun python-shell-send-chunks-from-here ()
+  ;;     (interactive)
+  ;;     ;; TODO: Check chunk header for enabled.
+  ;;     (pm-eval-from-here
+  ;;      #'(lambda () (python-shell-send-region
+  ;;                    (1+ (point-min))
+  ;;                    (1- (point-max))))))
 
-    (defun python-shell-send-chunks-from-here ()
-      (interactive)
-      ;; TODO: Check chunk header for enabled.
-      (pm-eval-from-here
-       #'(lambda () (python-shell-send-region
-                     (1+ (point-min))
-                     (1- (point-max))))))
-
-    (evil-leader/set-key-for-mode 'python-mode
-      "sC" 'python-shell-send-chunks-from-here)
-    )
-  (add-hook 'poly-noweb+python-mode-hook 'poly-noweb+python-mode-settings)
+  ;;   (evil-leader/set-key-for-mode 'python-mode
+  ;;     "sC" 'python-shell-send-chunks-from-here)
+  ;;   )
+  ;; (add-hook 'poly-noweb+python-mode-hook 'poly-noweb+python-mode-settings)
 
   (defun clang-format-bindings ()
     (define-key c++-mode-map [tab] 'clang-format-buffer)
@@ -677,10 +627,11 @@ you should place your code here."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(conda-anaconda-home "~/apps/anaconda3")
  '(helm-source-names-using-follow (quote ("completion-at-point" "Actions")))
  '(package-selected-packages
    (quote
-    (editorconfig company-quickhelp stickyfunc-enhance srefactor flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck auto-dictionary slime-company slime common-lisp-snippets conda mmm-mode markdown-toc markdown-mode gh-md web-beautify livid-mode skewer-mode simple-httpd json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc company-tern tern coffee-mode sql-indent disaster company-c-headers cmake-mode clang-format helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company-anaconda company auto-yasnippet yasnippet ac-ispell auto-complete auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
+    (web-mode tagedit slim-mode scss-mode sass-mode pug-mode less-css-mode helm-css-scss haml-mode emmet-mode company-web web-completion-data editorconfig company-quickhelp stickyfunc-enhance srefactor flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck auto-dictionary slime-company slime common-lisp-snippets conda mmm-mode markdown-toc markdown-mode gh-md web-beautify livid-mode skewer-mode simple-httpd json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc company-tern tern coffee-mode sql-indent disaster company-c-headers cmake-mode clang-format helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company-anaconda company auto-yasnippet yasnippet ac-ispell auto-complete auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
  '(paradox-github-token t))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
