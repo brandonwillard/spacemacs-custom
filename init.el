@@ -345,16 +345,16 @@ you should place your code here."
 
   ;; Make terminals and REPLs read-only.
   ;; https://emacs.stackexchange.com/a/2897
-  (defun my-comint-preoutput-turn-buffer-read-only (text)
-    (propertize text 'read-only t))
-
   (with-eval-after-load 'comint
     (setq-default comint-prompt-read-only t)
     (setq-default comint-use-prompt-regexp nil)
     (setq-default inhibit-field-text-motion nil)
 
+    (defun btw/comint-preoutput-turn-buffer-read-only (text)
+      (propertize text 'read-only t))
+
     (add-hook 'comint-output-filter-functions
-              #'my-comint-preoutput-turn-buffer-read-only
+              #'btw/comint-preoutput-turn-buffer-read-only
               'append))
 
   ;; Set conda env based on editorconfig settings.
@@ -403,7 +403,7 @@ you should place your code here."
     (define-key evil-insert-state-map (kbd "C-p") #'company-select-previous)
 
     ;; TODO: Move this to python layer (when it works).
-    (defun company-transform-python (candidates)
+    (defun btw/company-transform-python (candidates)
       "De-prioritize internal variables (i.e. '_blah') in completion list ordering.
 
 See `company-transformers'.
@@ -418,18 +418,11 @@ From URL `https://emacs.stackexchange.com/a/12403'"
                 candidates)
         (append candidates (nreverse deleted))))
 
-    (defun my-python-conf()
+    (defun btw/python-conf()
       (setq-local company-transformers
-                  (append company-transformers '(company-transform-python))))
+                  (append company-transformers '(btw/company-transform-python))))
 
-    (add-hook 'python-mode-hook 'my-python-conf)
-
-    (add-hook 'inferior-python-mode-hook
-              (lambda ()
-                ;; FIXME: Just stop the Python Spacemacs layer from setting this.
-                (setq-local company-idle-delay nil))
-              ;; TODO: `local' as well?
-              'append))
+    (add-hook 'python-mode-hook 'btw/python-conf))
 
   (with-eval-after-load 'helm
     (setq-default helm-follow-mode-persistent t)
@@ -476,7 +469,6 @@ From URL `https://emacs.stackexchange.com/a/12403'"
           (call-interactively (ad-get-orig-definition 'python-shell-send-region))
         ad-do-it)
       (ad-activate 'python-shell-send-string))
-    ;; (advice-remove 'python-shell-send-region 'ad-Advice-python-shell-send-region)
 
     (defadvice python-shell-send-string
         (around advice-python-shell-send-string activate)
@@ -498,125 +490,28 @@ From URL `https://emacs.stackexchange.com/a/12403'"
       (if (called-interactively-p 'any)
           (call-interactively (ad-get-orig-definition 'python-shell-send-string))
         ad-do-it))
-    ;; (advice-remove 'python-shell-send-string 'ad-Advice-python-shell-send-string)
     )
 
-  ;; (use-package polymode
-  ;;   :defer t
-  ;;   :load-path ("~/.emacs.d/private/local/polymode/modes")
-  ;;   :init
-  ;;   (progn
-  ;;     (setq pm-debug-mode t)
-  ;;     ;; `polymode-prefix-key' needs to be set *before* the package loads.
-  ;;     (setq polymode-prefix-key "\C-P"))
-  ;;   :config
-  ;;   (progn
-  ;;     ;; TODO: Could try `use-package' again.  Perhaps as follows:
-  ;;     ;; (use-package poly-python
-  ;;     ;;   :commands (poly-noweb+python-mode)
-  ;;     ;;   ;; :functions (poly-noweb+python-mode)
-  ;;     ;;   )
-  ;;     (require 'poly-python)
-
-  ;;     ;; Evil settings.
-  ;;     (evilified-state-evilify polymode-minor-mode polymode-mode-map)
-  ;;     (evil-define-key 'normal polymode-mode-map "]c" 'polymode-next-chunk-same-type)
-  ;;     (evil-define-key 'normal polymode-mode-map "]C" 'polymode-next-chunk)
-  ;;     (evil-define-key 'normal polymode-mode-map "[c" 'polymode-previous-chunk-same-type)
-  ;;     (evil-define-key 'normal polymode-mode-map "[C" 'polymode-previous-chunk)
-
-  ;;     ;; FIXME: Still doesn't work well.
-  ;;     ;; See https://github.com/noctuid/evil-guide#why-dont-keys-defined-with-evil-define-key-work-immediately
-  ;;     (add-hook 'polymode-init-host-hook #'evil-normalize-keymaps)
-  ;;     (add-hook 'polymode-init-inner-hook #'evil-normalize-keymaps)
-
-  ;;     ;; TODO: Would be great to have this working, but I don't know how best to determine
-  ;;     ;; a generic[-enough] minor mode that works for all polymode mode subclasses/instances.
-  ;;     ;; (evil-define-minor-mode-key 'normal 'polymode-minor-mode
-  ;;     ;;   (kbd "] c") 'polymode-next-chunk-same-type
-  ;;     ;;   (kbd "] C") 'polymode-next-chunk
-  ;;     ;;   (kbd "[ c") 'polymode-previous-chunk-same-type
-  ;;     ;;   (kbd "[ C") 'polymode-previous-chunk
-  ;;     ;;   )
-
-  ;;     (evil-define-motion noweb-chunk-forward (count)
-  ;;       "Move forward a chunk"
-  ;;       :type inclusive
-  ;;       (polymode-next-chunk count))
-  ;;     (evil-define-motion noweb-chunk-forward-same-type (count)
-  ;;       "Move forward a chunk (same type of chunk as current location)"
-  ;;       :type inclusive
-  ;;       (polymode-next-chunk-same-type count))
-  ;;     (evil-define-motion noweb-chunk-backward (count)
-  ;;       "Move backward a chunk."
-  ;;       :type inclusive
-  ;;       (polymode-previous-chunk count))
-  ;;     (evil-define-motion noweb-chunk-backward-same-type (count)
-  ;;       "Move backward a chunk (same type of chunk as current location)."
-  ;;       :type inclusive
-  ;;       (polymode-previous-chunk-same-type count))
-
-  ;;     (evil-add-command-properties #'polymode-next-chunk :jump t)
-  ;;     (evil-add-command-properties #'polymode-next-chunk-same-type :jump t)
-  ;;     (evil-add-command-properties #'polymode-previous-chunk :jump t)
-  ;;     (evil-add-command-properties #'polymode-previous-chunk-same-type :jump t)
-  ;;     ;; TODO
-  ;;     ;; (evil-define-text-object noweb-chunk-object (count) ...)
-  ;;     )
-  ;;   :mode
-  ;;   ("\\.texw" . poly-noweb+python-mode)
-  ;;   ;; ("\\.Rnw" . poly-noweb+r-mode)
-  ;;   ;; ("\\.Rmd" . poly-markdown+r-mode)
-  ;;   )
-
-  ;; (defun poly-noweb+python-mode-settings ()
-  ;;   "Custom settings for noweb"
-
-  ;;   (evilified-state-evilify poly-noweb+python-mode poly-noweb+python-mode-map)
-
-  ;;   ;; FYI: mode information is kept in `pm/polymode'.
-
-  ;;   ;; TODO: Use macro or something.
-  ;;   ;; TODO: This is more-or-less what R's polymode does (via `ess-mode').
-  ;;   ;; (when (fboundp 'advice-add)
-  ;;   ;;   (advice-add 'python-shell-send-buffer :around 'pm-execute-narrowed-to-span))
-  ;;   ;; (evil-leader/set-key-for-mode 'python-mode
-  ;;   ;;   "sc" 'python-shell-send-buffer)
-
-  ;;   (defun python-shell-send-chunk ()
-  ;;     "Send chunk under cursor to a mode-specified REPL server."
-  ;;     (interactive)
-  ;;     (let ((span (pm-get-innermost-span nil t)))
-  ;;       (when (eq (nth 0 span) 'body)
-  ;;         (python-shell-send-region
-  ;;          (1+ (nth 1 span)) (1- (nth 2 span))))
-  ;;       ))
-
-  ;;   (evil-leader/set-key-for-mode 'python-mode
-  ;;     "sc" 'python-shell-send-chunk)
-
-  ;;   (defun python-shell-send-chunks-from-here ()
-  ;;     (interactive)
-  ;;     ;; TODO: Check chunk header for enabled.
-  ;;     (pm-eval-from-here
-  ;;      #'(lambda () (python-shell-send-region
-  ;;                    (1+ (point-min))
-  ;;                    (1- (point-max))))))
-
-  ;;   (evil-leader/set-key-for-mode 'python-mode
-  ;;     "sC" 'python-shell-send-chunks-from-here)
-  ;;   )
-  ;; (add-hook 'poly-noweb+python-mode-hook 'poly-noweb+python-mode-settings)
-
-  (defun clang-format-bindings ()
+  (defun btw/clang-format-bindings ()
     (define-key c++-mode-map [tab] 'clang-format-buffer)
     (global-set-key [C-M-tab] 'clang-format-region))
-  (add-hook 'c++-mode-hook 'clang-format-bindings)
 
-  ;; (defun tex-mode-settings ()
+  (add-hook 'c++-mode-hook 'btw/clang-format-bindings)
+
+  ;; (defun btw/tex-mode-settings ()
   ;;   (setq latex-directory "")
   ;;   (setq latex-run-command ""))
-  ;; (add-hook 'tex-mode-hook 'tex-mode-settings)
+  ;; (add-hook 'tex-mode-hook 'btw/tex-mode-settings)
+
+  ;; From https://github.com/syl20bnr/spacemacs/issues/2345
+  (defun btw/setup-term-mode ()
+    (evil-local-set-key 'insert (kbd "C-r") 'btw/send-C-r))
+
+  (defun btw/send-C-r ()
+    (interactive)
+    (term-send-raw-string "\C-r"))
+
+  (add-hook 'term-mode-hook 'btw/setup-term-mode)
   )
 
 
