@@ -71,7 +71,13 @@ values."
    ;; packages, then consider creating a layer. You can also put the
    ;; configuration in `dotspacemacs/user-config'.
    dotspacemacs-additional-packages '(
-                                      ;; (polymode :location local)
+                                      ;; elisp file manipulation library
+                                      f
+                                      ;; elisp string manipulation library
+                                      s
+                                      ;; elisp list manipulation library
+                                      dash
+                                      dash-functional
                                       ob-ipython
                                       editorconfig
                                       ;; org-mime
@@ -325,9 +331,6 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   (setq load-path (append '("~/.spacemacs.d/") load-path))
 
-  (setq-default scroll-margin 10)
-  (setq-default sentence-end-double-space t)
-
   ;; TODO: Does this actually work?
   ;; Viper is loaded/installed automatically, but we want it disabled.
   (setq package-load-list '(all
@@ -342,6 +345,9 @@ layers configuration.
 This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
+
+  (setq-default scroll-margin 10)
+  (setq-default sentence-end-double-space t)
 
   ;; Make terminals and REPLs read-only.
   ;; https://emacs.stackexchange.com/a/2897

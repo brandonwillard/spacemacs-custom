@@ -128,7 +128,8 @@ See `pm-eval-from-here' and `python-shell-send-region'"
           ))
 
       (defun python-shell-send-chunks-from-here ()
-        "Send all preceding code chunks up to the current POINT via the Python `comint' REPL.
+        "Send all preceding code chunks up to the current POINT via the Python
+`comint' REPL.
 
 See `pm-eval-from-here' and `python-shell-send-region'"
         (interactive)
