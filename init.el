@@ -445,57 +445,65 @@ From URL `https://emacs.stackexchange.com/a/12403'"
 
   (with-eval-after-load 'python
     ;; Stop python from complaining when opening a REPL
-    (setq python-shell-completion-native-disabled-interpreters
-          (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython"))
+    ;; (setq python-shell-completion-native-disabled-interpreters
+    ;;       (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython"))
     (setq python-shell-completion-native-output-timeout 3.0)
 
     (defun python-shell-append-to-output (string)
-      "Append STRING to comint."
+      "Append STRING to `comint' display output."
       (let ((buffer (current-buffer))
             (py-buffer (process-buffer (python-shell-get-process))))
         (unless (eq buffer py-buffer)
-          (with-current-buffer py-buffer
-            (let ((oldpoint (point)))
-              (goto-char (process-mark (python-shell-get-process)))
-              (insert (propertize string 'read-only t))
-              (set-marker (process-mark (python-shell-get-process)) (point))
-              (goto-char oldpoint))
-            )
+          (save-mark-and-excursion
+            (with-current-buffer py-buffer
+              (let ((oldpoint (point)))
+                (goto-char (process-mark (python-shell-get-process)))
+                ;; (insert (propertize string 'read-only t))
+                (insert string)
+                (set-marker (process-mark (python-shell-get-process)) (point))
+                (goto-char oldpoint))
+              ))
           )))
 
-    (defadvice python-shell-send-region
-        (around advice-python-shell-send-region activate)
-      ;; (interactive
-      ;;  (list (region-beginning) (region-end) current-prefix-arg t))
-      (let* ((original-string (buffer-substring-no-properties start end)))
-        (python-shell-append-to-output
-         (concat (string-trim-right original-string) "\n")))
-      (ad-deactivate 'python-shell-send-string)
-      (if (called-interactively-p 'any)
-          (call-interactively (ad-get-orig-definition 'python-shell-send-region))
-        ad-do-it)
-      (ad-activate 'python-shell-send-string))
+    (defun python-shell-send-string-echo (string &optional process msg)
+      (python-shell-append-to-output string)
+      (python-shell-send-string string process msg))
 
-    (defadvice python-shell-send-string
-        (around advice-python-shell-send-string activate)
+    (defun python-shell-send-line-echo ()
+      "Send and echo a literal line to the `comint' buffer.
+Ignores beginning white-space."
       (interactive)
-      (let* ((append-string1
-              (if (string-match "import codecs, os;__pyfile = codecs.open.*$" string)
-                  (replace-match "" nil nil string)
-                string))
-             (append-string2
-              (if (string-match "^# -\\*- coding: utf-8 -\\*-\n*$" append-string1)
-                  (replace-match "" nil nil append-string1)
-                append-string1))
-             (append-string
-              (if (string-match "^\n*$" append-string2)
-                  (replace-match "" nil nil append-string2)
-                append-string2)))
-        (python-shell-append-to-output
-         (concat (string-trim-right append-string) "\n")))
-      (if (called-interactively-p 'any)
-          (call-interactively (ad-get-orig-definition 'python-shell-send-string))
-        ad-do-it))
+      (let (start end line)
+        (save-excursion
+          (end-of-line)
+          ;; or `forward-line'?
+          (setq end (point))
+          (beginning-of-line-text)
+          (setq start (point)))
+        (setq line (buffer-substring-no-properties start end))
+        (python-shell-send-string-echo line)))
+
+    (defun python-shell-send-syntax-line-echo ()
+      "Send and echo a \"syntactical\" line to the `comint' buffer."
+      (interactive)
+      (let (start end line)
+        (save-excursion
+          (python-nav-end-of-statement)
+          (setq end (point))
+          (python-nav-beginning-of-statement)
+          (setq start (point)))
+        (setq line (buffer-substring-no-properties start end))
+        (python-shell-send-string-echo line)))
+
+    (defun python-shell-send-region-echo (start end &optional send-main msg)
+      (interactive
+       (list (region-beginning) (region-end) current-prefix-arg t))
+      (python-shell-append-to-output (buffer-substring-no-properties start end))
+      (python-shell-send-region start end send-main msg))
+
+    (spacemacs/set-leader-keys-for-major-mode 'python-mode
+       "sr" 'python-shell-send-region-echo
+       "sl" 'python-shell-send-line-echo)
     )
 
   (defun btw/clang-format-bindings ()

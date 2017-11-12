@@ -123,7 +123,7 @@ See `pm-eval-from-here' and `python-shell-send-region'"
         (interactive)
         (let ((span (pm-get-innermost-span nil t)))
           (when (eq (nth 0 span) 'body)
-            (python-shell-send-region
+            (python-shell-send-region-echo
              (1+ (nth 1 span)) (1- (nth 2 span))))
           ))
 
@@ -131,11 +131,11 @@ See `pm-eval-from-here' and `python-shell-send-region'"
         "Send all preceding code chunks up to the current POINT via the Python
 `comint' REPL.
 
-See `pm-eval-from-here' and `python-shell-send-region'"
+See `pm--eval-from-here' and `python-shell-send-region'"
         (interactive)
         ;; TODO: Check the chunk header for enabled flags (e.g. 'enabled=True').
-        (pm-eval-from-here
-         #'(lambda () (python-shell-send-region
+        (pm--eval-from-here
+         #'(lambda () (python-shell-send-region-echo
                        (1+ (point-min))
                        (1- (point-max))))))
 
