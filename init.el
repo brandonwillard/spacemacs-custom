@@ -150,7 +150,7 @@ values."
    ;; True if the home buffer should respond to resize events.
    dotspacemacs-startup-buffer-responsive t
    ;; Default major mode of the scratch buffer (default `text-mode')
-   dotspacemacs-scratch-mode 'lisp-interaction-mode
+   dotspacemacs-scratch-mode 'emacs-lisp-mode
    ;; List of themes, the first of the list is loaded when spacemacs starts.
    ;; Press <SPC> T n to cycle to the next theme in the list (works great
    ;; with 2 themes variants, one dark and one light)
@@ -436,14 +436,26 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     )
 
   (with-eval-after-load 'org
-    (require 'ob-python)
+    ;; (require 'ob-python)
+    (require 'ob-ipython)
     (org-babel-do-load-languages
      'org-babel-load-languages
      '((C . t)
-       (python . t)))
-    )
+       ;; (python . t)
+       (ipython . t)))
+
+    ;; (add-to-list 'org-latex-minted-langs '(ipython "python"))
+
+    (add-hook 'org-mode-hook #'(lambda () (add-to-list 'company-backends 'company-ob-ipython)))
+    (setq org-confirm-babel-evaluate nil)
+    (setq org-src-window-setup 'current-window)
+
+    (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append))
 
   (with-eval-after-load 'python
+    ;;; See https://github.com/kaz-yos/eval-in-repl/blob/master/eval-in-repl-python.el
+    ;;; for some interesting ideas.
+
     ;; Stop python from complaining when opening a REPL
     ;; (setq python-shell-completion-native-disabled-interpreters
     ;;       (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython"))
@@ -481,7 +493,9 @@ Ignores beginning white-space."
           (beginning-of-line-text)
           (setq start (point)))
         (setq line (buffer-substring-no-properties start end))
-        (python-shell-send-string-echo line)))
+        (python-shell-send-string-echo (if (s-ends-with? "\n" line)
+                                           line
+                                           (concat line "\n")))))
 
     (defun python-shell-send-syntax-line-echo ()
       "Send and echo a \"syntactical\" line to the `comint' buffer."
