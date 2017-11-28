@@ -446,9 +446,16 @@ From URL `https://emacs.stackexchange.com/a/12403'"
 
     ;; (add-to-list 'org-latex-minted-langs '(ipython "python"))
 
-    (add-hook 'org-mode-hook #'(lambda () (add-to-list 'company-backends 'company-ob-ipython)))
+    (add-hook 'org-mode-hook
+              #'(lambda () (add-to-list 'company-backends 'company-ob-ipython)))
     (setq org-confirm-babel-evaluate nil)
     (setq org-src-window-setup 'current-window)
+
+    (setq org-latex-listings 'minted
+          org-latex-packages-alist '(("" "minted"))
+          org-latex-pdf-process
+          '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+            "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
 
     (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append))
 
