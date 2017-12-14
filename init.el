@@ -8,7 +8,7 @@ You should not put any user code in this function besides modifying the variable
 values."
   (setq-default
    ;; Base distribution to use. This is a layer contained in the directory
-   ;; `+distribution'. For now available distributions are `spacemacs-base'
+   ;; `+distribution'. For noweb-packages available distributions are `spacemacs-base'
    ;; or `spacemacs'. (default 'spacemacs)
    dotspacemacs-distribution 'spacemacs
    ;; Lazy installation of layers (i.e. layers are installed only when a file
@@ -51,7 +51,7 @@ values."
                       auto-completion-complete-with-key-sequence "C-y"
                       auto-completion-enable-snippets-in-popup t
                       auto-completion-enable-help-tooltip 'manual
-                      auto-completion-enable-sort-by-usage t
+                      ;; auto-completion-enable-sort-by-usage t
                       ;; :packages (not auto-complete ac-ispell)
                       )
      emacs-lisp
@@ -63,7 +63,7 @@ values."
      spell-checking
      syntax-checking
      ;; FIXME: We get `semantic-idle-scheduler-function' errors in `polymode' modes.
-     ;; (semantic :enabled-for emacs-lisp common-lisp)
+     (semantic :enabled-for emacs-lisp common-lisp)
      common-lisp
      )
    ;; List of additional packages that will be installed without being
@@ -345,6 +345,8 @@ before packages are loaded. If you are unsure, you should try in setting them in
                             (viper nil)
                             ))
 
+  (setq custom-file (concat user-emacs-directory "custom-settings.el"))
+  (load custom-file)
   )
 
 (defun dotspacemacs/user-config ()
@@ -358,30 +360,68 @@ you should place your code here."
   (setq-default scroll-margin 10)
   (setq-default sentence-end-double-space t)
 
+  (setq compilation-scroll-output t)
+  (setq compilation-scroll-output #'first-error)
+
+  ;; Temp fix.
+  ;; https://github.com/syl20bnr/spacemacs/issues/9549
+  (require 'helm-bookmark)
+
+  (with-eval-after-load "persp-mode"
+    ;; Add variables containing functions to be called after layout changes.
+    (defvar after-switch-to-buffer-functions nil)
+    (defvar after-display-buffer-functions nil)
+    (progn
+      (defun after-switch-to-buffer-adv (&rest r)
+        (apply #'run-hook-with-args 'after-switch-to-buffer-functions r))
+      (defun after-display-buffer-adv (&rest r)
+        (apply #'run-hook-with-args 'after-display-buffer-functions r))
+      (advice-add #'switch-to-buffer :after #'after-switch-to-buffer-adv)
+      (advice-add #'display-buffer   :after #'after-display-buffer-adv)))
+
   (use-package conda
     :defer t
     :init
     (progn
+      (custom-set-variables '(conda-anaconda-home "~/apps/anaconda3")
+                            '(conda-message-on-environment-switch nil))
+
       (conda-env-initialize-interactive-shells)
       (conda-env-initialize-eshell)
 
-      (pcase python-auto-set-local-conda-virtualenv
-        (`on-visit
-         (spacemacs/add-to-hooks 'spacemacs//conda--env-activate-project
-                                 '(python-mode-hook
-                                   hy-mode-hook)))
-        ;; FIXME: This doesn't always work.  Seems like files need to be opened in a subset of
-        ;; ways in order to activate projects and/or this hook.
-        ;; TODO: Might need something like this, too.
-        ;; (advice--add 'switch-to-buffer :after #'conda--env-activate-project)
-        ;; TODO: Alternatively, we could wrap/advise the existing autoactivate-mode.
-        ;; (advice--add 'conda--switch-buffer-auto-activate :after #'conda--env-activate-project)
-        ;; (conda-env-autoactivate-mode t)
-        (`on-project-switch
-         (add-hook 'projectile-after-switch-project-hook
-                   'spacemacs//conda--env-activate-project)))
+      (defun bw/conda--get-name-from-env-yml (filename)
+        "Pull the `name` property out of the YAML file at FILENAME."
+        (when filename
+          (let ((env-yml-contents (f-read-text filename)))
+            ;; We generalized the regex to include `-`.
+            (if (string-match "name:[ ]*\\([[:word:]-]+\\)[ ]*$" env-yml-contents)
+                (match-string 1 env-yml-contents)
+              nil))))
 
-      (custom-set-variables '(conda-anaconda-home "~/apps/anaconda3"))))
+      ;; Could've just overriden this package's function, but Emacs' advice functionality
+      ;; covers this explicit case *and* make it clear via the help/documentation that the
+      ;; function has been changed.
+      (advice-add 'conda--get-name-from-env-yml :override #'bw/conda--get-name-from-env-yml)
+
+      (defun bw/conda--find-project-env (dir)
+        "Finds an env yml file for a projectile project.
+Defers to standard `conda--find-env-yml' otherwise."
+        (let* ((project-root (ignore-errors (projectile-project-root)))
+              (file-name (f-expand "environment.yml" project-root)))
+          (when (f-exists? file-name)
+            file-name
+            )))
+
+      (advice-add 'conda--find-env-yml :before-until #'bw/conda--find-project-env)
+
+      ;; Since `editorconfig-custom-hooks' activates a discovered conda env, and `conda'
+      ;; sets the buffer-local variable `conda-project-env-name', the env should be found
+      ;; by `conda-env-autoactivate-mode' (because it checks that variable).
+      (conda-env-autoactivate-mode)
+
+      ;; This is what auto-activates conda environments after switching layouts:
+      (advice-add 'select-window :after #'conda--switch-buffer-auto-activate)
+      ))
 
   (with-eval-after-load 'spaceline
     ;; Hijacks existing segment.  Should add cases for both envs.
@@ -392,6 +432,7 @@ you should place your code here."
                  ;; conda envs can apply to more than just python operations
                  ;; (e.g. libraries, executables).
                  ;; (eq 'python-mode major-mode)
+                 ;; TODO: Display `conda-project-env-name' instead?  It's buffer-local.
                  (boundp 'conda-env-current-name)
                  (stringp conda-env-current-name))
         (propertize conda-env-current-name
@@ -444,13 +485,6 @@ you should place your code here."
     (define-key evil-visual-state-map "k" 'evil-previous-visual-line)
     ;; https://emacs.stackexchange.com/questions/9583/how-to-treat-underscore-as-part-of-the-word
     (defalias #'forward-evil-word #'forward-evil-symbol))
-
-  (setq compilation-scroll-output t)
-  (setq compilation-scroll-output #'first-error)
-
-  ;; Temp fix.
-  ;; https://github.com/syl20bnr/spacemacs/issues/9549
-  (require 'helm-bookmark)
 
   (with-eval-after-load 'company
     (setq-default company-idle-delay nil)
@@ -514,6 +548,18 @@ From URL `https://emacs.stackexchange.com/a/12403'"
             "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
 
     (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append))
+
+  ;; (use-package python-x
+  ;;   :defer t
+  ;;   ;; :commands
+  ;;   ;; (python-shell-send-line python-shell-print-region-or-symbol)
+  ;;   :init
+  ;;   (progn
+  ;;     (evil-leader/set-key-for-mode 'python-mode
+  ;;       "sl" 'python-shell-send-line)
+  ;;     (evil-leader/set-key-for-mode 'python-mode
+  ;;       "sw" 'python-shell-print-region-or-symbol))
+  ;;   ))
 
   (with-eval-after-load 'python
     ;;; See https://github.com/kaz-yos/eval-in-repl/blob/master/eval-in-repl-python.el
@@ -604,47 +650,3 @@ Ignores beginning white-space."
 
   (add-hook 'term-mode-hook 'btw/setup-term-mode)
   )
-
-
-;; Do not write anything past this comment. This is where Emacs will
-;; auto-generate custom variable definitions.
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(conda-anaconda-home "~/apps/anaconda3")
- '(helm-source-names-using-follow (quote ("completion-at-point" "Actions")))
- '(package-selected-packages
-   (quote
-    (evil-text-object-python evil-extra-operator web-mode tagedit slim-mode scss-mode sass-mode pug-mode less-css-mode helm-css-scss haml-mode emmet-mode company-web web-completion-data editorconfig company-quickhelp stickyfunc-enhance srefactor flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck auto-dictionary slime-company slime common-lisp-snippets conda mmm-mode markdown-toc markdown-mode gh-md web-beautify livid-mode skewer-mode simple-httpd json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc company-tern tern coffee-mode sql-indent disaster company-c-headers cmake-mode clang-format helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company-anaconda company auto-yasnippet yasnippet ac-ispell auto-complete auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
- '(paradox-github-token t))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
-(defun dotspacemacs/emacs-custom-settings ()
-  "Emacs custom settings.
-This is an auto-generated function, do not modify its content directly, use
-Emacs customize menu instead.
-This function is called at the very end of Spacemacs initialization."
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(conda-anaconda-home "~/apps/anaconda3")
- '(helm-source-names-using-follow (quote ("completion-at-point" "Actions")))
- '(package-selected-packages
-   (quote
-    (ghub let-alist symon string-inflection realgud test-simple loc-changes load-relative password-generator org-brain impatient-mode helm-purpose window-purpose imenu-list evil-org evil-lion cmake-ide levenshtein evil-text-object-python evil-extra-operator web-mode tagedit slim-mode scss-mode sass-mode pug-mode less-css-mode helm-css-scss haml-mode emmet-mode company-web web-completion-data editorconfig company-quickhelp stickyfunc-enhance srefactor flyspell-correct-helm flyspell-correct flycheck-pos-tip pos-tip flycheck auto-dictionary slime-company slime common-lisp-snippets conda mmm-mode markdown-toc markdown-mode gh-md web-beautify livid-mode skewer-mode simple-httpd json-mode json-snatcher json-reformat js2-refactor multiple-cursors js2-mode js-doc company-tern tern coffee-mode sql-indent disaster company-c-headers cmake-mode clang-format helm-company helm-c-yasnippet fuzzy company-statistics company-auctex company-anaconda company auto-yasnippet yasnippet ac-ispell auto-complete auctex-latexmk auctex ob-ipython python-x folding xterm-color shell-pop multi-term eshell-z eshell-prompt-extras esh-help polymode smeargle orgit org-projectile org-category-capture org-present org-pomodoro alert log4e gntp org-download magit-gitflow htmlize helm-gitignore gnuplot gitignore-mode gitconfig-mode gitattributes-mode git-timemachine git-messenger git-link evil-magit magit magit-popup git-commit with-editor yapfify pyvenv pytest pyenv-mode py-isort pip-requirements live-py-mode hy-mode dash-functional helm-pydoc cython-mode anaconda-mode pythonic yaml-mode ws-butler winum which-key volatile-highlights vi-tilde-fringe uuidgen use-package toc-org spaceline powerline restart-emacs request rainbow-delimiters popwin persp-mode pcre2el paradox spinner org-plus-contrib org-bullets open-junk-file neotree move-text macrostep lorem-ipsum linum-relative link-hint info+ indent-guide hydra hungry-delete hl-todo highlight-parentheses highlight-numbers parent-mode highlight-indentation hide-comnt help-fns+ helm-themes helm-swoop helm-projectile helm-mode-manager helm-make projectile pkg-info epl helm-flx helm-descbinds helm-ag google-translate golden-ratio flx-ido flx fill-column-indicator fancy-battery eyebrowse expand-region exec-path-from-shell evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-surround evil-search-highlight-persist evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state smartparens evil-indent-plus evil-iedit-state iedit evil-exchange evil-escape evil-ediff evil-args evil-anzu anzu evil goto-chg undo-tree eval-sexp-fu highlight elisp-slime-nav dumb-jump f dash s diminish define-word column-enforce-mode clean-aindent-mode bind-map bind-key auto-highlight-symbol auto-compile packed aggressive-indent adaptive-wrap ace-window ace-link ace-jump-helm-line helm avy helm-core popup async)))
- '(paradox-github-token t))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
-)
