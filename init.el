@@ -35,7 +35,11 @@ values."
      markdown
      javascript
      latex
-     python
+     (python :variables
+             python-test-runner 'pytest
+             python-auto-set-local-pyvenv-virtualenv 'on-project-switch
+             :packages (not live-py-mode)
+             )
      yaml
      sql
      noweb
@@ -45,6 +49,7 @@ values."
             ;; company-c-headers-path-user '("../include" "./include" "." "../../include" "../inc" "../../inc")
             )
      helm
+     ;; (helm :variables helm-enable-auto-resize t)
      (auto-completion :variables
                       auto-completion-return-key-behavior nil
                       auto-completion-tab-key-behavior nil
@@ -56,7 +61,9 @@ values."
                       )
      emacs-lisp
      git
-     org
+     (org :variables
+          org-enable-github-support t
+          org-projectile-file "TODOs.org")
      (shell :variables
             shell-default-height 30
             shell-default-position 'bottom)
@@ -158,7 +165,7 @@ values."
    ;; True if the home buffer should respond to resize events.
    dotspacemacs-startup-buffer-responsive t
    ;; Default major mode of the scratch buffer (default `text-mode')
-   dotspacemacs-scratch-mode 'emacs-lisp-mode
+   dotspacemacs-scratch-mode 'org-mode
    ;; List of themes, the first of the list is loaded when spacemacs starts.
    ;; Press <SPC> T n to cycle to the next theme in the list (works great
    ;; with 2 themes variants, one dark and one light)
@@ -214,7 +221,7 @@ values."
    dotspacemacs-display-default-layout nil
    ;; If non nil then the last auto saved layouts are resume automatically upon
    ;; start. (default nil)
-   dotspacemacs-auto-resume-layouts nil
+   dotspacemacs-auto-resume-layouts t
    ;; Size (in MB) above which spacemacs will prompt to open the large file
    ;; literally to avoid performance issues. Opening a file literally means that
    ;; no major mode or minor modes are active. (default is 1)
@@ -267,11 +274,11 @@ values."
    ;; A value from the range (0..100), in increasing opacity, which describes
    ;; the transparency level of a frame when it's active or selected.
    ;; Transparency can be toggled through `toggle-transparency'. (default 90)
-   dotspacemacs-active-transparency 90
+   dotspacemacs-active-transparency 100
    ;; A value from the range (0..100), in increasing opacity, which describes
    ;; the transparency level of a frame when it's inactive or deselected.
    ;; Transparency can be toggled through `toggle-transparency'. (default 90)
-   dotspacemacs-inactive-transparency 90
+   dotspacemacs-inactive-transparency 100
    ;; If non nil show the titles of transient states. (default t)
    dotspacemacs-show-transient-state-title t
    ;; If non nil show the color guide hint for transient state keys. (default t)
@@ -281,7 +288,7 @@ values."
    ;; If non nil smooth scrolling (native-scrolling) is enabled. Smooth
    ;; scrolling overrides the default behavior of Emacs which recenters point
    ;; when it reaches the top or bottom of the screen. (default t)
-   dotspacemacs-smooth-scrolling t
+   dotspacemacs-smooth-scrolling nil
    ;; Control line numbers activation.
    ;; If set to `t' or `relative' line numbers are turned on in all `prog-mode' and
    ;; `text-mode' derivatives. If set to `relative', line numbers are relative.
@@ -295,7 +302,7 @@ values."
    ;;                       text-mode
    ;;   :size-limit-kb 1000)
    ;; (default nil)
-   dotspacemacs-line-numbers t
+   dotspacemacs-line-numbers '(:size-limit-kb 1000)
    ;; Code folding method. Possible values are `evil' and `origami'.
    ;; (default 'evil)
    dotspacemacs-folding-method 'evil
@@ -345,7 +352,10 @@ before packages are loaded. If you are unsure, you should try in setting them in
                             (viper nil)
                             ))
 
-  (setq custom-file (concat user-emacs-directory "custom-settings.el"))
+  ;; Fix for anaconda env interaction with pyvenv.
+  (setenv "WORKON_HOME" "~/apps/anaconda3/envs")
+
+  (setq custom-file (concat user-emacs-directory "private/custom-settings.el"))
   (load custom-file)
   )
 
@@ -363,9 +373,29 @@ you should place your code here."
   (setq compilation-scroll-output t)
   (setq compilation-scroll-output #'first-error)
 
-  ;; Temp fix.
-  ;; https://github.com/syl20bnr/spacemacs/issues/9549
-  (require 'helm-bookmark)
+  (defun bw/messages-auto-tail (&rest _)
+    "Make *Messages* buffer auto-scroll to the end after each message.
+
+From https://stackoverflow.com/a/37356659/3006474"
+    (let* ((buf-name "*Messages*")
+          ;; Create *Messages* buffer if it does not exist
+          (buf (get-buffer-create buf-name)))
+      ;; Activate this advice only if the point is _not_ in the *Messages* buffer
+      ;; to begin with. This condition is required; otherwise you will not be
+      ;; able to use `isearch' and other stuff within the *Messages* buffer as
+      ;; the point will keep moving to the end of buffer :P
+      (when (not (string= buf-name (buffer-name)))
+        ;; Go to the end of buffer in all *Messages* buffer windows that are
+        ;; *live* (`get-buffer-window-list' returns a list of only live windows).
+        (dolist (win (get-buffer-window-list buf-name nil :all-frames))
+          (with-selected-window win
+            (goto-char (point-max))))
+        ;; Go to the end of the *Messages* buffer even if it is not in one of
+        ;; the live windows.
+        (with-current-buffer buf
+          (goto-char (point-max))))))
+
+  (advice-add 'message :after #'bw/messages-auto-tail)
 
   (with-eval-after-load "persp-mode"
     ;; Add variables containing functions to be called after layout changes.
@@ -377,71 +407,91 @@ you should place your code here."
       (defun after-display-buffer-adv (&rest r)
         (apply #'run-hook-with-args 'after-display-buffer-functions r))
       (advice-add #'switch-to-buffer :after #'after-switch-to-buffer-adv)
-      (advice-add #'display-buffer   :after #'after-display-buffer-adv)))
+      (advice-add #'display-buffer   :after #'after-display-buffer-adv))
+    ;; Restore eshell buffers.  See https://gist.github.com/Bad-ptr/1aca1ec54c3bdb2ee80996eb2b68ad2d#file-persp-inferior-python-save-load-el
+    ;; for more examples (e.g. Python inferior shells).
+    (persp-def-buffer-save/load
+     :mode 'eshell-mode :tag-symbol 'def-eshell-buffer
+     :save-vars '(major-mode default-directory)))
 
-  (use-package conda
-    :defer t
-    :init
-    (progn
-      (custom-set-variables '(conda-anaconda-home "~/apps/anaconda3")
-                            '(conda-message-on-environment-switch nil))
+  (defun bw/pyvenv-conda-activate-additions ()
+    (setenv "CONDA_PREFIX" (string-remove-suffix "/" pyvenv-virtual-env))
+    (setenv "CONDA_DEFAULT_ENV" pyvenv-virtual-env-name))
 
-      (conda-env-initialize-interactive-shells)
-      (conda-env-initialize-eshell)
+  (defun bw/pyvenv-conda-deactivate-additions ()
+    (setenv "CONDA_PREFIX" nil)
+    (setenv "CONDA_DEFAULT_ENV" nil))
 
-      (defun bw/conda--get-name-from-env-yml (filename)
-        "Pull the `name` property out of the YAML file at FILENAME."
-        (when filename
-          (let ((env-yml-contents (f-read-text filename)))
-            ;; We generalized the regex to include `-`.
-            (if (string-match "name:[ ]*\\([[:word:]-]+\\)[ ]*$" env-yml-contents)
-                (match-string 1 env-yml-contents)
-              nil))))
+  (add-hook 'pyvenv-post-activate-hooks #'bw/pyvenv-conda-activate-additions)
+  (add-hook 'pyvenv-post-deactivate-hooks #'bw/pyvenv-conda-deactivate-additions)
 
-      ;; Could've just overriden this package's function, but Emacs' advice functionality
-      ;; covers this explicit case *and* make it clear via the help/documentation that the
-      ;; function has been changed.
-      (advice-add 'conda--get-name-from-env-yml :override #'bw/conda--get-name-from-env-yml)
+  ;; (use-package conda
+;;     :defer t
+;;     :init
+;;     (progn
+;;       (custom-set-variables '(conda-anaconda-home "~/apps/anaconda3")
+;;                             '(conda-message-on-environment-switch nil))
 
-      (defun bw/conda--find-project-env (dir)
-        "Finds an env yml file for a projectile project.
-Defers to standard `conda--find-env-yml' otherwise."
-        (let* ((project-root (ignore-errors (projectile-project-root)))
-              (file-name (f-expand "environment.yml" project-root)))
-          (when (f-exists? file-name)
-            file-name
-            )))
+;;       (conda-env-initialize-interactive-shells)
+;;       (conda-env-initialize-eshell)
 
-      (advice-add 'conda--find-env-yml :before-until #'bw/conda--find-project-env)
+;;       (defun bw/conda--get-name-from-env-yml (filename)
+;;         "Pull the `name` property out of the YAML file at FILENAME."
+;;         (when filename
+;;           (let ((env-yml-contents (f-read-text filename)))
+;;             ;; We generalized the regex to include `-`.
+;;             (if (string-match "name:[ ]*\\([[:word:]-]+\\)[ ]*$" env-yml-contents)
+;;                 (match-string 1 env-yml-contents)
+;;               nil))))
 
-      ;; Since `editorconfig-custom-hooks' activates a discovered conda env, and `conda'
-      ;; sets the buffer-local variable `conda-project-env-name', the env should be found
-      ;; by `conda-env-autoactivate-mode' (because it checks that variable).
-      (conda-env-autoactivate-mode)
+;;       ;; Could've just overriden this package's function, but Emacs' advice functionality
+;;       ;; covers this explicit case *and* make it clear via the help/documentation that the
+;;       ;; function has been changed.
+;;       (advice-add 'conda--get-name-from-env-yml :override #'bw/conda--get-name-from-env-yml)
 
-      ;; This is what auto-activates conda environments after switching layouts:
-      (advice-add 'select-window :after #'conda--switch-buffer-auto-activate)
-      ))
+;;       (defun bw/conda--find-project-env (dir)
+;;         "Finds an env yml file for a projectile project.
+;; Defers to standard `conda--find-env-yml' otherwise."
+;;         (let* ((project-root (ignore-errors (projectile-project-root)))
+;;               (file-name (f-expand "environment.yml" project-root)))
+;;           (when (f-exists? file-name)
+;;             file-name)))
 
-  (with-eval-after-load 'spaceline
-    ;; Hijacks existing segment.  Should add cases for both envs.
-    (spaceline-define-segment python-pyenv
-      "The current python env.  Works with `conda'."
-      (when (and active
-                 ;; TODO: Consider not restricting to `python-mode', because
-                 ;; conda envs can apply to more than just python operations
-                 ;; (e.g. libraries, executables).
-                 ;; (eq 'python-mode major-mode)
-                 ;; TODO: Display `conda-project-env-name' instead?  It's buffer-local.
-                 (boundp 'conda-env-current-name)
-                 (stringp conda-env-current-name))
-        (propertize conda-env-current-name
-                    'face 'spaceline-python-venv
-                    'help-echo "Virtual environment (via conda)")))
-    (spaceline-compile))
+;;       ;; Avoid unnecessary searches by using *only* a project-centric environment.yml file.
+;;       ;; To fallback on an upward directory search, use `:before-until'.
+;;       (advice-add 'conda--find-env-yml :override #'bw/conda--find-project-env)
+
+;;       ;; Since `editorconfig-custom-hooks' activates a discovered conda env, and `conda'
+;;       ;; sets the buffer-local variable `conda-project-env-name', the env should be found
+;;       ;; by `conda-env-autoactivate-mode' (because it checks that variable).
+;;       (conda-env-autoactivate-mode)
+
+;;       ;; TODO: Check `window-purpose' for "edit", "general", etc.  Could also use `post-command-hook'
+;;       ;; (see the comment about using `(while-no-input (redisplay) CODE)')
+;;       ;; This is what auto-activates conda environments after switching layouts:
+;;       (advice-add 'select-window :after #'conda--switch-buffer-auto-activate)
+;;       ))
+
+  ;; (with-eval-after-load 'spaceline
+  ;;   ;; Hijacks existing segment.  Should add cases for both envs.
+  ;;   (spaceline-define-segment python-pyenv
+  ;;     "The current python env.  Works with `conda'."
+  ;;     (when (and active
+  ;;                ;; TODO: Consider not restricting to `python-mode', because
+  ;;                ;; conda envs can apply to more than just python operations
+  ;;                ;; (e.g. libraries, executables).
+  ;;                ;; (eq 'python-mode major-mode)
+  ;;                ;; TODO: Display `conda-project-env-name' instead?  It's buffer-local.
+  ;;                (boundp 'conda-env-current-name)
+  ;;                (stringp conda-env-current-name))
+  ;;       (propertize conda-env-current-name
+  ;;                   'face 'spaceline-python-venv
+  ;;                   'help-echo "Virtual environment (via conda)")))
+  ;;   (spaceline-compile))
 
   ;; Make terminals and REPLs read-only.
   ;; https://emacs.stackexchange.com/a/2897
+
   (with-eval-after-load 'comint
     (setq-default comint-prompt-read-only t)
     (setq-default comint-use-prompt-regexp nil)
@@ -465,7 +515,7 @@ Defers to standard `conda--find-env-yml' otherwise."
                    (progn
                      (let ((env-name (gethash 'conda_env_name props)))
                        (when env-name
-                         (conda-env-activate env-name)))))))
+                         (pyvenv-workon env-name)))))))
     )
 
   (with-eval-after-load 'evil
@@ -510,30 +560,28 @@ From URL `https://emacs.stackexchange.com/a/12403'"
                 candidates)
         (append candidates (nreverse deleted))))
 
-    (defun btw/python-conf()
+    (defun btw/python-company-conf()
       (setq-local company-transformers
                   (append company-transformers '(btw/company-transform-python))))
 
-    (add-hook 'python-mode-hook 'btw/python-conf))
+    (add-hook 'python-mode-hook 'btw/python-company-conf t))
 
   (with-eval-after-load 'helm
     (setq-default helm-follow-mode-persistent t)
     (define-key helm-map (kbd "C-w") 'evil-delete-backward-word)
     )
 
+  (with-eval-after-load 'evil-jumps
+    (setq evil-jumps-cross-buffers nil))
+
   (with-eval-after-load 'org
-    ;; (require 'ob-python)
-    (require 'ob-ipython)
+    (setq org-default-notes-file
+          (f-join user-home-directory "Documents" "notes.org"))
+
     (org-babel-do-load-languages
      'org-babel-load-languages
-     '((C . t)
-       ;; (python . t)
-       (ipython . t)))
+     (append org-babel-load-languages '((C . t) (ipython . t))))
 
-    ;; (add-to-list 'org-latex-minted-langs '(ipython "python"))
-
-    (add-hook 'org-mode-hook
-              #'(lambda () (add-to-list 'company-backends 'company-ob-ipython)))
     (setq org-confirm-babel-evaluate nil)
     (setq org-src-window-setup 'current-window)
 
@@ -548,6 +596,10 @@ From URL `https://emacs.stackexchange.com/a/12403'"
             "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
 
     (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append))
+
+  (with-eval-after-load 'org-agenda
+    (require 'org-projectile)
+    (push (org-projectile-todo-files) org-agenda-files))
 
   ;; (use-package python-x
   ;;   :defer t
@@ -569,6 +621,20 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     ;; (setq python-shell-completion-native-disabled-interpreters
     ;;       (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython"))
     (setq python-shell-completion-native-output-timeout 3.0)
+    (setq python-pdbtrack-activate nil)
+
+    (defun flycheck-virtualenv-executable-find (executable)
+      "Find an EXECUTABLE in the current virtualenv if any."
+      (if (bound-and-true-p python-shell-virtualenv-root)
+          (let ((exec-path (python-shell-calculate-exec-path)))
+            (executable-find executable))
+        (executable-find executable)))
+
+    (defun flycheck-virtualenv-setup ()
+      "Setup Flycheck for the current virtualenv."
+      (setq-local flycheck-executable-find #'flycheck-virtualenv-executable-find))
+
+    (add-hook 'python-mode-hook #'flycheck-virtualenv-setup)
 
     (defun python-shell-append-to-output (string)
       "Append STRING to `comint' display output."
