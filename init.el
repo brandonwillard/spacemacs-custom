@@ -414,16 +414,34 @@ From https://stackoverflow.com/a/37356659/3006474"
      :mode 'eshell-mode :tag-symbol 'def-eshell-buffer
      :save-vars '(major-mode default-directory)))
 
-  (defun bw/pyvenv-conda-activate-additions ()
-    (setenv "CONDA_PREFIX" (string-remove-suffix "/" pyvenv-virtual-env))
-    (setenv "CONDA_DEFAULT_ENV" pyvenv-virtual-env-name))
+  (with-eval-after-load 'pyvenv-mode
+    (defun bw/pyvenv-conda-activate-additions ()
+      (setenv "CONDA_PREFIX" (string-remove-suffix "/" pyvenv-virtual-env))
+      (setenv "CONDA_DEFAULT_ENV" pyvenv-virtual-env-name))
 
-  (defun bw/pyvenv-conda-deactivate-additions ()
-    (setenv "CONDA_PREFIX" nil)
-    (setenv "CONDA_DEFAULT_ENV" nil))
+    (defun bw/pyvenv-conda-deactivate-additions ()
+      (setenv "CONDA_PREFIX" nil)
+      (setenv "CONDA_DEFAULT_ENV" nil))
 
-  (add-hook 'pyvenv-post-activate-hooks #'bw/pyvenv-conda-activate-additions)
-  (add-hook 'pyvenv-post-deactivate-hooks #'bw/pyvenv-conda-deactivate-additions)
+    (add-hook 'pyvenv-post-activate-hooks #'bw/pyvenv-conda-activate-additions)
+    (add-hook 'pyvenv-post-deactivate-hooks #'bw/pyvenv-conda-deactivate-additions)
+
+    (defun bw/pyvenv-conda-env-shell-init (&rest process)
+      "Activate the current env in a newly opened shell PROCESS.
+
+From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
+      (let* ((activate-command (if (eq system-type 'windows-nt)
+                                   '("activate")
+                                 '("source" "activate")))
+             (full-command (append activate-command `(,pyvenv-virtual-env-name "\n")))
+             (command-string (combine-and-quote-strings full-command))
+             (buffer-or-process (if (not process)
+                                    (current-buffer)
+                                  process)))
+        (progn (message "sending %s to %S" command-string buffer-or-process)
+               (term-send-string buffer-or-process command-string))))
+
+    (add-hook 'term-exec-hook #'bw/pyvenv-conda-env-shell-init))
 
   ;; (use-package conda
 ;;     :defer t
