@@ -8,7 +8,7 @@ You should not put any user code in this function besides modifying the variable
 values."
   (setq-default
    ;; Base distribution to use. This is a layer contained in the directory
-   ;; `+distribution'. For noweb-packages available distributions are `spacemacs-base'
+   ;; `+distribution'. Available distributions are `spacemacs-base'
    ;; or `spacemacs'. (default 'spacemacs)
    dotspacemacs-distribution 'spacemacs
    ;; Lazy installation of layers (i.e. layers are installed only when a file
@@ -30,11 +30,13 @@ values."
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
-   '(
-     html
+   '(html
      markdown
      javascript
      latex
+     (ess :variables
+          ess-disable-underscore-assign t
+          :packages (not ess-R-object-popup))
      (python :variables
              python-test-runner 'pytest
              python-auto-set-local-pyvenv-virtualenv 'on-project-switch
@@ -221,11 +223,11 @@ values."
    dotspacemacs-display-default-layout nil
    ;; If non nil then the last auto saved layouts are resume automatically upon
    ;; start. (default nil)
-   dotspacemacs-auto-resume-layouts t
+   dotspacemacs-auto-resume-layouts nil
    ;; Size (in MB) above which spacemacs will prompt to open the large file
    ;; literally to avoid performance issues. Opening a file literally means that
    ;; no major mode or minor modes are active. (default is 1)
-   dotspacemacs-large-file-size 100
+   dotspacemacs-large-file-size 5
    ;; Location where to auto-save files. Possible values are `original' to
    ;; auto-save the file in-place, `cache' to auto-save the file to another
    ;; file stored in the cache directory and `nil' to disable auto-saving.
@@ -302,7 +304,15 @@ values."
    ;;                       text-mode
    ;;   :size-limit-kb 1000)
    ;; (default nil)
-   dotspacemacs-line-numbers '(:size-limit-kb 1000)
+   dotspacemacs-line-numbers '(:relative nil
+                               :disabled-for-modes dired-mode
+                                                   doc-view-mode
+                                                   markdown-mode
+                                                   org-mode
+                                                   pdf-view-mode
+                                                   text-mode
+                                                   xwidget-webkit-mode
+                               :size-limit-kb 1000)
    ;; Code folding method. Possible values are `evil' and `origami'.
    ;; (default 'evil)
    dotspacemacs-folding-method 'evil
@@ -344,6 +354,11 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
 
+  ;; Fix for unbound `helm-source-info-elisp'.
+  ;; (with-eval-after-load 'info
+  ;;   (customize-save-variable 'Info-default-directory-list '("/usr/share/info/emacs-27" "/usr/local/share/info/" "/usr/share/info/" "/usr/share/info/"))
+  ;; )
+
   (setq load-path (append '("~/.spacemacs.d/") load-path))
 
   ;; TODO: Does this actually work?
@@ -357,6 +372,9 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   (setq custom-file (concat user-emacs-directory "private/custom-settings.el"))
   (load custom-file)
+
+  ;; (setq browse-url-browser-function 'eww-browse-url)
+  (setq browse-url-browser-function 'xwidget-webkit-browse-url)
   )
 
 (defun dotspacemacs/user-config ()
@@ -372,6 +390,7 @@ you should place your code here."
 
   (setq compilation-scroll-output t)
   (setq compilation-scroll-output #'first-error)
+  (setq hs-allow-nesting t)
 
   (defun bw/messages-auto-tail (&rest _)
     "Make *Messages* buffer auto-scroll to the end after each message.
@@ -397,7 +416,7 @@ From https://stackoverflow.com/a/37356659/3006474"
 
   (advice-add 'message :after #'bw/messages-auto-tail)
 
-  (with-eval-after-load "persp-mode"
+  (with-eval-after-load 'persp-mode
     ;; Add variables containing functions to be called after layout changes.
     (defvar after-switch-to-buffer-functions nil)
     (defvar after-display-buffer-functions nil)
@@ -541,6 +560,7 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
     (setq-default evil-escape-key-sequence nil)
     (setq-default evil-emacs-state-modes nil)
     (setq-default evil-insert-state-modes '(magit-popup-mode))
+    (setq evil-kill-on-visual-paste nil)
     ;; (setq-default evil-motion-state-modes nil)
 
     (add-hook 'python-mode-hook 'evil-text-object-python-add-bindings)
@@ -634,6 +654,23 @@ From URL `https://emacs.stackexchange.com/a/12403'"
   (with-eval-after-load 'python
     ;;; See https://github.com/kaz-yos/eval-in-repl/blob/master/eval-in-repl-python.el
     ;;; for some interesting ideas.
+
+    ;; TODO: In the python layer, `spacemacs/python-toggle-breakpoint' should
+    ;; take an `alist' in the `cond' statement; that way, people could add their
+    ;; own debuggers via custom variable like this
+    ;;(defcustom spacemacs/python-breakpoints '((wdb . "import wdb; wdb.set_trace()")
+    ;;                                          (IPython . "from IPython.core.debugger import set_trace; set_trace()"))
+    ;;  :group 'python
+    ;;  :type '(alist :tag "Backing executable"
+    ;;                :key-type
+    ;;                (choice
+    ;;                 (const :tag "wdb" wdb)
+    ;;                 (const :tag "IPython" wdb)
+    ;;                 (const :tag "ipdb" ipdb))
+    ;;                :value-type (string :tag "Set trace expression")))
+    ;; One could then use `alist-get' defaulting to "pdb", as in the existing `cond'.
+
+    ;; from IPython.core.debugger import set_trace; set_trace()
 
     ;; Stop python from complaining when opening a REPL
     ;; (setq python-shell-completion-native-disabled-interpreters
