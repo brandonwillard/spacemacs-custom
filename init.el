@@ -90,7 +90,7 @@ values."
 
                                       ob-ipython
                                       ;; org-mime
-                                      ;; org-jira
+                                      ox-jira
 
                                       conda
 
@@ -209,7 +209,7 @@ values."
    dotspacemacs-remap-Y-to-y$ nil
    ;; If non-nil, the shift mappings `<' and `>' retain visual state if used
    ;; there. (default t)
-    dotspacemacs-retain-visual-state-on-shift t
+   dotspacemacs-retain-visual-state-on-shift t
    ;; If non-nil, J and K move lines up and down when in visual mode.
    ;; (default nil)
    dotspacemacs-visual-line-move-text nil
@@ -343,7 +343,9 @@ values."
    ;; `trailing' to delete only the whitespace at end of lines, `changed'to
    ;; delete only whitespace for changed lines or `nil' to disable cleanup.
    ;; (default nil)
-   dotspacemacs-whitespace-cleanup 'trailing
+   dotspacemacs-whitespace-cleanup nil
+
+   dotspacemacs-switch-to-buffer-prefers-purpose t
    ))
 
 (defun dotspacemacs/user-init ()
@@ -390,7 +392,25 @@ you should place your code here."
 
   (setq compilation-scroll-output t)
   (setq compilation-scroll-output #'first-error)
-  (setq hs-allow-nesting t)
+
+  ;; Folding stuff
+  (with-eval-after-load 'hideshow
+    (setq hs-allow-nesting t)
+    ;; Let's not lose the cursor position when folding.
+    (advice-add 'hs-hide-block :around #'(lambda (oldfun &rest r)
+                                           (save-excursion (apply oldfun r))))
+    (advice-add 'hs-show-block :around #'(lambda (oldfun &rest r)
+                                           (save-excursion (apply oldfun r))))
+    ;; TODO The meaning of "z[r|m]" is "level-folding" in Vim, but `evil-commands' has
+    ;; no notion of this.  For `hideshow' we can use `hs-show-level' and `hs-hide-level'
+    ;; to better approximate level-folding, but we would still have to work that into
+    ;; evil's framework via `evil-fold-list' (e.g. new level-folding properties--perhaps
+    ;; with fall-backs, too).
+    ;; (evil-global-set-key 'normal "zr" 'hs-show-level)
+    (evil-global-set-key 'normal "zm" 'hs-hide-level))
+
+  (evil-global-set-key 'normal "zR" 'evil-open-folds)
+  (evil-global-set-key 'normal "zM" 'evil-close-folds)
 
   (defun bw/messages-auto-tail (&rest _)
     "Make *Messages* buffer auto-scroll to the end after each message.
@@ -621,7 +641,9 @@ From URL `https://emacs.stackexchange.com/a/12403'"
      (append org-babel-load-languages '((C . t) (ipython . t))))
 
     (setq org-confirm-babel-evaluate nil)
+
     (setq org-src-window-setup 'current-window)
+    (setq org-src-tab-acts-natively t)
 
     ;; TODO: Configure org-mode export options based on projectile variables
     ;; (i.e. `projectile-project-root').
@@ -637,7 +659,8 @@ From URL `https://emacs.stackexchange.com/a/12403'"
 
   (with-eval-after-load 'org-agenda
     (require 'org-projectile)
-    (push (org-projectile-todo-files) org-agenda-files))
+    (let ((existing-todos (-filter 'f-exists-p (org-projectile-todo-files))))
+      (setq org-agenda-files (append org-agenda-files existing-todos))))
 
   ;; (use-package python-x
   ;;   :defer t
@@ -761,8 +784,8 @@ Ignores beginning white-space."
   ;;   (setq latex-run-command ""))
   ;; (add-hook 'tex-mode-hook 'btw/tex-mode-settings)
 
-  ;; From https://github.com/syl20bnr/spacemacs/issues/2345
   (defun btw/setup-term-mode ()
+    "From https://github.com/syl20bnr/spacemacs/issues/2345"
     (evil-local-set-key 'insert (kbd "C-r") 'btw/send-C-r))
 
   (defun btw/send-C-r ()
