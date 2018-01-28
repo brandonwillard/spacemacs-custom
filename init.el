@@ -34,6 +34,7 @@ values."
      markdown
      javascript
      latex
+     bibtex
      (ess :variables
           ess-disable-underscore-assign t
           :packages (not ess-R-object-popup))
@@ -63,6 +64,7 @@ values."
                       )
      emacs-lisp
      git
+     scheme
      (org :variables
           org-enable-github-support t
           org-projectile-file "TODOs.org")
@@ -88,11 +90,21 @@ values."
                                       dash
                                       dash-functional
 
-                                      ob-ipython
-                                      ;; org-mime
-                                      ox-jira
+                                      ;; embrace
+                                      evil-embrace
 
-                                      conda
+                                      ob-ipython
+                                      ob-clojure-literate
+                                      ;; org-babel-clojure
+                                      ;; org-mime
+                                      ;; ob-async
+
+                                      ox-jira
+                                      ;; ox-confluence
+
+                                      ;; conda
+
+                                      dockerfile-mode
 
                                       editorconfig
 
@@ -175,10 +187,13 @@ values."
                          spacemacs-light)
    ;; If non nil the cursor color matches the state color in GUI Emacs.
    dotspacemacs-colorize-cursor-according-to-state t
+
+   dotspacemacs-mode-line-theme 'vim-powerline
+
    ;; Default font, or prioritized list of fonts. `powerline-scale' allows to
    ;; quickly tweak the mode-line size to make separators look not too crappy.
    dotspacemacs-default-font '("Noto Mono"
-                               :size 16.0
+                               :size 13.0
                                :weight normal
                                :width normal
                                :powerline-scale 1.1)
@@ -358,8 +373,12 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   ;; Fix for unbound `helm-source-info-elisp'.
   ;; (with-eval-after-load 'info
-  ;;   (customize-save-variable 'Info-default-directory-list '("/usr/share/info/emacs-27" "/usr/local/share/info/" "/usr/share/info/" "/usr/share/info/"))
-  ;; )
+  ;;   (customize-save-variable
+  ;;    'Info-default-directory-list
+  ;;    '("/usr/share/info/emacs-27" "/usr/local/share/info/"
+  ;;      "/usr/share/info/" "/usr/share/info/")))
+
+  ;; (debug-watch 'python-shell-virtualenv-root)
 
   (setq load-path (append '("~/.spacemacs.d/") load-path))
 
@@ -376,7 +395,7 @@ before packages are loaded. If you are unsure, you should try in setting them in
   (load custom-file)
 
   ;; (setq browse-url-browser-function 'eww-browse-url)
-  (setq browse-url-browser-function 'xwidget-webkit-browse-url)
+  ;; (setq browse-url-browser-function 'xwidget-webkit-browse-url)
   )
 
 (defun dotspacemacs/user-config ()
@@ -387,13 +406,33 @@ This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
 
-  (setq-default scroll-margin 10)
+  (setq comment-empty-lines t)
+  (setq evil-move-beyond-eol t)
+
+  (require 'mode-local)
+  (setq-mode-local text-mode scroll-margin 10)
+  (setq-mode-local prog-mode scroll-margin 10)
+
   (setq-default sentence-end-double-space t)
 
-  (setq compilation-scroll-output t)
+  ;; XXX: This will stop completion with TAB (but also fix annoying noops when
+  ;; attempting to indent lines).
+  (setq tab-always-indent t)
+
   (setq compilation-scroll-output #'first-error)
 
-  ;; Folding stuff
+  (with-eval-after-load 'bibtex
+
+    (defun btw/find-project-bib-file (dir)
+      "Finds an bib file within a projectile project."
+      (let* ((project-root (ignore-errors (projectile-project-root)))
+            (file-name (f-glob "src/tex/*.bib" project-root)))
+        (when (f-exists? file-name)
+          file-name)))
+
+    (setq org-ref-pdf-directory "~/projects/papers/references"
+          org-ref-bibliography-notes "~/projects/papers/references/notes.org"))
+
   (with-eval-after-load 'hideshow
     (setq hs-allow-nesting t)
     ;; Let's not lose the cursor position when folding.
@@ -412,7 +451,7 @@ you should place your code here."
   (evil-global-set-key 'normal "zR" 'evil-open-folds)
   (evil-global-set-key 'normal "zM" 'evil-close-folds)
 
-  (defun bw/messages-auto-tail (&rest _)
+  (defun btw/messages-auto-tail (&rest _)
     "Make *Messages* buffer auto-scroll to the end after each message.
 
 From https://stackoverflow.com/a/37356659/3006474"
@@ -434,7 +473,7 @@ From https://stackoverflow.com/a/37356659/3006474"
         (with-current-buffer buf
           (goto-char (point-max))))))
 
-  (advice-add 'message :after #'bw/messages-auto-tail)
+  (advice-add 'message :after #'btw/messages-auto-tail)
 
   (with-eval-after-load 'persp-mode
     ;; Add variables containing functions to be called after layout changes.
@@ -447,31 +486,48 @@ From https://stackoverflow.com/a/37356659/3006474"
         (apply #'run-hook-with-args 'after-display-buffer-functions r))
       (advice-add #'switch-to-buffer :after #'after-switch-to-buffer-adv)
       (advice-add #'display-buffer   :after #'after-display-buffer-adv))
-    ;; Restore eshell buffers.  See https://gist.github.com/Bad-ptr/1aca1ec54c3bdb2ee80996eb2b68ad2d#file-persp-inferior-python-save-load-el
+
+    ;; Manually add certain buffers to the perspective
+    ;; (add-hook 'after-switch-to-buffer-functions
+    ;;           #'(lambda (bn) (when (and persp-mode
+    ;;                                     (not persp-temporarily-display-buffer))
+    ;;                            (persp-add-buffer bn))))
+
+    ;; Add all opened buffers (filter certain ones below).
+    (setq persp-add-buffer-on-after-change-major-mode t)
+    ;; (add-hook 'persp-common-buffer-filter-functions
+    ;;           ;; there is also `persp-add-buffer-on-after-change-major-mode-filter-functions'
+    ;;           #'(lambda (b) (string-prefix-p "*" (buffer-name b))))
+
+    ;; Restore eshell buffers.
+    ;; See https://gist.github.com/Bad-ptr/1aca1ec54c3bdb2ee80996eb2b68ad2d#file-persp-inferior-python-save-load-el
     ;; for more examples (e.g. Python inferior shells).
     (persp-def-buffer-save/load
      :mode 'eshell-mode :tag-symbol 'def-eshell-buffer
-     :save-vars '(major-mode default-directory)))
+     :save-vars '(major-mode default-directory))
+    )
 
   (with-eval-after-load 'pyvenv-mode
-    (defun bw/pyvenv-conda-activate-additions ()
+    (defun btw/pyvenv-conda-activate-additions ()
       (setenv "CONDA_PREFIX" (string-remove-suffix "/" pyvenv-virtual-env))
       (setenv "CONDA_DEFAULT_ENV" pyvenv-virtual-env-name))
 
-    (defun bw/pyvenv-conda-deactivate-additions ()
+    (defun btw/pyvenv-conda-deactivate-additions ()
       (setenv "CONDA_PREFIX" nil)
       (setenv "CONDA_DEFAULT_ENV" nil))
 
-    (add-hook 'pyvenv-post-activate-hooks #'bw/pyvenv-conda-activate-additions)
-    (add-hook 'pyvenv-post-deactivate-hooks #'bw/pyvenv-conda-deactivate-additions)
+    (add-hook 'pyvenv-post-activate-hooks #'btw/pyvenv-conda-activate-additions)
+    (add-hook 'pyvenv-post-deactivate-hooks #'btw/pyvenv-conda-deactivate-additions)
 
-    (defun bw/pyvenv-conda-env-shell-init (&rest process)
+    (defun btw/pyvenv-conda-env-shell-init (&rest process)
       "Activate the current env in a newly opened shell PROCESS.
 
 From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
       (let* ((activate-command (if (eq system-type 'windows-nt)
                                    '("activate")
-                                 '("source" "activate")))
+                                 ;'("source" "activate")
+                                 '("conda" "activate")
+                                 ))
              (full-command (append activate-command `(,pyvenv-virtual-env-name "\n")))
              (command-string (combine-and-quote-strings full-command))
              (buffer-or-process (if (not process)
@@ -480,54 +536,54 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
         (progn (message "sending %s to %S" command-string buffer-or-process)
                (term-send-string buffer-or-process command-string))))
 
-    (add-hook 'term-exec-hook #'bw/pyvenv-conda-env-shell-init))
+    (add-hook 'term-exec-hook #'btw/pyvenv-conda-env-shell-init))
 
-  ;; (use-package conda
-;;     :defer t
-;;     :init
-;;     (progn
-;;       (custom-set-variables '(conda-anaconda-home "~/apps/anaconda3")
-;;                             '(conda-message-on-environment-switch nil))
-
-;;       (conda-env-initialize-interactive-shells)
-;;       (conda-env-initialize-eshell)
-
-;;       (defun bw/conda--get-name-from-env-yml (filename)
-;;         "Pull the `name` property out of the YAML file at FILENAME."
-;;         (when filename
-;;           (let ((env-yml-contents (f-read-text filename)))
-;;             ;; We generalized the regex to include `-`.
-;;             (if (string-match "name:[ ]*\\([[:word:]-]+\\)[ ]*$" env-yml-contents)
-;;                 (match-string 1 env-yml-contents)
-;;               nil))))
-
-;;       ;; Could've just overriden this package's function, but Emacs' advice functionality
-;;       ;; covers this explicit case *and* make it clear via the help/documentation that the
-;;       ;; function has been changed.
-;;       (advice-add 'conda--get-name-from-env-yml :override #'bw/conda--get-name-from-env-yml)
-
-;;       (defun bw/conda--find-project-env (dir)
-;;         "Finds an env yml file for a projectile project.
-;; Defers to standard `conda--find-env-yml' otherwise."
-;;         (let* ((project-root (ignore-errors (projectile-project-root)))
-;;               (file-name (f-expand "environment.yml" project-root)))
-;;           (when (f-exists? file-name)
-;;             file-name)))
-
-;;       ;; Avoid unnecessary searches by using *only* a project-centric environment.yml file.
-;;       ;; To fallback on an upward directory search, use `:before-until'.
-;;       (advice-add 'conda--find-env-yml :override #'bw/conda--find-project-env)
-
-;;       ;; Since `editorconfig-custom-hooks' activates a discovered conda env, and `conda'
-;;       ;; sets the buffer-local variable `conda-project-env-name', the env should be found
-;;       ;; by `conda-env-autoactivate-mode' (because it checks that variable).
-;;       (conda-env-autoactivate-mode)
-
-;;       ;; TODO: Check `window-purpose' for "edit", "general", etc.  Could also use `post-command-hook'
-;;       ;; (see the comment about using `(while-no-input (redisplay) CODE)')
-;;       ;; This is what auto-activates conda environments after switching layouts:
-;;       (advice-add 'select-window :after #'conda--switch-buffer-auto-activate)
-;;       ))
+  ;;   (use-package conda
+  ;;     :defer t
+  ;;     :init
+  ;;     (progn
+  ;;       (custom-set-variables '(conda-anaconda-home "~/apps/anaconda3")
+  ;;                             '(conda-message-on-environment-switch nil))
+  ;;
+  ;;       (conda-env-initialize-interactive-shells)
+  ;;       (conda-env-initialize-eshell)
+  ;;
+  ;;       (defun btw/conda--get-name-from-env-yml (filename)
+  ;;         "Pull the `name` property out of the YAML file at FILENAME."
+  ;;         (when filename
+  ;;           (let ((env-yml-contents (f-read-text filename)))
+  ;;             ;; We generalized the regex to include `-`.
+  ;;             (if (string-match "name:[ ]*\\([[:word:]-]+\\)[ ]*$" env-yml-contents)
+  ;;                 (match-string 1 env-yml-contents)
+  ;;               nil))))
+  ;;
+  ;;       ;; Could've just overriden this package's function, but Emacs' advice functionality
+  ;;       ;; covers this explicit case *and* make it clear via the help/documentation that the
+  ;;       ;; function has been changed.
+  ;;       (advice-add 'conda--get-name-from-env-yml :override #'btw/conda--get-name-from-env-yml)
+  ;;
+  ;;       (defun btw/conda--find-project-env (dir)
+  ;;         "Finds an env yml file for a projectile project.
+  ;; Defers to standard `conda--find-env-yml' otherwise."
+  ;;         (let* ((project-root (ignore-errors (projectile-project-root)))
+  ;;               (file-name (f-expand "environment.yml" project-root)))
+  ;;           (when (f-exists? file-name)
+  ;;             file-name)))
+  ;;
+  ;;       ;; Avoid unnecessary searches by using *only* a project-centric environment.yml file.
+  ;;       ;; To fallback on an upward directory search, use `:before-until'.
+  ;;       (advice-add 'conda--find-env-yml :override #'btw/conda--find-project-env)
+  ;;
+  ;;       ;; Since `editorconfig-custom-hooks' activates a discovered conda env, and `conda'
+  ;;       ;; sets the buffer-local variable `conda-project-env-name', the env should be found
+  ;;       ;; by `conda-env-autoactivate-mode' (because it checks that variable).
+  ;;       (conda-env-autoactivate-mode)
+  ;;
+  ;;       ;; TODO: Check `window-purpose' for "edit", "general", etc.  Could also use `post-command-hook'
+  ;;       ;; (see the comment about using `(while-no-input (redisplay) CODE)')
+  ;;       ;; This is what auto-activates conda environments after switching layouts:
+  ;;       (advice-add 'select-window :after #'conda--switch-buffer-auto-activate)
+  ;;       ))
 
   ;; (with-eval-after-load 'spaceline
   ;;   ;; Hijacks existing segment.  Should add cases for both envs.
@@ -561,18 +617,31 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
               #'btw/comint-preoutput-turn-buffer-read-only
               'append))
 
+  (use-package evil-embrace
+    :config
+    (progn
+      (add-hook 'org-mode-hook 'embrace-org-mode-hook)
+      (evil-embrace-enable-evil-surround-integration)))
+
+  (use-package dockerfile-mode
+    :mode ("Dockerfile\\'" . dockerfile-mode))
+
   ;; Set conda env based on editorconfig settings.
   (use-package editorconfig
     :ensure t
     :config
     (progn
       (editorconfig-mode 1)
+
+      (defun btw/editorconfig-set-pyvenv (props)
+        (progn
+          (let ((env-name (gethash 'conda_env_name props)))
+            (when (and env-name (bound-and-true-p python-mode))
+              (message "editorconfig setting pyvenv: %s" env-name)
+              (pyvenv-workon env-name)))))
+
       (add-hook 'editorconfig-custom-hooks
-                '(lambda (props)
-                   (progn
-                     (let ((env-name (gethash 'conda_env_name props)))
-                       (when env-name
-                         (pyvenv-workon env-name)))))))
+                #'btw/editorconfig-set-pyvenv))
     )
 
   (with-eval-after-load 'evil
@@ -633,21 +702,56 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     (setq evil-jumps-cross-buffers nil))
 
   (with-eval-after-load 'org
+
+    (require 'ox-jira)
+    ;; (require 'ox-confluence)
+
     (setq org-default-notes-file
           (f-join user-home-directory "Documents" "notes.org"))
 
+    (defun btw/append-to-list (list other-list &rest append)
+      (dolist (it other-list)
+        (add-to-list list it append)))
+
     (org-babel-do-load-languages
      'org-babel-load-languages
-     (append org-babel-load-languages '((C . t) (ipython . t))))
+     '((emacs-lisp . t)
+       (C . t)
+       (R . t)
+       (sql . t)
+       (shell . t)
+       (scheme . t)
+       (ipython . t)
+       (python . t)
+       (clojure . t)))
 
-    (setq org-confirm-babel-evaluate nil)
+    ;; (btw/append-to-list
+    ;;  'org-babel-load-languages
+    ;;  '((emacs-lisp . t) (C . t) (ipython . t)))
 
-    (setq org-src-window-setup 'current-window)
-    (setq org-src-tab-acts-natively t)
+    (setq org-babel-clojure-backend 'cider)
 
-    ;; TODO: Configure org-mode export options based on projectile variables
-    ;; (i.e. `projectile-project-root').
-    ;; org-export-latex-options-plist
+    (setq org-edit-src-content-indentation 0
+          org-src-tab-acts-natively t
+          org-src-window-setup 'current-window
+          org-src-fontify-natively t
+          org-confirm-babel-evaluate nil
+          org-support-shift-select 'always)
+
+    ;; Just in case we want to use the vanilla python babel...
+    (setq org-babel-python-command (python-shell-calculate-command))
+
+    (defun btw/org-export-output-project-file-name (orig-fun extension &optional subtreep pub-dir)
+      "Export to a project's corresponding source directory as determined by EXTENSION."
+      (let* ((proj-root (projectile-project-root))
+             (lang-src-dir (f-join proj-root "src" (s-chop-prefix "." extension)))
+             (pub-dir (or pub-dir
+                          (and (f-exists? lang-src-dir) lang-src-dir))))
+        (message "%s" pub-dir)
+        (apply orig-fun extension subtreep (list pub-dir)))
+      )
+
+    (advice-add 'org-export-output-file-name :around #'btw/org-export-output-project-file-name)
 
     (setq org-latex-listings 'minted
           org-latex-packages-alist '(("" "minted"))
@@ -674,6 +778,25 @@ From URL `https://emacs.stackexchange.com/a/12403'"
   ;;       "sw" 'python-shell-print-region-or-symbol))
   ;;   ))
 
+  (with-eval-after-load 'flycheck
+
+    ;; (flycheck-add-next-checker 'python-flake8 'python-pylint)
+
+    (defun btw/flycheck-virtualenv-executable-find (executable &rest find-any)
+      "Find an EXECUTABLE in the current virtualenv (exclusively) if any."
+      (if (bound-and-true-p python-mode)
+          (if (bound-and-true-p python-shell-virtualenv-root)
+              (let ((exec-path (nth 0 (python-shell-calculate-exec-path))))
+                (executable-find executable))
+            (when find-any
+              (executable-find executable)))
+        (executable-find executable)))
+
+    (setq flycheck-executable-find #'btw/flycheck-virtualenv-executable-find)
+
+    (add-hook 'python-mode-hook #'(lambda () (add-to-list 'flycheck-disabled-checkers 'python-pylint)))
+    )
+
   (with-eval-after-load 'python
     ;;; See https://github.com/kaz-yos/eval-in-repl/blob/master/eval-in-repl-python.el
     ;;; for some interesting ideas.
@@ -692,7 +815,6 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     ;;                 (const :tag "ipdb" ipdb))
     ;;                :value-type (string :tag "Set trace expression")))
     ;; One could then use `alist-get' defaulting to "pdb", as in the existing `cond'.
-
     ;; from IPython.core.debugger import set_trace; set_trace()
 
     ;; Stop python from complaining when opening a REPL
@@ -701,20 +823,19 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     (setq python-shell-completion-native-output-timeout 3.0)
     (setq python-pdbtrack-activate nil)
 
-    (defun flycheck-virtualenv-executable-find (executable)
-      "Find an EXECUTABLE in the current virtualenv if any."
-      (if (bound-and-true-p python-shell-virtualenv-root)
-          (let ((exec-path (python-shell-calculate-exec-path)))
-            (executable-find executable))
-        (executable-find executable)))
+    (defun btw/python-shell-get-process-name (orig-func dedicated)
+      "Append project name to shell process name.
+       Makes shells specific to the active project."
+        (let ((proc-name (funcall orig-func dedicated))
+              (proj-name (ignore-errors (projectile-project-name))))
+          (if proj-name
+              (format "%s(%s)" proc-name proj-name)
+            proc-name)))
 
-    (defun flycheck-virtualenv-setup ()
-      "Setup Flycheck for the current virtualenv."
-      (setq-local flycheck-executable-find #'flycheck-virtualenv-executable-find))
+    (advice-add 'python-shell-get-process-name :around
+                #'btw/python-shell-get-process-name)
 
-    (add-hook 'python-mode-hook #'flycheck-virtualenv-setup)
-
-    (defun python-shell-append-to-output (string)
+    (defun btw/python-shell-append-to-output (string)
       "Append STRING to `comint' display output."
       (let ((buffer (current-buffer))
             (py-buffer (process-buffer (python-shell-get-process))))
@@ -731,7 +852,7 @@ From URL `https://emacs.stackexchange.com/a/12403'"
           )))
 
     (defun python-shell-send-string-echo (string &optional process msg)
-      (python-shell-append-to-output string)
+      (btw/python-shell-append-to-output string)
       (python-shell-send-string string process msg))
 
     (defun python-shell-send-line-echo ()
@@ -750,7 +871,7 @@ Ignores beginning white-space."
                                            line
                                            (concat line "\n")))))
 
-    (defun python-shell-send-syntax-line-echo ()
+    (defun btw/python-shell-send-syntax-line-echo ()
       "Send and echo a \"syntactical\" line to the `comint' buffer."
       (interactive)
       (let (start end line)
@@ -765,7 +886,7 @@ Ignores beginning white-space."
     (defun python-shell-send-region-echo (start end &optional send-main msg)
       (interactive
        (list (region-beginning) (region-end) current-prefix-arg t))
-      (python-shell-append-to-output (buffer-substring-no-properties start end))
+      (btw/python-shell-append-to-output (buffer-substring-no-properties start end))
       (python-shell-send-region start end send-main msg))
 
     (spacemacs/set-leader-keys-for-major-mode 'python-mode
@@ -792,5 +913,29 @@ Ignores beginning white-space."
     (interactive)
     (term-send-raw-string "\C-r"))
 
+  (add-hook 'term-mode-hook
+            (function
+             (lambda ()
+               ;; (setq-local fringe-mode nil)
+               ;; (setq-local fringes-outside-margins t)
+               ;; (setq term-prompt-regexp "^[^#$%>\n]*[#$%>] *")
+               ;; (setq-local mouse-yank-at-point t)
+               ;; (setq-local transient-mark-mode nil)
+               (auto-fill-mode -1)
+               ;; (setq tab-width 8 )
+               )))
+
   (add-hook 'term-mode-hook 'btw/setup-term-mode)
+
+  (defun btw/term-handle-more-ansi-escapes (proc char)
+    "Handle additional ansi escapes.
+From https://emacs.stackexchange.com/a/10698"
+    (cond
+     ;; \E[nG - Cursor Horizontal Absolute, e.g. move cursor to column n
+     ((eq char ?G)
+      (let ((col (min term-width (max 0 term-terminal-parameter))))
+        (term-move-columns (- col (term-current-column)))))
+     (t)))
+
+  (advice-add 'term-handle-ansi-escape :before #'btw/term-handle-more-ansi-escapes)
   )
