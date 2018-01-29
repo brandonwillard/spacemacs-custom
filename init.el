@@ -629,16 +629,28 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
   ;; Set conda env based on editorconfig settings.
   (use-package editorconfig
     :ensure t
-    :config
+    :init
     (progn
       (editorconfig-mode 1)
 
       (defun btw/editorconfig-set-pyvenv (props)
-        (progn
-          (let ((env-name (gethash 'conda_env_name props)))
-            (when (and env-name (bound-and-true-p python-mode))
-              (message "editorconfig setting pyvenv: %s" env-name)
-              (pyvenv-workon env-name)))))
+        "Set Anaconda virtual env from entry in editorconfig file.
+The config file entry should be the env name, and `pyenv-workon-home' should be
+set."
+        (let ((env-name (gethash 'conda_env_name props)))
+          ;; `pyvenv-workon' seems slow, so only set the bare minimum when
+          ;; the mode isn't python-specific.
+          (when env-name
+            (cond
+             ((and env-name (bound-and-true-p python-mode))
+              (progn (message "editorconfig setting pyvenv: %s" env-name)
+                     (pyvenv-workon env-name)))
+             ((and (not (local-variable-p python-shell-virtualenv-root))
+                   (getenv "WORKON_HOME"))
+              (progn (message "editorconfig setting virtualenv-root") 
+                     (require 'pyvenv)
+                     (setq-local python-shell-virtualenv-root
+                                 (f-join (getenv "WORKON_HOME") env-name))))))))
 
       (add-hook 'editorconfig-custom-hooks
                 #'btw/editorconfig-set-pyvenv))
