@@ -741,6 +741,15 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     ;; Just in case we want to use the vanilla python babel...
     (setq org-babel-python-command (python-shell-calculate-command))
 
+    (defun btw/org-babel-python-session-buffer (orig-func session)
+      "Set org-babel's default python session buffer naming to follow python-mode's."
+      (if (eq session :default)
+          (format "*%s*" (python-shell-get-process-name nil))
+        (funcall orig-func session)))
+
+    (advice-add 'org-babel-python-session-buffer :around
+                #'btw/org-babel-python-session-buffer)
+
     (defun btw/org-export-output-project-file-name (orig-fun extension &optional subtreep pub-dir)
       "Export to a project's corresponding source directory as determined by EXTENSION."
       (let* ((proj-root (projectile-project-root))
@@ -823,12 +832,14 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     (setq python-shell-completion-native-output-timeout 3.0)
     (setq python-pdbtrack-activate nil)
 
+    ;; FYI: Could just use a python-mode hook that sets `python-shell-buffer-name'.
     (defun btw/python-shell-get-process-name (orig-func dedicated)
       "Append project name to shell process name.
        Makes shells specific to the active project."
         (let ((proc-name (funcall orig-func dedicated))
               (proj-name (ignore-errors (projectile-project-name))))
-          (if proj-name
+          (if (and proj-name
+                   (not (s-suffix? (format "(%s)" proj-name) proc-name)))
               (format "%s(%s)" proc-name proj-name)
             proc-name)))
 
