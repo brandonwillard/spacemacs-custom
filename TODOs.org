@@ -1,0 +1,172 @@
+* Emacs Config                                                 :emacs:config:
+** TODO org-mode to Google Tasks, Calendar, etc.                   :orgmode:
+*** There's a push/pull/sync tool [[https://bitbucket.org/edgimar/michel-orgmode][here]].
+
+** TODO Set up org-mode TODOs and GitHub issues sync                :orgmode:
+*** [[https://github.com/arbox/org-sync][Here's]] a library that does it.
+** TODO Fix/adjust folding in [[file:init.el::(with-eval-after-load%20'hideshow][init.el]]
+   The meaning of "z[r|m]" is "level-folding" in Vim, but ~evil-commands~ has no
+ notion of this.  For ~hideshow~ we can use ~hs-hide-level~ to better approximate
+ level-folding, but we would still have to work that into evil's framework via
+ ~evil-fold-list~ (e.g. new level-folding properties--perhaps with fall-backs,
+ too).  We also need an ~hs-show-level~ function.
+
+** TODO [#A] Fix flycheck for Python virtual envs.                   :python:
+   See variables involving ~python-pylint~ and ~python-pycompile~.
+** TODO [#A] Slowness with Python file loading                       :python:
+*** Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
+** TODO [#A] Configure ~persp-mode~, ~projectile-mode~ and ~pyvenv~ to work together :python:
+   - Note taken on [2018-01-28 Sun 12:54] \\
+     Extending [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-process-name%20(dedicated)][~python-shell-get-process-name~]] to include
+     ~projectile-project-name~ might enable per-project inferior processes.
+
+   - Note taken on [2018-01-19 Fri 14:46] \\
+     Perhaps the [[file:~/.emacs.d/layers/+spacemacs/spacemacs-layouts/funcs.el::(defun%20spacemacs/layout-switch-by-pos%20(pos)][spacemacs layout switching function]] should call
+     ~projectile-persp-switch-project~ instead of ~persp-switch~.  We could advise
+     ~persp-switch~ or simply replace ~spacemacs/layout-switch-by-pos~.  Either way, I
+     think we'll need to check for an associated project, get the name or location
+     and pass *that* to ~projectile-persp-switch-project~.
+     Also, check out [[https://gist.github.com/Bad-ptr/1aca1ec54c3bdb2ee80996eb2b68ad2d#file-persp-projectile-auto-persp-el][these customizations]].
+     
+   - [X] Fix [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-buffer%20()][python-mode inferior buffer]] naming/initialization; we should be assigning inferior processes to
+     projects/perspectives, so naming could be one way to do that.
+    
+   - [X] Implement an alist with project/perspective-to-venv entries.
+     [[https://github.com/bbatsov/projectile/issues/139][Here's a discussion]] on project-local variables.  [[https://github.com/emacs-php/projectile-variable][This]] looks like an existing solution.   
+     We need to add venv awareness to ~org-babel~ via
+     ~org-babel-prep-session:python~.  ~org-babel~ might only need
+     ~python-shell-virtualenv-root~ set in order to start a venv-ed inferior shell.
+   
+   - [ ] Hook for project/perspective changes.
+     
+   Here's a functioning way to handle ~persp~ changes:
+   #+BEGIN_SRC elisp
+     ;; TODO: After persp change, check for virtualenv change.
+     (cl-pushnew #'(lambda (window)
+                     (debug)
+                     ;; (get-current-persp)
+                
+                     ;; XXX: This does a `locate-dominating-file' search.
+                     ;; (spacemacs//pyvenv-mode-set-local-virtualenv)
+
+                     ;; (when (and (bound-and-true-p project-pyvenv-virtual-env-name)
+                     ;;            (eq project-pyvenv-virtual-env-name pyvenv-virtual-env-name))
+                     ;;   (pyvenv-workon pyvenv-virtual-env-name))
+                     )
+                 persp-activated-functions)
+   #+END_SRC
+
+   
+** DONE [#B] Fix ~ansi-term~ redraws
+   CLOSED: [2018-01-14 Sun 19:15]
+   A new line and prompt is printed when the terminal window is resized.
+   Might be related to this: ~window-adjust-process-window-size-function~.
+   This little bit of debugging might be useful:
+#+BEGIN_SRC elisp
+  (with-current-buffer (get-buffer "*ansi-term-1*")) 
+    (cl-pushnew #'(lambda (&rest args) (debug)) before-change-functions) 
+#+END_SRC
+
+  and to undo this debug setting...
+#+BEGIN_SRC elisp
+  (with-current-buffer (get-buffer "*ansi-term-1*"))
+    (pop before-change-functions)
+#+END_SRC
+   
+  This was apparently due to the ~steef~ prompt I was using in ~zprezto~.  It must've
+  been using special control characters.
+
+** DONE Fix "unbound helm-source-info-elisp" error
+   Looks like my custom Emacs build caused a change in default
+directories?  This fixed it: 
+   #+BEGIN_SRC elisp
+   (with-eval-after-load 'info
+     (customize-save-variable
+      'Info-default-directory-list
+      '("/usr/share/info/emacs-27" "/usr/local/share/info/"
+        "/usr/share/info/" "/usr/share/info/")))
+   #+END_SRC
+* Old Settings
+** Conda
+#+BEGIN_SRC elisp
+(use-package conda
+  :defer t
+  :init (progn
+          (custom-set-variables '(conda-anaconda-home "~/apps/anaconda3")
+                                '(conda-message-on-environment-switch nil))
+          (conda-env-initialize-interactive-shells)
+          (conda-env-initialize-eshell)
+          (defun btw/conda--get-name-from-env-yml (filename)
+            "Pull the `name` property out of the YAML file at FILENAME."
+            (when filename
+              (let ((env-yml-contents (f-read-text filename)))
+                ;; We generalized the regex to include `-`.
+                (if (string-match "name:[ ]*\\([[:word:]-]+\\)[ ]*$"
+                                  env-yml-contents)
+                    (match-string 1 env-yml-contents)
+                  nil))))
+          ;; Could've just overriden this package's function, but Emacs' advice functionality
+          ;; covers this explicit case *and* make it clear via the help/documentation that the
+          ;; function has been changed.
+
+          (advice-add 'conda--get-name-from-env-yml
+                      :override #'btw/conda--get-name-from-env-yml)
+          (defun btw/conda--find-project-env (dir)
+            "Finds an env yml file for a projectile project.
+Defers to standard `conda--find-env-yml' otherwise."
+            (let* ((project-root (ignore-errors (projectile-project-root)))
+                   (file-name (f-expand "environment.yml" project-root)))
+              (when (f-exists? file-name)
+                file-name)))
+          ;; Avoid unnecessary searches by using *only* a project-centric environment.yml file.
+          ;; To fallback on an upward directory search, use `:before-until'.
+          (advice-add 'conda--find-env-yml :override #'btw/conda--find-project-env)
+          ;; Since `editorconfig-custom-hooks' activates a discovered conda env, and `conda'
+          ;; sets the buffer-local variable `conda-project-env-name', the env should be found
+          ;; by `conda-env-autoactivate-mode' (because it checks that variable).
+          (conda-env-autoactivate-mode)
+          ;; TODO: Check `window-purpose' for "edit", "general", etc.  Could also use `post-command-hook'
+          ;; (see the comment about using `(while-no-input (redisplay) CODE)')
+          ;; This is what auto-activates conda environments after switching layouts:
+          (advice-add 'select-window :after #'conda--switch-buffer-auto-activate)))
+
+(with-eval-after-load 'spaceline
+  ;; Hijacks existing segment.  Should add cases for both envs.
+  (spaceline-define-segment python-pyenv
+                            "The current python env.  Works with `conda'."
+                            (when (and active
+                                       ;; TODO: Consider not restricting to `python-mode', because
+                                       ;; conda envs can apply to more than just python operations
+                                       ;; (e.g. libraries, executables).
+                                       ;; (eq 'python-mode major-mode)
+                                       ;; TODO: Display `conda-project-env-name' instead?  It's buffer-local.
+                                       (boundp 'conda-env-current-name)
+                                       (stringp conda-env-current-name))
+                              (propertize conda-env-current-name 'face 'spaceline-python-venv
+                                          'help-echo "Virtual environment (via conda)")))
+  (spaceline-compile))
+
+#+END_SRC
+** ~python-x~
+#+BEGIN_SRC elisp
+(use-package python-x
+  :defer t
+  ;; :commands
+  ;; (python-shell-send-line python-shell-print-region-or-symbol)
+  :init
+  (progn
+    (evil-leader/set-key-for-mode 'python-mode
+      "sl" 'python-shell-send-line)
+    (evil-leader/set-key-for-mode 'python-mode
+      "sw" 'python-shell-print-region-or-symbol))
+  ))
+#+END_SRC
+
+** ~tex-mode~
+#+BEGIN_SRC elisp
+(defun btw/tex-mode-settings ()
+  (setq latex-directory "")
+  (setq latex-run-command ""))
+
+(add-hook 'tex-mode-hook 'btw/tex-mode-settings)
+#+END_SRC

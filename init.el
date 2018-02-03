@@ -371,18 +371,8 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
 
-  ;; Fix for unbound `helm-source-info-elisp'.
-  ;; (with-eval-after-load 'info
-  ;;   (customize-save-variable
-  ;;    'Info-default-directory-list
-  ;;    '("/usr/share/info/emacs-27" "/usr/local/share/info/"
-  ;;      "/usr/share/info/" "/usr/share/info/")))
-
-  ;; (debug-watch 'python-shell-virtualenv-root)
-
   (setq load-path (append '("~/.spacemacs.d/") load-path))
 
-  ;; TODO: Does this actually work?
   ;; Viper is loaded/installed automatically, but we want it disabled.
   (setq package-load-list '(all
                             (viper nil)
@@ -538,74 +528,9 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
 
     (add-hook 'term-exec-hook #'btw/pyvenv-conda-env-shell-init))
 
-  ;;   (use-package conda
-  ;;     :defer t
-  ;;     :init
-  ;;     (progn
-  ;;       (custom-set-variables '(conda-anaconda-home "~/apps/anaconda3")
-  ;;                             '(conda-message-on-environment-switch nil))
-  ;;
-  ;;       (conda-env-initialize-interactive-shells)
-  ;;       (conda-env-initialize-eshell)
-  ;;
-  ;;       (defun btw/conda--get-name-from-env-yml (filename)
-  ;;         "Pull the `name` property out of the YAML file at FILENAME."
-  ;;         (when filename
-  ;;           (let ((env-yml-contents (f-read-text filename)))
-  ;;             ;; We generalized the regex to include `-`.
-  ;;             (if (string-match "name:[ ]*\\([[:word:]-]+\\)[ ]*$" env-yml-contents)
-  ;;                 (match-string 1 env-yml-contents)
-  ;;               nil))))
-  ;;
-  ;;       ;; Could've just overriden this package's function, but Emacs' advice functionality
-  ;;       ;; covers this explicit case *and* make it clear via the help/documentation that the
-  ;;       ;; function has been changed.
-  ;;       (advice-add 'conda--get-name-from-env-yml :override #'btw/conda--get-name-from-env-yml)
-  ;;
-  ;;       (defun btw/conda--find-project-env (dir)
-  ;;         "Finds an env yml file for a projectile project.
-  ;; Defers to standard `conda--find-env-yml' otherwise."
-  ;;         (let* ((project-root (ignore-errors (projectile-project-root)))
-  ;;               (file-name (f-expand "environment.yml" project-root)))
-  ;;           (when (f-exists? file-name)
-  ;;             file-name)))
-  ;;
-  ;;       ;; Avoid unnecessary searches by using *only* a project-centric environment.yml file.
-  ;;       ;; To fallback on an upward directory search, use `:before-until'.
-  ;;       (advice-add 'conda--find-env-yml :override #'btw/conda--find-project-env)
-  ;;
-  ;;       ;; Since `editorconfig-custom-hooks' activates a discovered conda env, and `conda'
-  ;;       ;; sets the buffer-local variable `conda-project-env-name', the env should be found
-  ;;       ;; by `conda-env-autoactivate-mode' (because it checks that variable).
-  ;;       (conda-env-autoactivate-mode)
-  ;;
-  ;;       ;; TODO: Check `window-purpose' for "edit", "general", etc.  Could also use `post-command-hook'
-  ;;       ;; (see the comment about using `(while-no-input (redisplay) CODE)')
-  ;;       ;; This is what auto-activates conda environments after switching layouts:
-  ;;       (advice-add 'select-window :after #'conda--switch-buffer-auto-activate)
-  ;;       ))
-
-  ;; (with-eval-after-load 'spaceline
-  ;;   ;; Hijacks existing segment.  Should add cases for both envs.
-  ;;   (spaceline-define-segment python-pyenv
-  ;;     "The current python env.  Works with `conda'."
-  ;;     (when (and active
-  ;;                ;; TODO: Consider not restricting to `python-mode', because
-  ;;                ;; conda envs can apply to more than just python operations
-  ;;                ;; (e.g. libraries, executables).
-  ;;                ;; (eq 'python-mode major-mode)
-  ;;                ;; TODO: Display `conda-project-env-name' instead?  It's buffer-local.
-  ;;                (boundp 'conda-env-current-name)
-  ;;                (stringp conda-env-current-name))
-  ;;       (propertize conda-env-current-name
-  ;;                   'face 'spaceline-python-venv
-  ;;                   'help-echo "Virtual environment (via conda)")))
-  ;;   (spaceline-compile))
-
-  ;; Make terminals and REPLs read-only.
-  ;; https://emacs.stackexchange.com/a/2897
-
   (with-eval-after-load 'comint
+    ;; Make terminals and REPLs read-only.
+    ;; https://emacs.stackexchange.com/a/2897
     (setq-default comint-prompt-read-only t)
     (setq-default comint-use-prompt-regexp nil)
     (setq-default inhibit-field-text-motion nil)
@@ -787,18 +712,6 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     (let ((existing-todos (-filter 'f-exists-p (org-projectile-todo-files))))
       (setq org-agenda-files (append org-agenda-files existing-todos))))
 
-  ;; (use-package python-x
-  ;;   :defer t
-  ;;   ;; :commands
-  ;;   ;; (python-shell-send-line python-shell-print-region-or-symbol)
-  ;;   :init
-  ;;   (progn
-  ;;     (evil-leader/set-key-for-mode 'python-mode
-  ;;       "sl" 'python-shell-send-line)
-  ;;     (evil-leader/set-key-for-mode 'python-mode
-  ;;       "sw" 'python-shell-print-region-or-symbol))
-  ;;   ))
-
   (with-eval-after-load 'flycheck
 
     ;; (flycheck-add-next-checker 'python-flake8 'python-pylint)
@@ -922,11 +835,6 @@ Ignores beginning white-space."
     (global-set-key [C-M-tab] 'clang-format-region))
 
   (add-hook 'c++-mode-hook 'btw/clang-format-bindings)
-
-  ;; (defun btw/tex-mode-settings ()
-  ;;   (setq latex-directory "")
-  ;;   (setq latex-run-command ""))
-  ;; (add-hook 'tex-mode-hook 'btw/tex-mode-settings)
 
   (defun btw/setup-term-mode ()
     "From https://github.com/syl20bnr/spacemacs/issues/2345"
