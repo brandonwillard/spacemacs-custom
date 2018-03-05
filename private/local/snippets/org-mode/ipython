@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: ipython
+# key: ipy_
+# --
+#+BEGIN_SRC ipython :session :exports both :results raw drawer :async t
+$0
+#+END_SRC

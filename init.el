@@ -422,6 +422,13 @@ you should place your code here."
 
     (setq org-ref-pdf-directory "~/projects/papers/references"
           org-ref-bibliography-notes "~/projects/papers/references/notes.org"))
+  (with-eval-after-load 'tex
+    ;; (add-to-list 'TeX-command-list
+		;;              '("Latex Make"
+    ;;                "make %s"
+    ;;                TeX-run-compile) t)
+    ;; (setq TeX-command-default "Latex Make")
+    )
 
   (with-eval-after-load 'hideshow
     (setq hs-allow-nesting t)
@@ -565,12 +572,16 @@ set."
         (let ((env-name (gethash 'conda_env_name props)))
           ;; `pyvenv-workon' seems slow, so only set the bare minimum when
           ;; the mode isn't python-specific.
-          (when env-name
+          (when (and env-name
+                     (not (local-variable-p 'python-shell-virtualenv-root)))
             (cond
-             ((and env-name (bound-and-true-p python-mode))
+             ;; FIXME: Inferior mode catch doesn't work here.  Should just
+             ;; use the mode's hooks or something.
+             ((or (string-equal major-mode "inferior-python-mode")
+                  (bound-and-true-p python-mode))
               (progn (message "editorconfig setting pyvenv: %s" env-name)
                      (pyvenv-workon env-name)))
-             ((and (not (local-variable-p python-shell-virtualenv-root))
+             ((and (not (local-variable-p 'python-shell-virtualenv-root))
                    (getenv "WORKON_HOME"))
               (progn (message "editorconfig setting virtualenv-root") 
                      (require 'pyvenv)
@@ -640,6 +651,17 @@ From URL `https://emacs.stackexchange.com/a/12403'"
 
   (with-eval-after-load 'org
 
+    ;; yasnippet fixes from https://orgmode.org/manual/Conflicts.html
+    (defun yas/org-very-safe-expand ()
+      (let ((yas/fallback-behavior 'return-nil)) (yas/expand)))
+
+    (add-hook 'org-mode-hook
+              (lambda ()
+                (make-variable-buffer-local 'yas/trigger-key)
+                (setq yas/trigger-key [tab])
+                (add-to-list 'org-tab-first-hook 'yas/org-very-safe-expand)
+                (define-key yas/keymap [tab] 'yas/next-field)))
+
     (require 'ox-jira)
     ;; (require 'ox-confluence)
 
@@ -661,6 +683,8 @@ From URL `https://emacs.stackexchange.com/a/12403'"
        (ipython . t)
        (python . t)
        (clojure . t)))
+
+    (setq org-highlight-latex-and-related '(latex script entities))
 
     ;; (btw/append-to-list
     ;;  'org-babel-load-languages
@@ -687,6 +711,9 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     (advice-add 'org-babel-python-session-buffer :around
                 #'btw/org-babel-python-session-buffer)
 
+    ;; See https://emacs.stackexchange.com/a/21472 for a way to programmatically
+    ;; set org-mode properties in a buffer.
+
     (defun btw/org-export-output-project-file-name (orig-fun extension &optional subtreep pub-dir)
       "Export to a project's corresponding source directory as determined by EXTENSION."
       (let* ((proj-root (projectile-project-root))
@@ -699,11 +726,42 @@ From URL `https://emacs.stackexchange.com/a/12403'"
 
     (advice-add 'org-export-output-file-name :around #'btw/org-export-output-project-file-name)
 
+    (with-eval-after-load 'ob-python
+      (require 'python)
+      (defun org-babel-load-session:python (session body params)
+        "Load BODY into SESSION using python-shell-send-string-echo."
+        (save-window-excursion
+          (let ((buffer (org-babel-prep-session:python session params))
+                (python-shell-send (if (fboundp 'python-shell-send-string-echo)
+                                       'python-shell-send-string-echo
+                                     'python-shell-send-string)))
+            (with-current-buffer buffer
+              (funcall python-shell-send
+                       (org-babel-chomp body)
+                       (get-buffer-process (current-buffer))))
+            buffer))))
+
+    (defun btw/org-latex-pdf-process (file-name)
+      "XXX: This will err-out because of org-export's assumption that the output should b
+in the local directory"
+      (let* ((proj-root (projectile-project-root))
+             (pdf-out-dir (f-join proj-root "output"))
+             (pub-dir (if (f-exists? pdf-out-dir)
+                          pdf-out-dir
+                        (f-dirname file-name)))
+             (compile-cmd (s-join " "
+                                  (list "max_print_line=1000 error_line=254 half_error_line=238 openout_any=a"
+                                        "latexmk -pdf -bibtex -pdflatex='pdflatex -shell-escape -file-line-error -interaction=nonstopmode -synctex=1'"
+                                        (concat "-jobname="
+                                                (f-join pub-dir
+                                                        (f-base file-name)))
+                                        file-name))))
+        (message "%s" compile-cmd)
+        (compile compile-cmd)))
+
     (setq org-latex-listings 'minted
           org-latex-packages-alist '(("" "minted"))
-          org-latex-pdf-process
-          '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
-            "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+          org-latex-pdf-process #'btw/org-latex-pdf-process)
 
     (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append))
 
