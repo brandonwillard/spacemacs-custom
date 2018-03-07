@@ -97,22 +97,18 @@
 #+HEADER: :var label=""
 #+HEADER: :var width="1.0\\textwidth"
 #+BEGIN_SRC elisp :exports none :results silent value
-(format (s-join "\n"
-                '("#+BEGIN_table"
-                  "#+LATEX: \\centering"
-                  "#+LATEX: \\caption{%s}"
-                  "#+LATEX: \\label{%s}"
-                  "#+LATEX: \\adjustbox{max width=%s}{"
-                  ;; XXX: Not sure if the following two derived latex directives
-                  ;; work inside `adjustbox`.
-                  ;; "#+CAPTION: %s"
-                  ;; "#+NAME: %s"
-                  "#+ATTR_LATEX: :mode table :float nil :center nil"
-                  "%s"
-                  "#+LATEX: }"
-                  "#+END_table"
-                  ))
-        caption label width (s-trim data))
+(s-join "\n"
+        '("#+BEGIN_table"
+          "#+LATEX: \\centering"
+          (format "#+LATEX: \\caption{%s}" caption)
+          (format "#+LATEX: \\adjustbox{max width=%s}{"
+                  width)
+          (format "#+NAME: %s" label)
+          "#+ATTR_LATEX: :mode table :float nil :center nil"
+          "%s"
+          "#+LATEX: }"
+          "#+END_table"
+          (s-trim data)))
 #+END_SRC
 
 #+NAME: figure_wrap

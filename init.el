@@ -434,6 +434,14 @@ you should place your code here."
     ;; XXX: Must have this set in the spacemacs tex layer!
     (setq TeX-command-default "Make"))
 
+  (with-eval-after-load 'org-projectile
+    (setq org-projectile-capture-template "* TODO %?\n  %u\n  %a"))
+
+  (with-eval-after-load 'embrace
+    ;; TODO: Set up function syntax for different languages.
+    ;; (embrace-add-pair-regexp ?f "\\(\\w\\|\\s_\\)+?(" ")" 'embrace-with-function
+    ;;                          (embrace-build-help "function(" ")")))
+    )
   (with-eval-after-load 'hideshow
     (setq hs-allow-nesting t)
     ;; Let's not lose the cursor position when folding.
