@@ -14,7 +14,9 @@
 #+SELECT_TAGS: export
 #+EXCLUDE_TAGS: noexport
 
-#+PROPERTY: header-args:python :session :results output drawer replace
+#+PROPERTY: header-args :session :results output drawer replace
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="../extra/custom.css" />
 
 #+LaTeX_CLASS: article
 #+LaTeX_HEADER: \usepackage{amsfonts}
@@ -36,48 +38,13 @@
 #+LaTeX_HEADER: \setkeys{Gin}{keepaspectratio}
 #+LaTeX_HEADER: \usepackage{minted}
 #+LaTeX_HEADER: \setminted{fontsize=\footnotesize, breaklines=true, breakanywhere=true, breakautoindent=true}
-#+LaTeX_HEADER: \RequirePackage[hyphens]{url}
-#+LaTeX_HEADER: \RequirePackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
+# #+LaTeX_HEADER: \RequirePackage[hyphens]{url}
+# #+LaTeX_HEADER: \RequirePackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
 #+LaTeX_HEADER: \usepackage[authoryear]{natbib}
 #+LaTeX_HEADER: \usepackage{cleveref}
 #+LaTeX_HEADER: \allowdisplaybreaks
 #+LaTeX_HEADER: \include{math-commands}
 #+LaTeX_HEADER: \graphicspath{{../../figures/}{../figures/}{./figures/}{./}}
-
-#+NAME: python_export_setup
-#+BEGIN_SRC python :exports none
-import IPython
-from tabulate import tabulate
-
-class OrgFormatter(IPython.core.formatters.BaseFormatter):
-    def __call__(self, obj):
-        try:
-            return tabulate(obj, headers='keys',
-                            tablefmt='orgtbl', showindex='always')
-        except:
-            return None
-
-ip = get_ipython()
-ip.display_formatter.formatters['text/org'] = OrgFormatter()
-#+END_SRC
-
-#+NAME: figure_wrap
-#+HEADER: :var data=""
-#+HEADER: :var caption=""
-#+HEADER: :var name=""
-#+HEADER: :var width="1.0\\textwidth"
-#+BEGIN_SRC elisp :exports none :results silent value
-(format (s-join "\n"
-  '(;; Correct the below setting when org doesn't understand the value
-    ;; (e.g. "\textwidth").
-    "#+ATTR_ORG: :width 300"
-    "#+ATTR_LATEX: :width %s :float t" ; :caption %s
-    "#+CAPTION: %s"
-    "#+NAME: %s"
-    "[[file:%s]]"))
-    width caption label (s-trim data))
-#+END_SRC
-
 
 #+BEGIN_abstract
   $2
@@ -122,4 +89,63 @@ ip.display_formatter.formatters['text/org'] = OrgFormatter()
   (delete-file "test.html"))
 (let ((org-export-before-parsing-hook '(orcp-citeproc)))
   (browse-url (org-html-export-to-html)))
+#+END_SRC
+
+#+NAME: table_wrap
+#+HEADER: :var data=""
+#+HEADER: :var caption=""
+#+HEADER: :var label=""
+#+HEADER: :var width="1.0\\textwidth"
+#+BEGIN_SRC elisp :exports none :results silent value
+(format (s-join "\n"
+                '("#+BEGIN_table"
+                  "#+LATEX: \\centering"
+                  "#+LATEX: \\caption{%s}"
+                  "#+LATEX: \\label{%s}"
+                  "#+LATEX: \\adjustbox{max width=%s}{"
+                  ;; XXX: Not sure if the following two derived latex directives
+                  ;; work inside `adjustbox`.
+                  ;; "#+CAPTION: %s"
+                  ;; "#+NAME: %s"
+                  "#+ATTR_LATEX: :mode table :float nil :center nil"
+                  "%s"
+                  "#+LATEX: }"
+                  "#+END_table"
+                  ))
+        caption label width (s-trim data))
+#+END_SRC
+
+#+NAME: figure_wrap
+#+HEADER: :var data=""
+#+HEADER: :var caption=""
+#+HEADER: :var label=""
+#+HEADER: :var orgwidth="400"
+#+HEADER: :var width="1.0\\textwidth"
+#+BEGIN_SRC elisp :exports none :results silent value
+(format (s-join "\n"
+                '(;; Correct the below setting when org doesn't understand the value
+                  ;; (e.g. "\textwidth").
+                  "#+ATTR_ORG: :width %s"
+                  "#+ATTR_LATEX: :width %s :float t"
+                  "#+CAPTION: %s"
+                  "#+NAME: %s"
+                  "[[file:%s]]"))
+        orgwidth width caption label (s-trim data))
+#+END_SRC
+
+#+NAME: python_export_setup
+#+BEGIN_SRC python :exports none
+import IPython
+from tabulate import tabulate
+
+class OrgFormatter(IPython.core.formatters.BaseFormatter):
+    def __call__(self, obj):
+        try:
+            return tabulate(obj, headers='keys',
+            tablefmt='orgtbl', showindex='always')
+        except:
+            return None
+
+ip = get_ipython()
+ip.display_formatter.formatters['text/org'] = OrgFormatter()
 #+END_SRC

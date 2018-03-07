@@ -34,7 +34,8 @@ values."
      html
      markdown
      ;; javascript
-     latex
+     (latex :variables
+            latex-build-command "Make")
      bibtex
      ;; (ess :variables
      ;;      ess-disable-underscore-assign t
@@ -428,12 +429,10 @@ you should place your code here."
     (setq org-ref-pdf-directory "~/projects/papers/references"
           org-ref-bibliography-notes "~/projects/papers/references/notes.org"))
   (with-eval-after-load 'tex
-    ;; (add-to-list 'TeX-command-list
-		;;              '("Latex Make"
-    ;;                "make %s"
-    ;;                TeX-run-compile) t)
-    ;; (setq TeX-command-default "Latex Make")
-    )
+    (add-to-list 'TeX-command-list
+                 '("Make" "make %o" TeX-run-compile nil t))
+    ;; XXX: Must have this set in the spacemacs tex layer!
+    (setq TeX-command-default "Make"))
 
   (with-eval-after-load 'hideshow
     (setq hs-allow-nesting t)
