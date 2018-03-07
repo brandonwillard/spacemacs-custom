@@ -105,10 +105,10 @@
                   width)
           (format "#+NAME: %s" label)
           "#+ATTR_LATEX: :mode table :float nil :center nil"
-          "%s"
+          (format "%s"
+                  (s-trim data))
           "#+LATEX: }"
-          "#+END_table"
-          (s-trim data)))
+          "#+END_table"))
 #+END_SRC
 
 #+NAME: figure_wrap
@@ -118,15 +118,16 @@
 #+HEADER: :var orgwidth="400"
 #+HEADER: :var width="1.0\\textwidth"
 #+BEGIN_SRC elisp :exports none :results silent value
-(format (s-join "\n"
-                '(;; Correct the below setting when org doesn't understand the value
-                  ;; (e.g. "\textwidth").
-                  "#+ATTR_ORG: :width %s"
-                  "#+ATTR_LATEX: :width %s :float t"
-                  "#+CAPTION: %s"
-                  "#+NAME: %s"
-                  "[[file:%s]]"))
-        orgwidth width caption label (s-trim data))
+(s-join "\n"
+        '( ;; Correct the below setting when org doesn't understand the value
+          ;; (e.g. "\textwidth").
+          (format "#+ATTR_ORG: :width %s" orgwidth)
+          (format "#+ATTR_LATEX: :width %s :float t"
+                  width)
+          (format "#+CAPTION: %s" caption)
+          (format "#+NAME: %s" ,label)
+          (format "[[file:%s]]"
+                  (s-trim data))))
 #+END_SRC
 
 #+NAME: python_export_setup
