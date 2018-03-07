@@ -30,17 +30,19 @@ values."
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
-   '(html
+   '(lsp
+     html
      markdown
-     javascript
+     ;; javascript
      latex
      bibtex
-     (ess :variables
-          ess-disable-underscore-assign t
-          :packages (not ess-R-object-popup))
+     ;; (ess :variables
+     ;;      ess-disable-underscore-assign t
+     ;;      :packages (not ess-R-object-popup))
      (python :variables
              python-test-runner 'pytest
              python-auto-set-local-pyvenv-virtualenv 'on-project-switch
+             python-backend 'lsp
              :packages (not live-py-mode)
              )
      yaml
@@ -51,8 +53,7 @@ values."
             c-c++-default-mode-for-headers 'c++-mode
             ;; company-c-headers-path-user '("../include" "./include" "." "../../include" "../inc" "../../inc")
             )
-     helm
-     ;; (helm :variables helm-enable-auto-resize t)
+     (helm :variables helm-enable-auto-resize t)
      (auto-completion :variables
                       auto-completion-return-key-behavior nil
                       auto-completion-tab-key-behavior nil
@@ -94,7 +95,7 @@ values."
                                       evil-embrace
 
                                       ob-ipython
-                                      ob-clojure-literate
+                                      ;; ob-clojure-literate
                                       ;; org-babel-clojure
                                       ;; org-mime
                                       ;; ob-async
@@ -342,6 +343,10 @@ values."
    ;; `current', `all' or `nil'. Default is `all' (highlight any scope and
    ;; emphasis the current one). (default 'all)
    dotspacemacs-highlight-delimiters 'all
+
+   ;; If non-nil, start an Emacs server if one is not already running.
+   dotspacemacs-enable-server nil
+
    ;; If non nil, advise quit functions to keep server open when quitting.
    ;; (default nil)
    dotspacemacs-persistent-server nil
@@ -358,9 +363,9 @@ values."
    ;; `trailing' to delete only the whitespace at end of lines, `changed'to
    ;; delete only whitespace for changed lines or `nil' to disable cleanup.
    ;; (default nil)
-   dotspacemacs-whitespace-cleanup nil
+   dotspacemacs-whitespace-cleanup 'trailing
 
-   dotspacemacs-switch-to-buffer-prefers-purpose t
+   ;; dotspacemacs-switch-to-buffer-prefers-purpose t
    ))
 
 (defun dotspacemacs/user-init ()
@@ -505,6 +510,10 @@ From https://stackoverflow.com/a/37356659/3006474"
     )
 
   (with-eval-after-load 'pyvenv-mode
+    ;; If `pyvenv-workon' buffer-local variables is set, activate the corresponding
+    ;; venv when entering the buffer.
+    (pyvenv-tracking-mode +1)
+
     (defun btw/pyvenv-conda-activate-additions ()
       (setenv "CONDA_PREFIX" (string-remove-suffix "/" pyvenv-virtual-env))
       (setenv "CONDA_DEFAULT_ENV" pyvenv-virtual-env-name))
@@ -583,8 +592,9 @@ set."
                      (pyvenv-workon env-name)))
              ((and (not (local-variable-p 'python-shell-virtualenv-root))
                    (getenv "WORKON_HOME"))
-              (progn (message "editorconfig setting virtualenv-root") 
-                     (require 'pyvenv)
+              (progn (message "editorconfig setting virtualenv-root")
+                     ;; (require 'pyvenv)
+                     (setq-local pyvenv-workon env-name)
                      (setq-local python-shell-virtualenv-root
                                  (f-join (getenv "WORKON_HOME") env-name))))))))
 
@@ -643,26 +653,24 @@ From URL `https://emacs.stackexchange.com/a/12403'"
 
   (with-eval-after-load 'helm
     (setq-default helm-follow-mode-persistent t)
+    (setq helm-always-two-windows nil)
+    (setq helm-split-window-inside-p nil)
     (define-key helm-map (kbd "C-w") 'evil-delete-backward-word)
     )
 
   (with-eval-after-load 'evil-jumps
     (setq evil-jumps-cross-buffers nil))
 
+  ;; (spacemacs|use-package-add-hook org
+  ;;   :post-config
+  ;;   (use-package ob-ipython
+  ;;     :init (add-to-list 'org-babel-load-languages '(ipython . t))))
+
   (with-eval-after-load 'org
 
-    ;; yasnippet fixes from https://orgmode.org/manual/Conflicts.html
-    (defun yas/org-very-safe-expand ()
-      (let ((yas/fallback-behavior 'return-nil)) (yas/expand)))
-
-    (add-hook 'org-mode-hook
-              (lambda ()
-                (make-variable-buffer-local 'yas/trigger-key)
-                (setq yas/trigger-key [tab])
-                (add-to-list 'org-tab-first-hook 'yas/org-very-safe-expand)
-                (define-key yas/keymap [tab] 'yas/next-field)))
-
+    ;; TODO: Use `spacemacs|use-package-add-hook'?
     (require 'ox-jira)
+
     ;; (require 'ox-confluence)
 
     (setq org-default-notes-file
@@ -681,8 +689,7 @@ From URL `https://emacs.stackexchange.com/a/12403'"
        (shell . t)
        (scheme . t)
        (ipython . t)
-       (python . t)
-       (clojure . t)))
+       (python . t)))
 
     (setq org-highlight-latex-and-related '(latex script entities))
 
@@ -788,6 +795,10 @@ in the local directory"
 
     (add-hook 'python-mode-hook #'(lambda () (add-to-list 'flycheck-disabled-checkers 'python-pylint)))
     )
+
+  (with-eval-after-load 'ob-ipython
+    ;; `org-babel-execute:ipython' and `org-babel-ipython-initiate-session' are the functions to look at.
+  )
 
   (with-eval-after-load 'python
     ;;; See https://github.com/kaz-yos/eval-in-repl/blob/master/eval-in-repl-python.el

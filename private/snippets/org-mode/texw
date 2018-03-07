@@ -2,7 +2,7 @@
 # See https://github.com/tsdye/LKFS for some other useful tweaks.
 # name: texw
 # key: texw_
-# expand-env: ((yas-indent-line 'nil) (yas-wrap-around-region 'nil))
+# expand-env: ((yas-indent-line 'nil) (yas-wrap-around-region 'nil) (org-adapt-indentation 'nil))
 # --
 
 #+TITLE: ${1:title}
@@ -10,11 +10,11 @@
 #+DATE: `(format-time-string "%Y-%m-%d")`
 #+EMAIL: brandonwillard@gmail.com
 
-#+OPTIONS: ^:nil toc:nil tex:t d:nil
+#+OPTIONS: ^:nil toc:nil tex:t d:results
 #+SELECT_TAGS: export
 #+EXCLUDE_TAGS: noexport
 
-#+PROPERTY: header-args:python :session :results output raw drawer
+#+PROPERTY: header-args:python :session :results output drawer replace
 
 #+LaTeX_CLASS: article
 #+LaTeX_HEADER: \usepackage{amsfonts}
@@ -61,6 +61,24 @@ ip = get_ipython()
 ip.display_formatter.formatters['text/org'] = OrgFormatter()
 #+END_SRC
 
+#+NAME: figure_wrap
+#+HEADER: :var data=""
+#+HEADER: :var caption=""
+#+HEADER: :var name=""
+#+HEADER: :var width="1.0\\textwidth"
+#+BEGIN_SRC elisp :exports none :results silent value
+(format (s-join "\n"
+  '(;; Correct the below setting when org doesn't understand the value
+    ;; (e.g. "\textwidth").
+    "#+ATTR_ORG: :width 300"
+    "#+ATTR_LATEX: :width %s :float t" ; :caption %s
+    "#+CAPTION: %s"
+    "#+NAME: %s"
+    "[[file:%s]]"))
+    width caption label (s-trim data))
+#+END_SRC
+
+
 #+BEGIN_abstract
   $2
 #+END_abstract
@@ -97,7 +115,7 @@ ip.display_formatter.formatters['text/org'] = OrgFormatter()
 
 * post-org-setup                                                           :noexport:
 
-#+BEGIN_SRC elisp :eval never-export :exports none :results none
+#+BEGIN_SRC elisp :eval never :exports none :results none
 ;; This is an org-ref test snippet.
 (require 'org-ref-citeproc)
 (when (file-exists-p "test.html")
