@@ -98,15 +98,15 @@
 #+HEADER: :var width="1.0\\textwidth"
 #+BEGIN_SRC elisp :exports none :results silent value
 (s-join "\n"
-        '("#+BEGIN_table"
+        \`("#+BEGIN_table"
           "#+LATEX: \\centering"
-          (format "#+LATEX: \\caption{%s}" caption)
-          (format "#+LATEX: \\adjustbox{max width=%s}{"
-                  width)
-          (format "#+NAME: %s" label)
+          ,(format "#+LATEX: \\caption{%s}" caption)
+          ,(format "#+LATEX: \\adjustbox{max width=%s}{"
+                   width)
+          ,(format "#+NAME: %s" label)
           "#+ATTR_LATEX: :mode table :float nil :center nil"
-          (format "%s"
-                  (s-trim data))
+          ,(format "%s"
+                   (s-trim data))
           "#+LATEX: }"
           "#+END_table"))
 #+END_SRC
@@ -119,15 +119,15 @@
 #+HEADER: :var width="1.0\\textwidth"
 #+BEGIN_SRC elisp :exports none :results silent value
 (s-join "\n"
-        '( ;; Correct the below setting when org doesn't understand the value
+        \`(;; Correct the below setting when org doesn't understand the value
           ;; (e.g. "\textwidth").
-          (format "#+ATTR_ORG: :width %s" orgwidth)
-          (format "#+ATTR_LATEX: :width %s :float t"
-                  width)
-          (format "#+CAPTION: %s" caption)
-          (format "#+NAME: %s" ,label)
-          (format "[[file:%s]]"
-                  (s-trim data))))
+          ,(format "#+ATTR_ORG: :width %s" orgwidth)
+          ,(format "#+ATTR_LATEX: :width %s :float t"
+                   width)
+          ,(format "#+CAPTION: %s" caption)
+          ,(format "#+NAME: %s" ,label)
+          ,(format "[[file:%s]]"
+                   (s-trim data))))
 #+END_SRC
 
 #+NAME: python_export_setup
