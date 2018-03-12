@@ -107,8 +107,15 @@ too).  We also need an ~hs-show-level~ function.
 * TODO [#A] Slowness with Python file loading                        :python:
 ** Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
 
-* TODO Try [[https://github.com/andras-simonyi/citeproc-orgref][~citeproc-orgref~]]                                 :bibtex:orgmode:
+* TODO Find ~org-ref~ alternative and/or try [[https://github.com/andras-simonyi/citeproc-orgref][~citeproc-orgref~]] :bibtex:orgmode:
 
+  - Note taken on [2018-03-11 Sun 18:20] \\
+    Look at [[https://code.orgmode.org/bzg/org-mode/raw/master/contrib/lisp/ox-bibtex.el][ox-bibtex.el]] for ways to implement better syntax than ~org-ref~.
+    For instance, here's how we can add custom link types:
+    #+BEGIN_SRC elisp :eval never
+    (org-link-set-parameters "code" :follow follow :export export)
+    #+END_SRC
+    See [[https://orgmode.org/worg/org-contrib/org-exp-blocks.html][~org-exp-blocks~]] for ways to pre-process blocks on export.
 * TODO Fix org-babel Python interaction                     :python:orgbabel:
    @@html:<kbd>@@ , , @@html:</kbd>@@ naively sends buffer lines, which breaks python code sent to
 the default IPython/Jupyter parser.  The function being called is ~org-babel-load-in-session~
@@ -195,3 +202,7 @@ directories?  This fixed it:
 * TODO Set up function syntax for different languages.
   [2018-03-07 Wed]
   [[file:~/.spacemacs.d/init.el::;;%20TODO:%20Set%20up%20function%20syntax%20for%20different%20languages.]]
+
+* TODO Should ~spacemacs|use-package-add-hook~ be used instead of ~with-eval-after-load~?
+  [2018-03-09 Fri]
+  [[file:~/.spacemacs.d/init.el::;;%20(spacemacs|use-package-add-hook%20org]]

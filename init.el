@@ -30,7 +30,8 @@ values."
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
-   '(lsp
+   '(javascript
+     lsp
      html
      markdown
      ;; javascript
@@ -76,7 +77,7 @@ values."
      spell-checking
      syntax-checking
      ;; FIXME: We get `semantic-idle-scheduler-function' errors in `polymode' modes.
-     (semantic :enabled-for emacs-lisp common-lisp)
+     (semantic :enabled-for emacs-lisp common-lisp python)
      common-lisp
      )
    ;; List of additional packages that will be installed without being
@@ -428,20 +429,19 @@ you should place your code here."
 
     (setq org-ref-pdf-directory "~/projects/papers/references"
           org-ref-bibliography-notes "~/projects/papers/references/notes.org"))
+
   (with-eval-after-load 'tex
     (add-to-list 'TeX-command-list
                  '("Make" "make %o" TeX-run-compile nil t))
     ;; XXX: Must have this set in the spacemacs tex layer!
     (setq TeX-command-default "Make"))
 
+  (with-eval-after-load 'projectile
+    (setq projectile-use-git-grep t))
+
   (with-eval-after-load 'org-projectile
     (setq org-projectile-capture-template "* TODO %?\n  %u\n  %a"))
 
-  (with-eval-after-load 'embrace
-    ;; TODO: Set up function syntax for different languages.
-    ;; (embrace-add-pair-regexp ?f "\\(\\w\\|\\s_\\)+?(" ")" 'embrace-with-function
-    ;;                          (embrace-build-help "function(" ")")))
-    )
   (with-eval-after-load 'hideshow
     (setq hs-allow-nesting t)
     ;; Let's not lose the cursor position when folding.
@@ -568,13 +568,34 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
   (use-package evil-embrace
     :config
     (progn
-      (add-hook 'org-mode-hook 'embrace-org-mode-hook)
-      (evil-embrace-enable-evil-surround-integration)))
+      (evil-embrace-enable-evil-surround-integration)
+
+      ))
+
+  (with-eval-after-load 'embrace
+    (add-hook 'LaTeX-mode-hook 'embrace-LaTeX-mode-hook)
+    (add-hook 'org-mode-hook 'embrace-org-mode-hook)
+
+    (defun btw/embrace-emacs-lisp-mode-hook ()
+      ;; (assq-delete-all ?f embrace--pairs-list)
+      (defun embrace-with-function-elisp ()
+        (let ((fname (read-string "Function: ")))
+          (cons (format "(%s " (or fname "")) ")")))
+      (embrace-add-pair-regexp
+       ?f
+       "(\\(\\sw\\|\\s_\\)+?\\s-+?" ")"
+       'embrace-with-function-elisp
+       (embrace-build-help "(function " ")")
+       nil))
+
+    (advice-add 'embrace-emacs-lisp-mode-hook :after #'btw/embrace-emacs-lisp-mode-hook)
+    (add-hook 'emacs-lisp-mode-hook
+              'embrace-emacs-lisp-mode-hook)
+    )
 
   (use-package dockerfile-mode
     :mode ("Dockerfile\\'" . dockerfile-mode))
 
-  ;; Set conda env based on editorconfig settings.
   (use-package editorconfig
     :ensure t
     :init
