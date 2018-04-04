@@ -14,7 +14,9 @@
 #+SELECT_TAGS: export
 #+EXCLUDE_TAGS: noexport
 
-#+PROPERTY: header-args :session :results output drawer replace
+#+PROPERTY: header-args :eval never-export :exports both :results output drawer replace
+#+PROPERTY: header-args+ :session
+# (ignore-errors (projectile-project-name))
 
 #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="../extra/custom.css" />
 
@@ -125,7 +127,7 @@
           ,(format "#+ATTR_LATEX: :width %s :float t"
                    width)
           ,(format "#+CAPTION: %s" caption)
-          ,(format "#+NAME: %s" ,label)
+          ,(format "#+NAME: %s" label)
           ,(format "[[file:%s]]"
                    (s-trim data))))
 #+END_SRC

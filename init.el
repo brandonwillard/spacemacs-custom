@@ -30,7 +30,8 @@ values."
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
-   '(javascript
+   '(csv
+     javascript
      lsp
      html
      markdown
@@ -97,10 +98,7 @@ values."
                                       evil-embrace
 
                                       ob-ipython
-                                      ;; ob-clojure-literate
-                                      ;; org-babel-clojure
-                                      ;; org-mime
-                                      ;; ob-async
+                                      ob-async
 
                                       ox-jira
                                       ;; ox-confluence
@@ -112,7 +110,7 @@ values."
                                       editorconfig
 
                                       evil-text-object-python
-                                      ;; TODO: Setup this package.
+
                                       evil-extra-operator
                                       )
    ;; A list of packages that cannot be updated.
@@ -170,7 +168,7 @@ values."
    ;; directory. A string value must be a path to an image format supported
    ;; by your Emacs build.
    ;; If the value is nil then no banner is displayed. (default 'official)
-   dotspacemacs-startup-banner 'official
+   dotspacemacs-startup-banner nil
    ;; List of items to show in startup buffer or an association list of
    ;; the form `(list-type . list-size)`. If nil then it is disabled.
    ;; Possible values for list-type are:
@@ -631,7 +629,8 @@ set."
     )
 
   (with-eval-after-load 'evil
-    (setq-default evil-move-cursor-back nil)
+    (setq-default evil-want-visual-char-semi-exclusive t)
+    (setq-default evil-move-curser-back nil)
     (setq-default evil-escape-key-sequence nil)
     (setq-default evil-emacs-state-modes nil)
     (setq-default evil-insert-state-modes '(magit-popup-mode))
@@ -689,11 +688,6 @@ From URL `https://emacs.stackexchange.com/a/12403'"
   (with-eval-after-load 'evil-jumps
     (setq evil-jumps-cross-buffers nil))
 
-  ;; (spacemacs|use-package-add-hook org
-  ;;   :post-config
-  ;;   (use-package ob-ipython
-  ;;     :init (add-to-list 'org-babel-load-languages '(ipython . t))))
-
   (with-eval-after-load 'org
 
     ;; TODO: Use `spacemacs|use-package-add-hook'?
@@ -702,30 +696,23 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     ;; (require 'ox-confluence)
 
     (setq org-default-notes-file
+          ;; Could use `getenv' and some xdg location...
           (f-join user-home-directory "Documents" "notes.org"))
 
-    (defun btw/append-to-list (list other-list &rest append)
-      (dolist (it other-list)
-        (add-to-list list it append)))
-
-    (org-babel-do-load-languages
-     'org-babel-load-languages
-     '((emacs-lisp . t)
-       (C . t)
-       (R . t)
-       (sql . t)
-       (shell . t)
-       (scheme . t)
-       (ipython . t)
-       (python . t)))
+    (setq org-capture-templates
+          '(("t" "Tasks" entry
+             (file+headline org-default-notes-file "Tasks"))))
 
     (setq org-highlight-latex-and-related '(latex script entities))
 
-    ;; (btw/append-to-list
-    ;;  'org-babel-load-languages
-    ;;  '((emacs-lisp . t) (C . t) (ipython . t)))
+    ;; Most often, we'll use inline src statements (e.g. src_python{...}) to
+    ;; simply display formatted text.
+    (setq org-babel-default-inline-header-args
+          '((:exports . "code")
+            (:eval . "never")
+            (:results . "none")))
 
-    (setq org-babel-clojure-backend 'cider)
+    ;; (setq org-babel-clojure-backend 'cider)
 
     (setq org-edit-src-content-indentation 0
           org-src-tab-acts-natively t
@@ -738,7 +725,7 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     (setq org-babel-python-command (python-shell-calculate-command))
 
     (defun btw/org-babel-python-session-buffer (orig-func session)
-      "Set org-babel's default python session buffer naming to follow python-mode's."
+      "Make org-babel's default python session buffer naming follow `python-mode'."
       (if (eq session :default)
           (format "*%s*" (python-shell-get-process-name nil))
         (funcall orig-func session)))
@@ -795,6 +782,7 @@ in the local directory"
         (compile compile-cmd)))
 
     (setq org-latex-listings 'minted
+          org-latex-prefer-user-labels t
           org-latex-packages-alist '(("" "minted"))
           org-latex-pdf-process #'btw/org-latex-pdf-process)
 
@@ -824,33 +812,122 @@ in the local directory"
     (add-hook 'python-mode-hook #'(lambda () (add-to-list 'flycheck-disabled-checkers 'python-pylint)))
     )
 
-  (with-eval-after-load 'ob-ipython
-    ;; `org-babel-execute:ipython' and `org-babel-ipython-initiate-session' are the functions to look at.
-  )
+  (spacemacs|use-package-add-hook org
+    :post-config
+    (progn
+      ;; FIXME: What's the deal with these?
+      (add-to-list 'org-babel-load-languages '(emacs-lisp . t))
+      ;; (add-to-list 'org-babel-load-languages '(R . t))
+      ;; (add-to-list 'org-babel-load-languages '(shell . t))
+      ;; (add-to-list 'org-babel-load-languages '(sql. t))
+      (use-package ob-ipython
+        :init (add-to-list 'org-babel-load-languages '(ipython . t))
+        :config
+        (progn
+          (add-hook 'org-mode-hook
+                    #'(lambda ()
+                        (ob-ipython-mode)))
+          (add-hook 'ob-ipython-mode-hook
+                    #'(lambda ()
+                        (let* ((proj-root (projectile-project-root))
+                              (proj-figures-dir (f-join proj-root "figures")))
+                          (when (f-exists? proj-figures-dir)
+                            (setq-local ob-ipython-resources-dir proj-figures-dir)))
+                        (add-to-list 'company-backends 'company-ob-ipython))
+                    )
+
+          (defun btw/ob-ipython--create-repl (name)
+            "Use `python-shell-get-process-name' for buffer processes."
+            (let ((python-shell-completion-native-enable nil)
+                  (cmd (s-join " " (ob-ipython--kernel-repl-cmd name)))
+                  (process-name (if (string= "default" name)
+                                    (python-shell-get-process-name nil)
+                                  (format "%s:%s" (python-shell-get-process-name nil) name)
+                                  )))
+                (get-buffer-process
+                 (python-shell-make-comint cmd process-name nil))
+                (format "*%s*" process-name)
+              ))
+
+          (advice-add 'ob-ipython--create-repl :override #'btw/ob-ipython--create-repl)
+
+          (defun btw/ob-ipython--process-response (ret file result-type)
+            "Don't append 'Out[...]:\n' junk to value-type output!"
+            (let ((result (cdr (assoc :result ret)))
+                  (output (cdr (assoc :output ret))))
+              (if (eq result-type 'output)
+                  output
+                ;; Don't need this lame-ass popup window.
+                ;; (ob-ipython--output output nil)
+                (car (->> (-map (-partial 'ob-ipython--render file)
+                                (list (cdr (assoc :value result))
+                                      (cdr (assoc :display result))))
+                          (remove-if-not nil))))
+              ))
+
+          (advice-add 'ob-ipython--process-response :override #'btw/ob-ipython--process-response)
+
+          (defun btw/ob-jupyter-console-repl-refresh ()
+            " Manually--and hackishly--'refresh' a Jupyter console session with a
+      remote kernel (opening one if not present) and display results echoed from
+      a remote kernel.
+
+      XXX: Requires 'c.ZMQTerminalInteractiveShell.include_other_output = True' in
+      the jupyter console config.  Could add this to `ob-ipython' console initiation
+      just to be sure."
+            (ignore-errors
+              ;; FIXME: Does not seem to find the correct/any session!
+              (let ((session-buffer (org-babel-initiate-session)))
+              ;; (let* ((info (or info (org-babel-get-src-block-info)))
+              ;;        (lang (nth 0 info))
+              ;;        (params (nth 2 info))
+              ;;        (session (cdr (assq :session params))))
+                (when session-buffer
+                  (save-mark-and-excursion
+                    (with-current-buffer session-buffer
+                      (python-shell-send-string "pass" (python-shell-get-process))))))))
+
+          ;; Needed to get rid of erroneous output related to the above.
+          (defun btw/ob-ipython--render (file-or-nil values)
+            (let ((org (lambda (value) value))
+                  (png (lambda (value)
+                         (let ((file (or file-or-nil (ob-ipython--generate-file-name ".png"))))
+                           (ob-ipython--write-base64-string file value)
+                           (format "[[file:%s]]" file))))
+                  (svg (lambda (value)
+                         (let ((file (or file-or-nil (ob-ipython--generate-file-name ".svg"))))
+                           (ob-ipython--write-string-to-file file value)
+                           (format "[[file:%s]]" file))))
+                  (html (lambda (value)))
+                  (txt (lambda (value)
+                         (when value
+                           (string-trim value "['\"]" "['\"]")))))
+              (or (-when-let (val (cdr (assoc 'text/org values))) (funcall org val))
+                  (-when-let (val (cdr (assoc 'image/png values))) (funcall png val))
+                  (-when-let (val (cdr (assoc 'image/svg+xml values))) (funcall svg val))
+                  (-when-let (val (cdr (assoc 'text/plain values))) (funcall txt val)))
+              ;; (btw/ob-jupyter-console-repl-refresh)
+              ))
+
+          (advice-add 'ob-ipython--render :override #'btw/ob-ipython--render)
+
+          (defun btw/ob-ipython--dump-error (err-msg)
+            "Get rid of separate trace buffer"
+            ;; Drop into console instead?
+            ;; (ignore-errors (btw/ob-jupyter-console-repl-refresh))
+            (error "There was a fatal error trying to process the request."))
+
+          (advice-add 'ob-ipython--dump-error :override #'btw/ob-ipython--dump-error)
+          ))))
 
   (with-eval-after-load 'python
     ;;; See https://github.com/kaz-yos/eval-in-repl/blob/master/eval-in-repl-python.el
     ;;; for some interesting ideas.
 
-    ;; TODO: In the python layer, `spacemacs/python-toggle-breakpoint' should
-    ;; take an `alist' in the `cond' statement; that way, people could add their
-    ;; own debuggers via custom variable like this
-    ;;(defcustom spacemacs/python-breakpoints '((wdb . "import wdb; wdb.set_trace()")
-    ;;                                          (IPython . "from IPython.core.debugger import set_trace; set_trace()"))
-    ;;  :group 'python
-    ;;  :type '(alist :tag "Backing executable"
-    ;;                :key-type
-    ;;                (choice
-    ;;                 (const :tag "wdb" wdb)
-    ;;                 (const :tag "IPython" wdb)
-    ;;                 (const :tag "ipdb" ipdb))
-    ;;                :value-type (string :tag "Set trace expression")))
-    ;; One could then use `alist-get' defaulting to "pdb", as in the existing `cond'.
-    ;; from IPython.core.debugger import set_trace; set_trace()
-
     ;; Stop python from complaining when opening a REPL
-    ;; (setq python-shell-completion-native-disabled-interpreters
-    ;;       (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython"))
+    ;; (add-to-list 'python-shell-completion-native-disabled-interpreters "jupyter")
+    ;; (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython")
+
     (setq python-shell-completion-native-output-timeout 3.0)
     (setq python-pdbtrack-activate nil)
 
