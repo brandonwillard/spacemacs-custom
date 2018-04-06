@@ -376,6 +376,8 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
 
+  ;; (toggle-debug-on-error)
+
   (setq load-path (append '("~/.spacemacs.d/") load-path))
 
   ;; Viper is loaded/installed automatically, but we want it disabled.
@@ -391,7 +393,24 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   ;; (setq browse-url-browser-function 'eww-browse-url)
   ;; (setq browse-url-browser-function 'xwidget-webkit-browse-url)
-  )
+
+  (defun btw/ad-timestamp-message (format-string &rest args)
+    "Advice to run before `message' that prepends a timestamp to each message.
+    Activate this advice with:
+      (advice-add 'message :before 'btw/ad-timestamp-message)
+    Deactivate this advice with:
+      (advice-remove 'message 'btw/ad-timestamp-message)
+    From https://emacs.stackexchange.com/a/33523"
+    (if message-log-max
+        (let ((deactivate-mark nil)
+              (inhibit-read-only t))
+          (with-current-buffer "*Messages*"
+            (goto-char (point-max))
+            (if (not (bolp))
+                (newline))
+            (insert (format-time-string "[%F %T.%3N] "))))))
+
+  (advice-add 'message :before 'btw/ad-timestamp-message))
 
 (defun dotspacemacs/user-config ()
   "Configuration function for user code.
@@ -420,7 +439,7 @@ you should place your code here."
 
     (defun btw/find-project-bib-file (dir)
       "Finds an bib file within a projectile project."
-      (let* ((project-root (ignore-errors (projectile-project-root)))
+      (let* ((project-root (with-demoted-errors "Error: %S" (projectile-project-root)))
             (file-name (f-glob "src/tex/*.bib" project-root)))
         (when (f-exists? file-name)
           file-name)))
@@ -738,10 +757,13 @@ From URL `https://emacs.stackexchange.com/a/12403'"
 
     (defun btw/org-export-output-project-file-name (orig-fun extension &optional subtreep pub-dir)
       "Export to a project's corresponding source directory as determined by EXTENSION."
-      (let* ((proj-root (projectile-project-root))
-             (lang-src-dir (f-join proj-root "src" (s-chop-prefix "." extension)))
-             (pub-dir (or pub-dir
-                          (and (f-exists? lang-src-dir) lang-src-dir))))
+      (let* ((projectile-require-project-root nil)
+             (proj-root (projectile-project-root))
+             (lang-src-dir (when proj-root
+                             (f-join proj-root "src" (s-chop-prefix "." extension))))
+             (pub-dir (if (and lang-src-dir (f-exists? lang-src-dir))
+                          lang-src-dir
+                        pub-dir)))
         (message "%s" pub-dir)
         (apply orig-fun extension subtreep (list pub-dir)))
       )
@@ -766,9 +788,11 @@ From URL `https://emacs.stackexchange.com/a/12403'"
     (defun btw/org-latex-pdf-process (file-name)
       "XXX: This will err-out because of org-export's assumption that the output should b
 in the local directory"
-      (let* ((proj-root (projectile-project-root))
-             (pdf-out-dir (f-join proj-root "output"))
-             (pub-dir (if (f-exists? pdf-out-dir)
+      (let* ((projectile-require-project-root nil)
+             (proj-root (projectile-project-root))
+             (pdf-out-dir (when proj-root
+                            (f-join proj-root "output")))
+             (pub-dir (if (and pdf-out-dir (f-exists? pdf-out-dir))
                           pdf-out-dir
                         (f-dirname file-name)))
              (compile-cmd (s-join " "
@@ -824,16 +848,20 @@ in the local directory"
         :init (add-to-list 'org-babel-load-languages '(ipython . t))
         :config
         (progn
-          (add-hook 'org-mode-hook
+          ;; Only initialize `ob-ipython-mode' when we edit a src block.
+          (add-hook 'org-src-mode-hook
                     #'(lambda ()
                         (ob-ipython-mode)))
           (add-hook 'ob-ipython-mode-hook
                     #'(lambda ()
-                        (let* ((proj-root (projectile-project-root))
-                              (proj-figures-dir (f-join proj-root "figures")))
-                          (when (f-exists? proj-figures-dir)
+                        (let* ((projectile-require-project-root nil)
+                               (proj-root (projectile-project-root))
+                               (proj-figures-dir (when proj-root
+                                                   (f-join proj-root "figures"))))
+                          (when (and proj-figures-dir (f-exists? proj-figures-dir))
                             (setq-local ob-ipython-resources-dir proj-figures-dir)))
-                        (add-to-list 'company-backends 'company-ob-ipython))
+                        (when (symbolp 'company-backends)
+                          (add-to-list 'company-backends 'company-ob-ipython)))
                     )
 
           (defun btw/ob-ipython--create-repl (name)
@@ -875,7 +903,7 @@ in the local directory"
       XXX: Requires 'c.ZMQTerminalInteractiveShell.include_other_output = True' in
       the jupyter console config.  Could add this to `ob-ipython' console initiation
       just to be sure."
-            (ignore-errors
+            (with-demoted-errors "Error: %S"
               ;; FIXME: Does not seem to find the correct/any session!
               (let ((session-buffer (org-babel-initiate-session)))
               ;; (let* ((info (or info (org-babel-get-src-block-info)))
@@ -914,7 +942,7 @@ in the local directory"
           (defun btw/ob-ipython--dump-error (err-msg)
             "Get rid of separate trace buffer"
             ;; Drop into console instead?
-            ;; (ignore-errors (btw/ob-jupyter-console-repl-refresh))
+            ;; (with-demoted-errors "Error: %S" (btw/ob-jupyter-console-repl-refresh))
             (error "There was a fatal error trying to process the request."))
 
           (advice-add 'ob-ipython--dump-error :override #'btw/ob-ipython--dump-error)
@@ -936,7 +964,7 @@ in the local directory"
       "Append project name to shell process name.
        Makes shells specific to the active project."
         (let ((proc-name (funcall orig-func dedicated))
-              (proj-name (ignore-errors (projectile-project-name))))
+              (proj-name (with-demoted-errors "Error: %S" (projectile-project-name))))
           (if (and proj-name
                    (not (s-suffix? (format "(%s)" proj-name) proc-name)))
               (format "%s(%s)" proc-name proj-name)

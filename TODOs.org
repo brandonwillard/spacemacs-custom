@@ -99,6 +99,8 @@
     #+END_SRC
     See [[https://orgmode.org/worg/org-contrib/org-exp-blocks.html][~org-exp-blocks~]] for ways to pre-process blocks on export.
 * TODO Better ~org-babel~ Python interaction                :python:orgbabel:
+  - Note taken on [2018-04-06 Fri 12:41] \\
+    Consider adding a =org-babel-ipython-associate-session=.
   - Note taken on [2018-04-04 Wed 17:14] \\
     =ob-ipython='s completion is terribly slow; consider refactoring to keep a
     low-level network connection, instead of calling a python script that
