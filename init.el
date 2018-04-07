@@ -422,6 +422,7 @@ you should place your code here."
 
   (setq comment-empty-lines t)
   (setq evil-move-beyond-eol t)
+  (setq evil-search-wrap nil)
 
   (require 'mode-local)
   (setq-mode-local text-mode scroll-margin 10)
@@ -949,12 +950,12 @@ in the local directory"
           ))))
 
   (with-eval-after-load 'python
-    ;;; See https://github.com/kaz-yos/eval-in-repl/blob/master/eval-in-repl-python.el
-    ;;; for some interesting ideas.
+    ;; See https://github.com/kaz-yos/eval-in-repl/blob/master/eval-in-repl-python.el
+    ;; for some interesting ideas.
 
     ;; Stop python from complaining when opening a REPL
-    ;; (add-to-list 'python-shell-completion-native-disabled-interpreters "jupyter")
-    ;; (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython")
+    (add-to-list 'python-shell-completion-native-disabled-interpreters "jupyter")
+    (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython")
 
     (setq python-shell-completion-native-output-timeout 3.0)
     (setq python-pdbtrack-activate nil)
