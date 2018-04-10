@@ -44,6 +44,7 @@
     :init (add-hook 'python-mode-hook 'evil-text-object-python-add-bindings)))
 
 (defun python-extras/post-init-editorconfig ()
+
   (defun python-extras/editorconfig-set-pyvenv (props)
     "Set Anaconda virtual env from entry in editorconfig file.
 The config file entry should be the env name, and `pyenv-workon-home' should be
@@ -82,8 +83,8 @@ set."
   (setq python-pdbtrack-activate nil)
 
   (spacemacs|use-package-add-hook python
+    ;; This variable is not auto-exported?
     :post-config
-    ;; This variable is not auto-exported
     (add-to-list 'python-shell-completion-native-disabled-interpreters "jupyter")
     (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython"))
 
@@ -96,6 +97,7 @@ set."
     "sl" 'spacemacs//python-shell-send-line-echo))
 
 (defun python-extras/post-init-company ()
+
   (defun python-extras/company-transform-python (candidates)
     "De-prioritize internal variables (i.e. '_blah') in completion list ordering.
 
@@ -118,10 +120,10 @@ From URL `https://emacs.stackexchange.com/a/12403'"
   (add-hook 'python-mode-hook 'python-extras/python-company-conf t)
 
   ;; Disable company idle/automatic completion.
-  ;; TODO: Could override `spacemacs//inferior-python-setup-hook'.
-  (add-hook 'inferior-python-mode-hook
-            #'(lambda ()
-                (setq-local company-idle-delay nil)) t))
+  (advice-add 'spacemacs//init-company-vars-inferior-python-mode
+              :after
+              #'(lambda (&rest _)
+                  (setq-local company-idle-delay nil))))
 
 (defun python-extras/post-init-pyvenv ()
 

@@ -24,8 +24,11 @@ Makes shells specific to the active project."
 
 (when (configuration-layer/package-used-p 'pyvenv)
   (defun spacemacs//pyvenv-conda-activate-additions ()
-    (setenv "CONDA_PREFIX" (string-remove-suffix "/" pyvenv-virtual-env))
-    (setenv "CONDA_DEFAULT_ENV" pyvenv-virtual-env-name))
+    (when (and (boundp 'pyvenv-virtual-env)
+               (boundp 'pyvenv-virtual-env-name))
+      (setenv "CONDA_PREFIX"
+              (string-remove-suffix "/" pyvenv-virtual-env))
+      (setenv "CONDA_DEFAULT_ENV" pyvenv-virtual-env-name)))
 
   (defun spacemacs//pyvenv-conda-deactivate-additions ()
     (setenv "CONDA_PREFIX" nil)
@@ -35,18 +38,19 @@ Makes shells specific to the active project."
     "Activate the current env in a newly opened shell PROCESS.
 
 From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
-    (let* ((activate-command (if (eq system-type 'windows-nt)
-                                  '("activate")
-                                ;'("source" "activate")
-                                '("conda" "activate")
-                                ))
-            (full-command (append activate-command `(,pyvenv-virtual-env-name "\n")))
-            (command-string (combine-and-quote-strings full-command))
-            (buffer-or-process (if (not process)
-                                  (current-buffer)
-                                process)))
-      (progn (message "sending %s to %S" command-string buffer-or-process)
-              (term-send-string buffer-or-process command-string)))))
+    (when (boundp 'pyvenv-virtual-env-name)
+      (let* ((activate-command (if (eq system-type 'windows-nt)
+                                   '("activate")
+                                        ;'("source" "activate")
+                                 '("conda" "activate")
+                                 ))
+             (full-command (append activate-command `(,pyvenv-virtual-env-name "\n")))
+             (command-string (combine-and-quote-strings full-command))
+             (buffer-or-process (if (not process)
+                                    (current-buffer)
+                                  process)))
+        (progn (message "sending %s to %S" command-string buffer-or-process)
+               (term-send-string buffer-or-process command-string))))))
 
 (defun spacemacs//python-shell-append-to-output (string)
   "Append STRING to `comint' display output."

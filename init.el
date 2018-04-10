@@ -30,12 +30,12 @@ values."
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
-   '(csv
-     javascript
+   '(
+     csv
+     (javascript :packages (not tern))
      lsp
      html
      markdown
-     ;; javascript
      (latex :variables
             latex-build-command "Make")
      bibtex
@@ -48,6 +48,7 @@ values."
              python-backend 'lsp
              :packages (not live-py-mode)
              )
+     python-extras
      yaml
      sql
      noweb
@@ -72,6 +73,7 @@ values."
      (org :variables
           org-enable-github-support t
           org-projectile-file "TODOs.org")
+     org-extras
      (shell :variables
             shell-default-height 30
             shell-default-position 'bottom)
@@ -97,19 +99,10 @@ values."
                                       ;; embrace
                                       evil-embrace
 
-                                      ob-ipython
-                                      ob-async
-
                                       ox-jira
                                       ;; ox-confluence
 
-                                      ;; conda
-
                                       dockerfile-mode
-
-                                      editorconfig
-
-                                      evil-text-object-python
 
                                       evil-extra-operator
                                       )
@@ -365,7 +358,7 @@ values."
    ;; (default nil)
    dotspacemacs-whitespace-cleanup 'trailing
 
-   ;; dotspacemacs-switch-to-buffer-prefers-purpose t
+   dotspacemacs-switch-to-buffer-prefers-purpose t
    ))
 
 (defun dotspacemacs/user-init ()
@@ -380,6 +373,9 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   (setq load-path (append '("~/.spacemacs.d/") load-path))
 
+  (setq Info-default-directory-list
+    '("/usr/share/info/emacs-27" "/usr/local/share/info/" "/usr/share/info/"))
+
   ;; Viper is loaded/installed automatically, but we want it disabled.
   (setq package-load-list '(all
                             (viper nil)
@@ -389,7 +385,6 @@ before packages are loaded. If you are unsure, you should try in setting them in
   (setenv "WORKON_HOME" "~/apps/anaconda3/envs")
 
   (setq custom-file (concat user-emacs-directory "private/custom-settings.el"))
-  (load custom-file)
 
   ;; (setq browse-url-browser-function 'eww-browse-url)
   ;; (setq browse-url-browser-function 'xwidget-webkit-browse-url)
@@ -436,17 +431,25 @@ you should place your code here."
 
   (setq compilation-scroll-output #'first-error)
 
-  (with-eval-after-load 'bibtex
+  (with-eval-after-load 'vim-powerline-theme
+    ;; Egh, doesn't really work.
+    (setq winum-auto-setup-mode-line t)
+    (setq powerline-default-separator 'bar))
 
+  (with-eval-after-load 'bibtex
     (defun btw/find-project-bib-file (dir)
       "Finds an bib file within a projectile project."
       (let* ((project-root (with-demoted-errors "Error: %S" (projectile-project-root)))
-            (file-name (f-glob "src/tex/*.bib" project-root)))
+             (file-name (f-glob "src/tex/*.bib" project-root)))
         (when (f-exists? file-name)
-          file-name)))
+          file-name))))
 
+  (with-eval-after-load 'org-ref
     (setq org-ref-pdf-directory "~/projects/papers/references"
           org-ref-bibliography-notes "~/projects/papers/references/notes.org"))
+
+  (with-eval-after-load 'org
+    (setq org-default-notes-file (f-join user-home-directory "Documents" "notes.org")))
 
   (with-eval-after-load 'tex
     (add-to-list 'TeX-command-list
@@ -456,9 +459,6 @@ you should place your code here."
 
   (with-eval-after-load 'projectile
     (setq projectile-use-git-grep t))
-
-  (with-eval-after-load 'org-projectile
-    (setq org-projectile-capture-template "* TODO %?\n  %u\n  %a"))
 
   (with-eval-after-load 'hideshow
     (setq hs-allow-nesting t)
@@ -503,16 +503,8 @@ From https://stackoverflow.com/a/37356659/3006474"
   (advice-add 'message :after #'btw/messages-auto-tail)
 
   (with-eval-after-load 'persp-mode
-    ;; Add variables containing functions to be called after layout changes.
-    (defvar after-switch-to-buffer-functions nil)
-    (defvar after-display-buffer-functions nil)
-    (progn
-      (defun after-switch-to-buffer-adv (&rest r)
-        (apply #'run-hook-with-args 'after-switch-to-buffer-functions r))
-      (defun after-display-buffer-adv (&rest r)
-        (apply #'run-hook-with-args 'after-display-buffer-functions r))
-      (advice-add #'switch-to-buffer :after #'after-switch-to-buffer-adv)
-      (advice-add #'display-buffer   :after #'after-display-buffer-adv))
+    ;; Add variables containing functions to be called after layout changes:
+    ;; See `persp-before-switch-functions'.
 
     ;; Manually add certain buffers to the perspective
     ;; (add-hook 'after-switch-to-buffer-functions
@@ -531,43 +523,7 @@ From https://stackoverflow.com/a/37356659/3006474"
     ;; for more examples (e.g. Python inferior shells).
     (persp-def-buffer-save/load
      :mode 'eshell-mode :tag-symbol 'def-eshell-buffer
-     :save-vars '(major-mode default-directory))
-    )
-
-  (with-eval-after-load 'pyvenv-mode
-    ;; If `pyvenv-workon' buffer-local variables is set, activate the corresponding
-    ;; venv when entering the buffer.
-    (pyvenv-tracking-mode +1)
-
-    (defun btw/pyvenv-conda-activate-additions ()
-      (setenv "CONDA_PREFIX" (string-remove-suffix "/" pyvenv-virtual-env))
-      (setenv "CONDA_DEFAULT_ENV" pyvenv-virtual-env-name))
-
-    (defun btw/pyvenv-conda-deactivate-additions ()
-      (setenv "CONDA_PREFIX" nil)
-      (setenv "CONDA_DEFAULT_ENV" nil))
-
-    (add-hook 'pyvenv-post-activate-hooks #'btw/pyvenv-conda-activate-additions)
-    (add-hook 'pyvenv-post-deactivate-hooks #'btw/pyvenv-conda-deactivate-additions)
-
-    (defun btw/pyvenv-conda-env-shell-init (&rest process)
-      "Activate the current env in a newly opened shell PROCESS.
-
-From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
-      (let* ((activate-command (if (eq system-type 'windows-nt)
-                                   '("activate")
-                                 ;'("source" "activate")
-                                 '("conda" "activate")
-                                 ))
-             (full-command (append activate-command `(,pyvenv-virtual-env-name "\n")))
-             (command-string (combine-and-quote-strings full-command))
-             (buffer-or-process (if (not process)
-                                    (current-buffer)
-                                  process)))
-        (progn (message "sending %s to %S" command-string buffer-or-process)
-               (term-send-string buffer-or-process command-string))))
-
-    (add-hook 'term-exec-hook #'btw/pyvenv-conda-env-shell-init))
+     :save-vars '(major-mode default-directory)))
 
   (with-eval-after-load 'comint
     ;; Make terminals and REPLs read-only.
@@ -586,9 +542,7 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
   (use-package evil-embrace
     :config
     (progn
-      (evil-embrace-enable-evil-surround-integration)
-
-      ))
+      (evil-embrace-enable-evil-surround-integration)))
 
   (with-eval-after-load 'embrace
     (add-hook 'LaTeX-mode-hook 'embrace-LaTeX-mode-hook)
@@ -614,40 +568,6 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
   (use-package dockerfile-mode
     :mode ("Dockerfile\\'" . dockerfile-mode))
 
-  (use-package editorconfig
-    :ensure t
-    :init
-    (progn
-      (editorconfig-mode 1)
-
-      (defun btw/editorconfig-set-pyvenv (props)
-        "Set Anaconda virtual env from entry in editorconfig file.
-The config file entry should be the env name, and `pyenv-workon-home' should be
-set."
-        (let ((env-name (gethash 'conda_env_name props)))
-          ;; `pyvenv-workon' seems slow, so only set the bare minimum when
-          ;; the mode isn't python-specific.
-          (when (and env-name
-                     (not (local-variable-p 'python-shell-virtualenv-root)))
-            (cond
-             ;; FIXME: Inferior mode catch doesn't work here.  Should just
-             ;; use the mode's hooks or something.
-             ((or (string-equal major-mode "inferior-python-mode")
-                  (bound-and-true-p python-mode))
-              (progn (message "editorconfig setting pyvenv: %s" env-name)
-                     (pyvenv-workon env-name)))
-             ((and (not (local-variable-p 'python-shell-virtualenv-root))
-                   (getenv "WORKON_HOME"))
-              (progn (message "editorconfig setting virtualenv-root")
-                     ;; (require 'pyvenv)
-                     (setq-local pyvenv-workon env-name)
-                     (setq-local python-shell-virtualenv-root
-                                 (f-join (getenv "WORKON_HOME") env-name))))))))
-
-      (add-hook 'editorconfig-custom-hooks
-                #'btw/editorconfig-set-pyvenv))
-    )
-
   (with-eval-after-load 'evil
     (setq-default evil-want-visual-char-semi-exclusive t)
     (setq-default evil-move-curser-back nil)
@@ -656,8 +576,6 @@ set."
     (setq-default evil-insert-state-modes '(magit-popup-mode))
     (setq evil-kill-on-visual-paste nil)
     ;; (setq-default evil-motion-state-modes nil)
-
-    (add-hook 'python-mode-hook 'evil-text-object-python-add-bindings)
 
     ;; Make evil-mode up/down operate in screen lines instead of logical lines
     (define-key evil-motion-state-map "j" 'evil-next-visual-line)
@@ -674,29 +592,7 @@ set."
     (define-key company-active-map (kbd "C-w") 'evil-delete-backward-word)
     (define-key company-active-map (kbd "C-y") 'company-complete-selection)
     (define-key evil-insert-state-map (kbd "C-n") #'company-select-next)
-    (define-key evil-insert-state-map (kbd "C-p") #'company-select-previous)
-
-    ;; TODO: Move this to python layer (when it works).
-    (defun btw/company-transform-python (candidates)
-      "De-prioritize internal variables (i.e. '_blah') in completion list ordering.
-
-See `company-transformers'.
-
-From URL `https://emacs.stackexchange.com/a/12403'"
-      (let ((deleted))
-        (mapcar #'(lambda (c)
-                    (if (or (string-prefix-p "_" c) (string-prefix-p "._" c))
-                        (progn
-                          (add-to-list 'deleted c)
-                          (setq candidates (delete c candidates)))))
-                candidates)
-        (append candidates (nreverse deleted))))
-
-    (defun btw/python-company-conf()
-      (setq-local company-transformers
-                  (append company-transformers '(btw/company-transform-python))))
-
-    (add-hook 'python-mode-hook 'btw/python-company-conf t))
+    (define-key evil-insert-state-map (kbd "C-p") #'company-select-previous))
 
   (with-eval-after-load 'helm
     (setq-default helm-follow-mode-persistent t)
@@ -707,331 +603,6 @@ From URL `https://emacs.stackexchange.com/a/12403'"
 
   (with-eval-after-load 'evil-jumps
     (setq evil-jumps-cross-buffers nil))
-
-  (with-eval-after-load 'org
-
-    ;; TODO: Use `spacemacs|use-package-add-hook'?
-    (require 'ox-jira)
-
-    ;; (require 'ox-confluence)
-
-    (setq org-default-notes-file
-          ;; Could use `getenv' and some xdg location...
-          (f-join user-home-directory "Documents" "notes.org"))
-
-    (setq org-capture-templates
-          '(("t" "Tasks" entry
-             (file+headline org-default-notes-file "Tasks"))))
-
-    (setq org-highlight-latex-and-related '(latex script entities))
-
-    ;; Most often, we'll use inline src statements (e.g. src_python{...}) to
-    ;; simply display formatted text.
-    (setq org-babel-default-inline-header-args
-          '((:exports . "code")
-            (:eval . "never")
-            (:results . "none")))
-
-    ;; (setq org-babel-clojure-backend 'cider)
-
-    (setq org-edit-src-content-indentation 0
-          org-src-tab-acts-natively t
-          org-src-window-setup 'current-window
-          org-src-fontify-natively t
-          org-confirm-babel-evaluate nil
-          org-support-shift-select 'always)
-
-    ;; Just in case we want to use the vanilla python babel...
-    (setq org-babel-python-command (python-shell-calculate-command))
-
-    (defun btw/org-babel-python-session-buffer (orig-func session)
-      "Make org-babel's default python session buffer naming follow `python-mode'."
-      (if (eq session :default)
-          (format "*%s*" (python-shell-get-process-name nil))
-        (funcall orig-func session)))
-
-    (advice-add 'org-babel-python-session-buffer :around
-                #'btw/org-babel-python-session-buffer)
-
-    ;; See https://emacs.stackexchange.com/a/21472 for a way to programmatically
-    ;; set org-mode properties in a buffer.
-
-    (defun btw/org-export-output-project-file-name (orig-fun extension &optional subtreep pub-dir)
-      "Export to a project's corresponding source directory as determined by EXTENSION."
-      (let* ((projectile-require-project-root nil)
-             (proj-root (projectile-project-root))
-             (lang-src-dir (when proj-root
-                             (f-join proj-root "src" (s-chop-prefix "." extension))))
-             (pub-dir (if (and lang-src-dir (f-exists? lang-src-dir))
-                          lang-src-dir
-                        pub-dir)))
-        (message "%s" pub-dir)
-        (apply orig-fun extension subtreep (list pub-dir)))
-      )
-
-    (advice-add 'org-export-output-file-name :around #'btw/org-export-output-project-file-name)
-
-    (with-eval-after-load 'ob-python
-      (require 'python)
-      (defun org-babel-load-session:python (session body params)
-        "Load BODY into SESSION using python-shell-send-string-echo."
-        (save-window-excursion
-          (let ((buffer (org-babel-prep-session:python session params))
-                (python-shell-send (if (fboundp 'python-shell-send-string-echo)
-                                       'python-shell-send-string-echo
-                                     'python-shell-send-string)))
-            (with-current-buffer buffer
-              (funcall python-shell-send
-                       (org-babel-chomp body)
-                       (get-buffer-process (current-buffer))))
-            buffer))))
-
-    (defun btw/org-latex-pdf-process (file-name)
-      "XXX: This will err-out because of org-export's assumption that the output should b
-in the local directory"
-      (let* ((projectile-require-project-root nil)
-             (proj-root (projectile-project-root))
-             (pdf-out-dir (when proj-root
-                            (f-join proj-root "output")))
-             (pub-dir (if (and pdf-out-dir (f-exists? pdf-out-dir))
-                          pdf-out-dir
-                        (f-dirname file-name)))
-             (compile-cmd (s-join " "
-                                  (list "max_print_line=1000 error_line=254 half_error_line=238 openout_any=a"
-                                        "latexmk -pdf -bibtex -pdflatex='pdflatex -shell-escape -file-line-error -interaction=nonstopmode -synctex=1'"
-                                        (concat "-jobname="
-                                                (f-join pub-dir
-                                                        (f-base file-name)))
-                                        file-name))))
-        (message "%s" compile-cmd)
-        (compile compile-cmd)))
-
-    (setq org-latex-listings 'minted
-          org-latex-prefer-user-labels t
-          org-latex-packages-alist '(("" "minted"))
-          org-latex-pdf-process #'btw/org-latex-pdf-process)
-
-    (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append))
-
-  (with-eval-after-load 'org-agenda
-    (require 'org-projectile)
-    (let ((existing-todos (-filter 'f-exists-p (org-projectile-todo-files))))
-      (setq org-agenda-files (append org-agenda-files existing-todos))))
-
-  (with-eval-after-load 'flycheck
-
-    ;; (flycheck-add-next-checker 'python-flake8 'python-pylint)
-
-    (defun btw/flycheck-virtualenv-executable-find (executable &rest find-any)
-      "Find an EXECUTABLE in the current virtualenv (exclusively) if any."
-      (if (bound-and-true-p python-mode)
-          (if (bound-and-true-p python-shell-virtualenv-root)
-              (let ((exec-path (nth 0 (python-shell-calculate-exec-path))))
-                (executable-find executable))
-            (when find-any
-              (executable-find executable)))
-        (executable-find executable)))
-
-    (setq flycheck-executable-find #'btw/flycheck-virtualenv-executable-find)
-
-    (add-hook 'python-mode-hook #'(lambda () (add-to-list 'flycheck-disabled-checkers 'python-pylint)))
-    )
-
-  (spacemacs|use-package-add-hook org
-    :post-config
-    (progn
-      ;; FIXME: What's the deal with these?
-      (add-to-list 'org-babel-load-languages '(emacs-lisp . t))
-      ;; (add-to-list 'org-babel-load-languages '(R . t))
-      ;; (add-to-list 'org-babel-load-languages '(shell . t))
-      ;; (add-to-list 'org-babel-load-languages '(sql. t))
-      (use-package ob-ipython
-        :init (add-to-list 'org-babel-load-languages '(ipython . t))
-        :config
-        (progn
-          ;; Only initialize `ob-ipython-mode' when we edit a src block.
-          (add-hook 'org-src-mode-hook
-                    #'(lambda ()
-                        (ob-ipython-mode)))
-          (add-hook 'ob-ipython-mode-hook
-                    #'(lambda ()
-                        (let* ((projectile-require-project-root nil)
-                               (proj-root (projectile-project-root))
-                               (proj-figures-dir (when proj-root
-                                                   (f-join proj-root "figures"))))
-                          (when (and proj-figures-dir (f-exists? proj-figures-dir))
-                            (setq-local ob-ipython-resources-dir proj-figures-dir)))
-                        (when (symbolp 'company-backends)
-                          (add-to-list 'company-backends 'company-ob-ipython)))
-                    )
-
-          (defun btw/ob-ipython--create-repl (name)
-            "Use `python-shell-get-process-name' for buffer processes."
-            (let ((python-shell-completion-native-enable nil)
-                  (cmd (s-join " " (ob-ipython--kernel-repl-cmd name)))
-                  (process-name (if (string= "default" name)
-                                    (python-shell-get-process-name nil)
-                                  (format "%s:%s" (python-shell-get-process-name nil) name)
-                                  )))
-                (get-buffer-process
-                 (python-shell-make-comint cmd process-name nil))
-                (format "*%s*" process-name)
-              ))
-
-          (advice-add 'ob-ipython--create-repl :override #'btw/ob-ipython--create-repl)
-
-          (defun btw/ob-ipython--process-response (ret file result-type)
-            "Don't append 'Out[...]:\n' junk to value-type output!"
-            (let ((result (cdr (assoc :result ret)))
-                  (output (cdr (assoc :output ret))))
-              (if (eq result-type 'output)
-                  output
-                ;; Don't need this lame-ass popup window.
-                ;; (ob-ipython--output output nil)
-                (car (->> (-map (-partial 'ob-ipython--render file)
-                                (list (cdr (assoc :value result))
-                                      (cdr (assoc :display result))))
-                          (remove-if-not nil))))
-              ))
-
-          (advice-add 'ob-ipython--process-response :override #'btw/ob-ipython--process-response)
-
-          (defun btw/ob-jupyter-console-repl-refresh ()
-            " Manually--and hackishly--'refresh' a Jupyter console session with a
-      remote kernel (opening one if not present) and display results echoed from
-      a remote kernel.
-
-      XXX: Requires 'c.ZMQTerminalInteractiveShell.include_other_output = True' in
-      the jupyter console config.  Could add this to `ob-ipython' console initiation
-      just to be sure."
-            (with-demoted-errors "Error: %S"
-              ;; FIXME: Does not seem to find the correct/any session!
-              (let ((session-buffer (org-babel-initiate-session)))
-              ;; (let* ((info (or info (org-babel-get-src-block-info)))
-              ;;        (lang (nth 0 info))
-              ;;        (params (nth 2 info))
-              ;;        (session (cdr (assq :session params))))
-                (when session-buffer
-                  (save-mark-and-excursion
-                    (with-current-buffer session-buffer
-                      (python-shell-send-string "pass" (python-shell-get-process))))))))
-
-          ;; Needed to get rid of erroneous output related to the above.
-          (defun btw/ob-ipython--render (file-or-nil values)
-            (let ((org (lambda (value) value))
-                  (png (lambda (value)
-                         (let ((file (or file-or-nil (ob-ipython--generate-file-name ".png"))))
-                           (ob-ipython--write-base64-string file value)
-                           (format "[[file:%s]]" file))))
-                  (svg (lambda (value)
-                         (let ((file (or file-or-nil (ob-ipython--generate-file-name ".svg"))))
-                           (ob-ipython--write-string-to-file file value)
-                           (format "[[file:%s]]" file))))
-                  (html (lambda (value)))
-                  (txt (lambda (value)
-                         (when value
-                           (string-trim value "['\"]" "['\"]")))))
-              (or (-when-let (val (cdr (assoc 'text/org values))) (funcall org val))
-                  (-when-let (val (cdr (assoc 'image/png values))) (funcall png val))
-                  (-when-let (val (cdr (assoc 'image/svg+xml values))) (funcall svg val))
-                  (-when-let (val (cdr (assoc 'text/plain values))) (funcall txt val)))
-              ;; (btw/ob-jupyter-console-repl-refresh)
-              ))
-
-          (advice-add 'ob-ipython--render :override #'btw/ob-ipython--render)
-
-          (defun btw/ob-ipython--dump-error (err-msg)
-            "Get rid of separate trace buffer"
-            ;; Drop into console instead?
-            ;; (with-demoted-errors "Error: %S" (btw/ob-jupyter-console-repl-refresh))
-            (error "There was a fatal error trying to process the request."))
-
-          (advice-add 'ob-ipython--dump-error :override #'btw/ob-ipython--dump-error)
-          ))))
-
-  (with-eval-after-load 'python
-    ;; See https://github.com/kaz-yos/eval-in-repl/blob/master/eval-in-repl-python.el
-    ;; for some interesting ideas.
-
-    ;; Stop python from complaining when opening a REPL
-    (add-to-list 'python-shell-completion-native-disabled-interpreters "jupyter")
-    (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython")
-
-    (setq python-shell-completion-native-output-timeout 3.0)
-    (setq python-pdbtrack-activate nil)
-
-    ;; FYI: Could just use a python-mode hook that sets `python-shell-buffer-name'.
-    (defun btw/python-shell-get-process-name (orig-func dedicated)
-      "Append project name to shell process name.
-       Makes shells specific to the active project."
-        (let ((proc-name (funcall orig-func dedicated))
-              (proj-name (with-demoted-errors "Error: %S" (projectile-project-name))))
-          (if (and proj-name
-                   (not (s-suffix? (format "(%s)" proj-name) proc-name)))
-              (format "%s(%s)" proc-name proj-name)
-            proc-name)))
-
-    (advice-add 'python-shell-get-process-name :around
-                #'btw/python-shell-get-process-name)
-
-    (defun btw/python-shell-append-to-output (string)
-      "Append STRING to `comint' display output."
-      (let ((buffer (current-buffer))
-            (py-buffer (process-buffer (python-shell-get-process))))
-        (unless (eq buffer py-buffer)
-          (save-mark-and-excursion
-            (with-current-buffer py-buffer
-              (let ((oldpoint (point)))
-                (goto-char (process-mark (python-shell-get-process)))
-                ;; (insert (propertize string 'read-only t))
-                (insert string)
-                (set-marker (process-mark (python-shell-get-process)) (point))
-                (goto-char oldpoint))
-              ))
-          )))
-
-    (defun python-shell-send-string-echo (string &optional process msg)
-      (btw/python-shell-append-to-output string)
-      (python-shell-send-string string process msg))
-
-    (defun python-shell-send-line-echo ()
-      "Send and echo a literal line to the `comint' buffer.
-Ignores beginning white-space."
-      (interactive)
-      (let (start end line)
-        (save-excursion
-          (end-of-line)
-          ;; or `forward-line'?
-          (setq end (point))
-          (beginning-of-line-text)
-          (setq start (point)))
-        (setq line (buffer-substring-no-properties start end))
-        (python-shell-send-string-echo (if (s-ends-with? "\n" line)
-                                           line
-                                           (concat line "\n")))))
-
-    (defun btw/python-shell-send-syntax-line-echo ()
-      "Send and echo a \"syntactical\" line to the `comint' buffer."
-      (interactive)
-      (let (start end line)
-        (save-excursion
-          (python-nav-end-of-statement)
-          (setq end (point))
-          (python-nav-beginning-of-statement)
-          (setq start (point)))
-        (setq line (buffer-substring-no-properties start end))
-        (python-shell-send-string-echo line)))
-
-    (defun python-shell-send-region-echo (start end &optional send-main msg)
-      (interactive
-       (list (region-beginning) (region-end) current-prefix-arg t))
-      (btw/python-shell-append-to-output (buffer-substring-no-properties start end))
-      (python-shell-send-region start end send-main msg))
-
-    (spacemacs/set-leader-keys-for-major-mode 'python-mode
-       "sr" 'python-shell-send-region-echo
-       "sl" 'python-shell-send-line-echo)
-    )
 
   (defun btw/clang-format-bindings ()
     (define-key c++-mode-map [tab] 'clang-format-buffer)
@@ -1072,4 +643,6 @@ From https://emacs.stackexchange.com/a/10698"
      (t)))
 
   (advice-add 'term-handle-ansi-escape :before #'btw/term-handle-more-ansi-escapes)
-  )
+
+  (when (file-exists-p custom-file)
+    (load-file custom-file)))
