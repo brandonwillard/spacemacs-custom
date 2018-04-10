@@ -562,8 +562,7 @@ From https://stackoverflow.com/a/37356659/3006474"
 
     (advice-add 'embrace-emacs-lisp-mode-hook :after #'btw/embrace-emacs-lisp-mode-hook)
     (add-hook 'emacs-lisp-mode-hook
-              'embrace-emacs-lisp-mode-hook)
-    )
+              'embrace-emacs-lisp-mode-hook))
 
   (use-package dockerfile-mode
     :mode ("Dockerfile\\'" . dockerfile-mode))

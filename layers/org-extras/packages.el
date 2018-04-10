@@ -118,8 +118,7 @@
   (setq org-projectile-capture-template "* TODO %?\n  %u\n  %a"))
 
 (defun org-extras/init-ob-async ()
-  (use-package ob-async
-    :defer t))
+  (use-package ob-async))
 
 (defun org-extras/post-init-dash ())
 
