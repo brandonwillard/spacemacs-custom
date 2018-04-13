@@ -1,0 +1,103 @@
+
+* TODO Implement Python src block caching
+  [2018-04-12 Thu]
+  [[file:~/.spacemacs.d/layers/org-extras/funcs.el::;;%20How%20do%20we%20want%20to%20handle%20this?%20Add%20advice%20to%20`org-babel-where-is-src-block-result'?]]
+
+  Use my [[https://github.com/brandonwillard/withhacks/blob/384c0b0b95a39109f9d79e5698c2dc0c650615a1/withhacks/tests/__init__.py#L143][withhacks approach]] to implementing a pickle cache.  Should be easier, since we'll have
+  the source body as a string.
+
+  How do we want to handle this?  Add advice to =org-babel-where-is-src-block-result=?
+  It gets called from =org-babel-execute-src-block= when the hash *hasn't* changed, so
+  it's really only good for loading cached results.  For the case when results need to
+  be written to the cache, =org-babel-execute:[i]python= could work.
+
+  Otherwise, we could just follow the steps in =org-babel-execute-src-block= and
+  add our logic.
+
+  #+BEGIN_SRC elisp
+  (defun org-babel-python-cache-execute (&optional arg info params)
+    "Pickle variables in the src block's body."
+    )
+  (advice-add 'org-babel-execute:python :replace 'org-babel-python-cache-execute)
+  #+END_SRC
+
+  #+BEGIN_SRC python
+  # import bytecode
+  import shelve
+  import tempfile
+  import ast
+  from itertools import cycle
+
+  cache_file = tempfile.mktemp(suffix='.db', dir='/tmp')
+
+  code_str = '''
+  print("hi")
+
+  x = 1
+
+  def blah(y, b=32):
+      res = y + b
+      return res
+
+  class Bloh(object):
+      some_field = 0
+
+      def some_method(self, q=1):
+          method_res = q + 3
+          return method_res
+
+  z = blah(x)
+
+  c, d = [1, 3]
+
+  z = blah(x, b=80)
+  '''
+
+  class AssignVisitor(ast.NodeVisitor):
+
+      cache_invalid = False
+
+      def visit_FunctionDef(self, node):
+          pass
+
+      def visit_AsyncFunctionDef(self, node):
+          pass
+
+      def visit_ClassDef(self, node):
+          pass
+
+      def visit_Assign(self, node):
+          if isinstance(node, ast.Assign):
+              var_nodes = node.targets
+
+              for var, val in zip(var_nodes, cycle([node.value])):
+                  if isinstance(var, ast.Tuple):
+                      print([(v.id, w) for v, w in zip(var.elts, val.elts)])
+                  else:
+                      print((var.id, val))
+
+              # import pdb; pdb.set_trace()
+
+              # val_node = node.value
+              #
+              # for var in var_nodes:
+              #     val_cached = db.get(var.id, None)
+              #
+              #     if val_cached is None:
+              #         cache_invalid = True
+              #         # TODO: Run all the code in this tree and quit,
+              #         # or incrementally evaluation (for partial caches)?
+              #         if isinstance(val, ast.Num):
+              #             var_evaled = eval(val_node.n)
+              #             exec('{} = {}'.format(var.id, var_evaled))
+              #         db[var.id] = var_evaled
+              #     else:
+              #         exec('{} = {}'.format(var.id, val_cached))
+
+
+  code_ast = ast.parse(code_str)
+
+  db = shelve.open(cache_file)
+
+  AssignVisitor().visit(code_ast)
+  #+END_SRC
