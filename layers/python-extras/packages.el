@@ -78,23 +78,22 @@ set."
 
 (defun python-extras/post-init-persp-mode ())
 
-(defun python-extras/post-init-python ()
-  (setq python-shell-completion-native-output-timeout 3.0)
-  (setq python-pdbtrack-activate nil)
-
+(defun python-extras/pre-init-python ()
   (spacemacs|use-package-add-hook python
-    ;; This variable is not auto-exported?
     :post-config
-    (add-to-list 'python-shell-completion-native-disabled-interpreters "jupyter")
-    (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython"))
+    (progn
+      (setq python-shell-completion-native-output-timeout 3.0)
+      (setq python-pdbtrack-activate nil)
+      (add-to-list 'python-shell-completion-native-disabled-interpreters "jupyter")
+      (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython")
 
-  (advice-add 'python-shell-get-process-name :around
-              #'spacemacs//python-shell-get-process-name)
+      (advice-add 'python-shell-get-process-name :around
+                  #'spacemacs//python-shell-get-process-name)
 
-  (spacemacs/set-leader-keys-for-major-mode 'python-mode
-    "hh" 'spacemacs//python-help-for-region-or-symbol
-    "sr" 'spacemacs//python-shell-send-region-echo
-    "sl" 'spacemacs//python-shell-send-line-echo))
+      (spacemacs/set-leader-keys-for-major-mode 'python-mode
+        "hh" 'spacemacs//python-help-for-region-or-symbol
+        "sr" 'spacemacs//python-shell-send-region-echo
+        "sl" 'spacemacs//python-shell-send-line-echo))))
 
 (defun python-extras/post-init-company ()
 

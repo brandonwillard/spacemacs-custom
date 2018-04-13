@@ -57,7 +57,7 @@ values."
             c-c++-default-mode-for-headers 'c++-mode
             ;; company-c-headers-path-user '("../include" "./include" "." "../../include" "../inc" "../../inc")
             )
-     (helm :variables helm-enable-auto-resize t)
+     helm
      (auto-completion :variables
                       auto-completion-return-key-behavior nil
                       auto-completion-tab-key-behavior nil
@@ -449,9 +449,11 @@ you should place your code here."
           org-ref-bibliography-notes "~/projects/papers/references/notes.org"))
 
   (with-eval-after-load 'org
+    (setq org-confirm-babel-evaluate nil)
     (setq org-default-notes-file (f-join user-home-directory "Documents" "notes.org")))
 
   (with-eval-after-load 'tex
+    (defvar TeX-command-list)
     (add-to-list 'TeX-command-list
                  '("Make" "make %o" TeX-run-compile nil t))
     ;; XXX: Must have this set in the spacemacs tex layer!
@@ -539,30 +541,30 @@ From https://stackoverflow.com/a/37356659/3006474"
               #'btw/comint-preoutput-turn-buffer-read-only
               'append))
 
+  (use-package embrace
+    :init (progn
+            (add-hook 'LaTeX-mode-hook 'embrace-LaTeX-mode-hook)
+            (add-hook 'org-mode-hook 'embrace-org-mode-hook))
+    :functions embrace-add-pair-regexp
+    :config (progn
+              (defun btw/embrace-emacs-lisp-mode-hook ()
+                ;; (assq-delete-all ?f embrace--pairs-list)
+                (defun embrace-with-function-elisp ()
+                  (let ((fname (read-string "Function: ")))
+                    (cons (format "(%s "
+                                  (or fname "")) ")")))
+                (embrace-add-pair-regexp ?f
+                                         "(\\(\\sw\\|\\s_\\)+?\\s-+?"
+                                         ")"
+                                         'embrace-with-function-elisp
+                                         (embrace-build-help "(function " ")")
+                                         nil))
+              (advice-add 'embrace-emacs-lisp-mode-hook
+                          :after #'btw/embrace-emacs-lisp-mode-hook)
+              (add-hook 'emacs-lisp-mode-hook 'embrace-emacs-lisp-mode-hook)))
+
   (use-package evil-embrace
-    :config
-    (progn
-      (evil-embrace-enable-evil-surround-integration)))
-
-  (with-eval-after-load 'embrace
-    (add-hook 'LaTeX-mode-hook 'embrace-LaTeX-mode-hook)
-    (add-hook 'org-mode-hook 'embrace-org-mode-hook)
-
-    (defun btw/embrace-emacs-lisp-mode-hook ()
-      ;; (assq-delete-all ?f embrace--pairs-list)
-      (defun embrace-with-function-elisp ()
-        (let ((fname (read-string "Function: ")))
-          (cons (format "(%s " (or fname "")) ")")))
-      (embrace-add-pair-regexp
-       ?f
-       "(\\(\\sw\\|\\s_\\)+?\\s-+?" ")"
-       'embrace-with-function-elisp
-       (embrace-build-help "(function " ")")
-       nil))
-
-    (advice-add 'embrace-emacs-lisp-mode-hook :after #'btw/embrace-emacs-lisp-mode-hook)
-    (add-hook 'emacs-lisp-mode-hook
-              'embrace-emacs-lisp-mode-hook))
+    :init (evil-embrace-enable-evil-surround-integration))
 
   (use-package dockerfile-mode
     :mode ("Dockerfile\\'" . dockerfile-mode))
@@ -593,12 +595,22 @@ From https://stackoverflow.com/a/37356659/3006474"
     (define-key evil-insert-state-map (kbd "C-n") #'company-select-next)
     (define-key evil-insert-state-map (kbd "C-p") #'company-select-previous))
 
+  (with-eval-after-load 'window-purpose-switch
+    (setq purpose-display-at-bottom-height 0.4))
+
   (with-eval-after-load 'helm
     (setq-default helm-follow-mode-persistent t)
     (setq helm-always-two-windows nil)
+    (setq helm-autoresize-mode nil)
     (setq helm-split-window-inside-p nil)
-    (define-key helm-map (kbd "C-w") 'evil-delete-backward-word)
-    )
+    (setq helm-split-window-default-side 'below)
+
+    ;; NOTE: `window-purpose-switch' can destroy expected
+    ;; pop-up/window placement behavior; look at the default
+    ;; values for vars like `purpose-display-at-bottom-height'
+    ;; if there are problems.
+
+    (define-key helm-map (kbd "C-w") 'evil-delete-backward-word))
 
   (with-eval-after-load 'evil-jumps
     (setq evil-jumps-cross-buffers nil))
@@ -615,6 +627,7 @@ From https://stackoverflow.com/a/37356659/3006474"
 
   (defun btw/send-C-r ()
     (interactive)
+    (declare-function term-send-raw-string "term.el")
     (term-send-raw-string "\C-r"))
 
   (add-hook 'term-mode-hook
@@ -637,8 +650,14 @@ From https://emacs.stackexchange.com/a/10698"
     (cond
      ;; \E[nG - Cursor Horizontal Absolute, e.g. move cursor to column n
      ((eq char ?G)
-      (let ((col (min term-width (max 0 term-terminal-parameter))))
-        (term-move-columns (- col (term-current-column)))))
+      (defvar term-width)
+      (defvar term-terminal-parameter)
+      (declare-function term-move-columns "term.el")
+      (declare-function term-current-column "term.el")
+      (let ((col (min term-width
+                      (max 0 term-terminal-parameter))))
+        (term-move-columns (- col
+                              (term-current-column)))))
      (t)))
 
   (advice-add 'term-handle-ansi-escape :before #'btw/term-handle-more-ansi-escapes)

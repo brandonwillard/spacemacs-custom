@@ -130,13 +130,20 @@
   - [X] Fix [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-buffer%20()][python-mode inferior buffer]] naming/initialization; we should be assigning inferior processes to
     projects/perspectives, so naming could be one way to do that.
 
-  - [X] Implement an alist with project/perspective-to-venv entries.
+  - [ ] Implement an alist with project/perspective-to-venv entries.
     [[https://github.com/bbatsov/projectile/issues/139][Here's a discussion]] on project-local variables.  [[https://github.com/emacs-php/projectile-variable][This]] looks like an existing solution.
     We need to add venv awareness to ~org-babel~ via
     ~org-babel-prep-session:python~.  ~org-babel~ might only need
     ~python-shell-virtualenv-root~ set in order to start a venv-ed inferior shell.
 
   - [ ] Hook for project/perspective changes.
+    The correct "hook" may be ~persp-before-switch-functions~.
+    #+BEGIN_SRC elisp
+    (add-to-list 'persp-before-switch-functions #'(lambda (persp-name frame-or-window)
+                                                    (message "Switching to %s" persp-name)))
+
+    #+END_SRC
+
 
   Here's a functioning way to handle ~persp~ changes:
   #+BEGIN_SRC elisp
