@@ -54,7 +54,11 @@
         (advice-add 'org-export-output-file-name :around
                     #'spacemacs//org-export-output-project-file-name))
 
+      ;; TODO: Does this work?
+      ;; (declare-function python-shell-calculate-command "ext:python" nil)
+      ;; (setq org-babel-python-command (python-shell-calculate-command))
       (setq org-babel-python-command "ipython --simple-prompt -i")
+
       (advice-add 'org-babel-load-session:python :override
                   #'spacemacs//org-babel-load-session:python)
 
@@ -80,7 +84,8 @@
           ;; Only initialize `ob-ipython-mode' when we edit a src block.
           (add-hook 'org-src-mode-hook
                     #'(lambda ()
-                        (ob-ipython-mode)))
+                        (when (derived-mode-p python-mode)
+                          (ob-ipython-mode))))
           (spacemacs|add-company-backends :backends company-ob-ipython
                                           :modes ob-ipython-mode)
 
