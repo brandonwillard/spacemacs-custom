@@ -84,7 +84,7 @@
           ;; Only initialize `ob-ipython-mode' when we edit a src block.
           (add-hook 'org-src-mode-hook
                     #'(lambda ()
-                        (when (derived-mode-p python-mode)
+                        (when (derived-mode-p 'python-mode)
                           (ob-ipython-mode))))
           (spacemacs|add-company-backends :backends company-ob-ipython
                                           :modes ob-ipython-mode)
@@ -100,7 +100,7 @@
 
 (defun org-extras/init-ob-ipython ())
 
-(defun org-extras/pre-init-org-agenda ()
+(defun org-extras/post-init-org-agenda ()
   (spacemacs|use-package-add-hook org-projectile
     :post-config (let ((existing-todos (-filter 'f-exists-p
                                                 (org-projectile-todo-files))))

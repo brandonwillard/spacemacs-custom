@@ -16,275 +16,309 @@
   Otherwise, we could just follow the steps in =org-babel-execute-src-block= and
   add our logic.
 
-  #+BEGIN_SRC elisp
-  (require 'org)
-
-  (defun org-babel-python-initiate-cached-session (orig-func &rest args)
-    "Send Python caching code when initially creating a session."
-    (let* ((session (nth 0 args))
-           (_params (nth 1 args))
-           (python-buffer (org-babel-python-session-buffer session)))
-      (if (not python-buffer)
-          (let* ((python-buffer (funcall orig-func session _params))
-                 (cache-file (format "%s-cache.db"
-                                     (org-babel-python-without-earmuffs python-buffer)))
-                 (init-body (concat (format org-babel-python--exec-tmpfile "python_caching.py")
-                                    ;; (org-babel-eval-read-file "python_caching.py")
-                                    ";"
-                                    (format "__org_babel_python_cacher = AssignCachingVisitor('%s')"
-                                            cache-file))))
-            (org-babel-comint-in-buffer python-buffer
-              (mapc (lambda (var)
-                      (end-of-line 1)
-                      (insert var)
-                      (comint-send-input)
-                      (org-babel-comint-wait-for-output python-buffer))
-                    (split-string init-body "[\r\n]")))
-            python-buffer)
-        (funcall orig-func session _params))))
-
-  (advice-add 'org-babel-python-initiate-session :around 'org-babel-python-initiate-cached-session)
-
-  (defun ob-python--execute-cached (orig-func &rest args)
-    "Pickle variables in the src block's body.
-
-  TODO: Read block arguments specifying excluded/included cached variables."
-    (let ((body (nth 0 args))
-          (params (nth 1 args)))
-      (if (cdr (assoc :cache params))
-          (let* ((info (if info
-                           (copy-tree info)
-                         (org-babel-get-src-block-info)))
-                 (block-hash (org-babel-sha1-hash info))
-                 (print-escape-newlines t)
-                 (print-escape-nonascii t)
-                 (cached-body (format "__org_babel_python_cacher.run('%s', code_context_id='%s')"
-                                      (prin1-to-string body) block-hash)))
-            (funcall orig-func cached-body params))
-        (funcall orig-func body params))))
-
-  (advice-add 'org-babel-execute:python :around 'ob-python--execute-cached)
-  #+END_SRC
-
-  #+RESULTS:
-
-  #+BEGIN_SRC python :tangle "python_caching.py"
-  import inspect
-  import shelve
-  import ast
-
-  from itertools import cycle
-
-
-  class AssignCachingVisitor(ast.NodeVisitor):
-      """Slightly less naive src block caching.
-
-      TODO: Create a simple dependency graph so that we can invalidate
-      cache items from other blocks.
-      """
-
-      def __init__(self, cache_file, debug=False):
-          """
-          Parameters
-          ==========
-          cache_file: str, or file-like object
-              The cache file used by `shelve`.
-          """
-
-          self.db = shelve.open(cache_file)
-          self.debug = debug
-
-          try:
-              self.locals = inspect.stack()[1][0].f_locals
-          except Exception:
-              raise ValueError("Cannot obtain caller's locals")
-
-      def _var_cache_id(self, name_symbol):
-          if self.code_context_id:
-              return '{}-{}'.format(self.code_context_id, name_symbol.id)
-          else:
-              return name_symbol.id
-
-      def _get_vars_and_vals(self, node):
-          for var, val in zip(node.targets, cycle([node.value])):
-              if isinstance(var, ast.Tuple):
-                  vars_vals = [(v, w) for v, w in zip(var.elts, val.elts)]
-              else:
-                  vars_vals = [(var, val)]
-          return vars_vals
-
-      def visit_FunctionDef(self, node):
-          # TODO: When building a dependency graph, find assignments to
-          # tracked variables within functions.
-          # for cnode in ast.iter_child_nodes(node):
-          #     if isinstance(node, ast.Assign):
-          #         pass
-          pass
+** Minimum Working Example
+
+   The following Python code defines an object that tracks simple assign statements in
+   the source code it's given.
+   #+BEGIN_SRC python :tangle "python_caching.py" :results none
+   import inspect
+   import shelve
+   import ast
+
+   from itertools import cycle
+
+
+   class AssignCachingVisitor(ast.NodeVisitor):
+       """Slightly less naive src block caching.
+
+       TODO: Create a simple dependency graph so that we can invalidate
+       cache items from other blocks.
+       """
+
+       def __init__(self, cache_file, debug=False):
+           """
+           Parameters
+           ==========
+           cache_file: str, or file-like object
+               The cache file used by `shelve`.
+           """
+
+           self.db = shelve.open(cache_file)
+           self.debug = debug
+
+           try:
+               self.locals = inspect.stack()[1][0].f_locals
+           except Exception:
+               raise ValueError("Cannot obtain caller's locals")
+
+       def _var_cache_id(self, name_symbol):
+           if self.code_context_id:
+               return '{}-{}'.format(self.code_context_id, name_symbol.id)
+           else:
+               return name_symbol.id
+
+       def _get_vars_and_vals(self, node):
+           for var, val in zip(node.targets, cycle([node.value])):
+               if isinstance(var, ast.Tuple):
+                   vars_vals = [(v, w) for v, w in zip(var.elts, val.elts)]
+               else:
+                   vars_vals = [(var, val)]
+           return vars_vals
+
+       def visit_FunctionDef(self, node):
+           # TODO: When building a dependency graph, find assignments to
+           # tracked variables within functions.
+           # for cnode in ast.iter_child_nodes(node):
+           #     if isinstance(node, ast.Assign):
+           #         pass
+           pass
+
+       def visit_AsyncFunctionDef(self, node):
+           # self.visit_FunctionDef(node)
+           pass
+
+       def visit_ClassDef(self, node):
+           # TODO: Check outside assignments from within class methods?
+           # self.visit_FunctionDef(node)
+           pass
+
+       def visit_Assign(self, node):
+           vars_vals = self._get_vars_and_vals(node)
+
+           for var, val in vars_vals:
+
+               exists_var_local = var.id in self.locals
+               # self.locals.get(var.id, None)
+               var_cache_id = self._var_cache_id(var)
+
+               if var_cache_id not in self.db:
+                   # Execute the code and add variables to the cache.
+                   if not self.dirty:
+                       co = compile(self.base_node, "<ast>", 'exec')
+                       exec(co, self.locals)
+                       self.dirty = True
+
+                       if self.debug:
+                           print('Executed code.')
+
+                   self.db[var_cache_id] = self.locals[var.id]
+
+                   if self.debug:
+                       print('Added {} to cache with cache id {}'.format(var.id, var_cache_id))
+
+               elif not self.dirty and not exists_var_local and var_cache_id in self.db:
+                   # Add missing variable to local environment
+                   cache_val = self.db[var_cache_id]
+                   self.locals[var.id] = cache_val
+
+                   if self.debug:
+                       print('Added {} from cache with cache id {}'.format(var.id, var_cache_id))
+
+               elif not self.dirty and exists_var_local and var_cache_id in self.db:
+                   # Variable already exists (not due to us executing the source) and is in the cache.
+                   if self.prefer_cache:
+                       self.locals[var.id] = self.db[var_cache_id]
+
+                       if self.debug:
+                           print('Updated local value (using cache value) for cache id {}'.format(var_cache_id))
+
+                   elif self.update_cache:
+                       self.db[var_cache_id] = self.locals[var.id]
+
+                       if self.debug:
+                           print('Updated cache value (using local value) for cache id {}'.format(var_cache_id))
+
+       def run(self, code_str, code_context_id=None, prefer_cache=False, update_cache=False):
+           """
+           Parameters
+           ==========
+           code_context_id: str (None)
+               An identifier applied to symbol names.  Allows for code-block-specific/historical
+               caching.
+           prefer_cache: bool
+               Use the cached value when a variable exists locally and in the cache.
+           update_cache: bool
+               Update the cache value when a variable exists locally and in the cache.
+               `prefer_cache` must be `False` for this to take effect.
+           """
+
+           node = ast.parse(code_str)
+
+           self.code_context_id = code_context_id
+           self.base_node = node
+           self.dirty = False
+           self.prefer_cache = prefer_cache
+           self.update_cache = update_cache
+
+           self.visit(node)
+
+   #+END_SRC
+
+   The following sets up =org-babel= for automatic use of the Python caching class.
+   An instance of the class is created when a session is initialized and used when the
+   src block option =:cache pickle= is given.  The contents of the src blocks are hashed and
+   passed to the caching code as a prefix, so that the values of variables in src blocks are
+   specific to the block being evaluated.
+
+   #+BEGIN_SRC elisp :results none
+   (require 'org)
+
+   (defun org-babel-python-initiate-cached-session (orig-func &rest args)
+     "Send Python caching code when initially creating a session."
+     (let* ((session (nth 0 args))
+            (actual-session (if session
+                                (intern session)
+                              :default))
+            (_params (nth 1 args))
+            (python-buffer (org-babel-python-session-buffer actual-session)))
+       (if (not (python-shell-get-process))
+           (let* ((python-buffer (funcall orig-func session _params))
+                  (cache-file (format "%s-cache.db"
+                                      (org-babel-python-without-earmuffs python-buffer)))
+                  (init-body (concat (format org-babel-python--exec-tmpfile "python_caching.py")
+                                     ;; (org-babel-eval-read-file "python_caching.py")
+                                     ";"
+                                     (format "__org_babel_python_cacher = AssignCachingVisitor('%s')"
+                                             cache-file))))
+             (org-babel-comint-in-buffer python-buffer
+               (mapc (lambda (var)
+                       (end-of-line 1)
+                       (insert var)
+                       (comint-send-input)
+                       (org-babel-comint-wait-for-output python-buffer))
+                     (split-string init-body "[\r\n]")))
+             python-buffer)
+         (funcall orig-func session _params))))
 
-      def visit_AsyncFunctionDef(self, node):
-          # self.visit_FunctionDef(node)
-          pass
+   (advice-add 'org-babel-python-initiate-session :around 'org-babel-python-initiate-cached-session)
 
-      def visit_ClassDef(self, node):
-          # TODO: Check outside assignments from within class methods?
-          # self.visit_FunctionDef(node)
-          pass
+   (defun ob-python--execute-cached (orig-func &rest args)
+     "Pickle variables in the src block's body.
 
-      def visit_Assign(self, node):
-          vars_vals = self._get_vars_and_vals(node)
+   TODO: Read block arguments specifying excluded/included cached variables."
+     (let ((body (nth 0 args))
+           (params (nth 1 args)))
+       (if (string= "pickle" (cdr (assoc :cache params)))
+           (let* ((info (if info
+                            (copy-tree info)
+                          (org-babel-get-src-block-info)))
+                  (block-hash (org-babel-sha1-hash info))
+                  (print-escape-newlines t)
+                  (print-escape-nonascii t)
+                  (cached-body (format "__org_babel_python_cacher.run(%s, code_context_id='%s')"
+                                       (prin1-to-string body) block-hash)))
+             (funcall orig-func cached-body params))
+         (funcall orig-func body params))))
 
-          for var, val in vars_vals:
+   (advice-add 'org-babel-execute:python :around 'ob-python--execute-cached)
+   #+END_SRC
 
-              exists_var_local = var.id in self.locals
-              # self.locals.get(var.id, None)
-              var_cache_id = self._var_cache_id(var)
+   Here are some unit-like tests of the above Python code.
+   #+BEGIN_SRC python :session
+   import tempfile
 
-              if var_cache_id not in self.db:
-                  # Execute the code and add variables to the cache.
-                  if not self.dirty:
-                      co = compile(self.base_node, "<ast>", 'exec')
-                      exec(co, self.locals)
-                      self.dirty = True
 
-                      if self.debug:
-                          print('Executed code.')
+   cache_file = tempfile.mktemp(suffix='.db', dir='/tmp')
 
-                  self.db[var_cache_id] = self.locals[var.id]
+   code_str = '''
+   import os
 
-                  if self.debug:
-                      print('Added {} to cache with cache id {}'.format(var.id, var_cache_id))
+   print("hi")
 
-              elif not self.dirty and not exists_var_local and var_cache_id in self.db:
-                  # Add missing variable to local environment
-                  cache_val = self.db[var_cache_id]
-                  self.locals[var.id] = cache_val
+   x = 1
+   q = 3
 
-                  if self.debug:
-                      print('Added {} from cache with cache id {}'.format(var.id, var_cache_id))
+   def blah(y, b=32):
+       res = y + b
 
-              elif not self.dirty and exists_var_local and var_cache_id in self.db:
-                  # Variable already exists (not due to us executing the source) and is in the cache.
-                  if self.prefer_cache:
-                      self.locals[var.id] = self.db[var_cache_id]
+       # Assigning a var out of scope.
+       q = 30
 
-                      if self.debug:
-                          print('Updated local value (using cache value) for cache id {}'.format(var_cache_id))
+       return res
 
-                  elif self.update_cache:
-                      self.db[var_cache_id] = self.locals[var.id]
+   class Bloh(object):
+       some_field = 0
 
-                      if self.debug:
-                          print('Updated cache value (using local value) for cache id {}'.format(var_cache_id))
+       def some_method(self, q=1):
+           # This `q` is different.
+           q += 8
+           method_res = q + 3
 
-      def run(self, code_str, code_context_id=None, prefer_cache=False, update_cache=False):
-          """
-          Parameters
-          ==========
-          code_context_id: str (None)
-              An identifier applied to symbol names.  Allows for code-block-specific/historical
-              caching.
-          prefer_cache: bool
-              Use the cached value when a variable exists locally and in the cache.
-          update_cache: bool
-              Update the cache value when a variable exists locally and in the cache.
-              `prefer_cache` must be `False` for this to take effect.
-          """
+           # Assigning a var out of scope.
+           x = 20
 
-          node = ast.parse(code_str)
+           return method_res
 
-          self.code_context_id = code_context_id
-          self.base_node = node
-          self.dirty = False
-          self.prefer_cache = prefer_cache
-          self.update_cache = update_cache
+   # l = blagh()
 
-          self.visit(node)
+   z = blah(x)
 
-  #+END_SRC
+   x += 1
 
-  #+BEGIN_SRC python :session
-  import tempfile
+   c, d = [1, 3]
 
+   z = blah(x, b=80)
+   '''
 
-  cache_file = tempfile.mktemp(suffix='.db', dir='/tmp')
+   exec(code_str)
 
-  code_str = '''
-  import os
+   acv = AssignCachingVisitor(cache_file)
 
-  print("hi")
+   try:
+       del x, q, z, c, d
+   except Exception:
+       pass
 
-  x = 1
-  q = 3
+   acv.db.clear()
 
-  def blah(y, b=32):
-      res = y + b
+   assert len(list(acv.db.keys())) == 0
 
-      # Assigning a var out of scope.
-      q = 30
+   # This run should mark the cache as dirty and add all assigned variables.
+   acv.run(code_str)
 
-      return res
+   assert acv.dirty
+   assert set(acv.db.keys()) == set(['x', 'q', 'z', 'c', 'd'])
 
-  class Bloh(object):
-      some_field = 0
+   # This run should run no code.
+   acv.run(code_str)
 
-      def some_method(self, q=1):
-          # This `q` is different.
-          q += 8
-          method_res = q + 3
+   assert not acv.dirty
 
-          # Assigning a var out of scope.
-          x = 20
+   del x
 
-          return method_res
+   # This run should find that `x` is missing and add it back into the session.
+   acv.run(code_str)
 
-  # l = blagh()
+   assert not acv.dirty
+   assert 'x' in locals()
+   #+END_SRC
 
-  z = blah(x)
+   Now, to test the =org-mode= integration, initiate a session for the following block
+   by executing it with @@html:<kbd>@@ C-c C-c @@html:</kbd>@@:
+   #+BEGIN_SRC python :session :cache pickle :exports both :results output
+   import os
 
-  x += 1
+   print('setting x...')
+   x = 1
 
-  c, d = [1, 3]
+   print('setting y...')
+   y = 2
+   #+END_SRC
 
-  z = blah(x, b=80)
-  '''
+   #+RESULTS:
+   :
+   :
+   :
 
-  exec(code_str)
 
-  acv = AssignCachingVisitor(cache_file)
+   #+BEGIN_SRC python :session :cache pickle :exports both :results output
+   print('x = {}'.format(x))
+   x = 3
+   print('x = {}'.format(x))
+   #+END_SRC
 
-  try:
-      del x, q, z, c, d
-  except Exception:
-      pass
-
-  acv.db.clear()
-
-  assert len(list(acv.db.keys())) == 0
-
-  # This run should mark the cache as dirty and add all assigned variables.
-  acv.run(code_str)
-
-  assert acv.dirty
-  assert set(acv.db.keys()) == set(['x', 'q', 'z', 'c', 'd'])
-
-  # This run should run no code.
-  acv.run(code_str)
-
-  assert not acv.dirty
-
-  del x
-
-  # This run should find that `x` is missing and add it back into the session.
-  acv.run(code_str)
-
-  assert not acv.dirty
-  assert 'x' in locals()
-  #+END_SRC
-
-  #+BEGIN_SRC python :session :cache yes
-  import os
-
-  x = 1
-  #+END_SRC
-
-  #+RESULTS[bea96c2ce2b8722ff29ba7773ceafa8422e4cbb0]:
+   #+RESULTS:
+   : x = 1
+   : x = 3
+   :
+   :

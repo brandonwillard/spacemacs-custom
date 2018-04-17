@@ -33,7 +33,7 @@ values."
    '(
      csv
      (javascript :packages (not tern))
-     lsp
+     (lsp :packages (not flycheck-lsp lsp-ui))
      html
      markdown
      (latex :variables
@@ -448,6 +448,14 @@ you should place your code here."
     (setq org-ref-pdf-directory "~/projects/papers/references"
           org-ref-bibliography-notes "~/projects/papers/references/notes.org"))
 
+  (with-eval-after-load 'lsp
+    (setq lsp-enable-eldoc nil))
+
+  (with-eval-after-load 'lsp-ui
+    (setq lsp-ui-sideline-delay nil)
+    (setq lsp-ui-sideline-show-hover nil)
+    (setq lsp-ui-sideline-enable nil))
+
   (with-eval-after-load 'org
     (setq org-confirm-babel-evaluate nil)
     (setq org-default-notes-file (f-join user-home-directory "Documents" "notes.org")))
@@ -479,6 +487,20 @@ you should place your code here."
 
   (evil-global-set-key 'normal "zR" 'evil-open-folds)
   (evil-global-set-key 'normal "zM" 'evil-close-folds)
+
+  (with-eval-after-load 'evil-lisp-state
+    ;; Let's get rid of the annoying mode switching.
+    (dolist (x evil-lisp-state-commands)
+      (let ((key (car x))
+            (cmd (cdr x)))
+        (eval
+         `(progn
+            (if evil-lisp-state-global
+                (define-key evil-lisp-state-map ,(kbd key) (quote ,cmd))
+              (define-key evil-lisp-state-major-mode-map ,(kbd key) (quote ,cmd)))))))
+
+    ;; (spacemacs/set-leader-keys "k" evil-lisp-state-map)
+    )
 
   (defun btw/messages-auto-tail (&rest _)
     "Make *Messages* buffer auto-scroll to the end after each message.
@@ -588,7 +610,7 @@ From https://stackoverflow.com/a/37356659/3006474"
     (defalias #'forward-evil-word #'forward-evil-symbol))
 
   (with-eval-after-load 'company
-    (setq-default company-idle-delay nil)
+    (setq company-idle-delay nil)
 
     (define-key company-active-map (kbd "C-w") 'evil-delete-backward-word)
     (define-key company-active-map (kbd "C-y") 'company-complete-selection)
