@@ -100,7 +100,7 @@
 
 (defun org-extras/init-ob-ipython ())
 
-(defun org-extras/post-init-org-agenda ()
+(defun org-extras/pre-init-org-agenda ()
   (spacemacs|use-package-add-hook org-projectile
     :post-config (let ((existing-todos (-filter 'f-exists-p
                                                 (org-projectile-todo-files))))

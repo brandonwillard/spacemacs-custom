@@ -33,7 +33,7 @@ values."
    '(
      csv
      (javascript :packages (not tern))
-     (lsp :packages (not flycheck-lsp lsp-ui))
+     ;; (lsp :packages (not flycheck-lsp lsp-ui))
      html
      markdown
      (latex :variables
@@ -45,7 +45,7 @@ values."
      (python :variables
              python-test-runner 'pytest
              python-auto-set-local-pyvenv-virtualenv 'on-project-switch
-             python-backend 'lsp
+             ;; python-backend 'lsp
              :packages (not live-py-mode)
              )
      python-extras
@@ -105,7 +105,9 @@ values."
                                       dockerfile-mode
 
                                       evil-extra-operator
-                                      )
+
+                                      ;; Use a newer version of python.el.
+                                      (python :location elpa :min-version "0.26.1"))
    ;; A list of packages that cannot be updated.
    dotspacemacs-frozen-packages '()
    ;; A list of packages that will not be installed and loaded.
@@ -358,7 +360,7 @@ values."
    ;; (default nil)
    dotspacemacs-whitespace-cleanup 'trailing
 
-   dotspacemacs-switch-to-buffer-prefers-purpose t
+   dotspacemacs-switch-to-buffer-prefers-purpose nil
    ))
 
 (defun dotspacemacs/user-init ()
@@ -422,6 +424,7 @@ you should place your code here."
   (require 'mode-local)
   (setq-mode-local text-mode scroll-margin 10)
   (setq-mode-local prog-mode scroll-margin 10)
+  (setq-mode-local makefile-mode indent-tabs-mode t)
 
   (setq-default sentence-end-double-space t)
 
@@ -430,6 +433,12 @@ you should place your code here."
   (setq tab-always-indent t)
 
   (setq compilation-scroll-output #'first-error)
+
+  (with-eval-after-load 'flycheck
+    (add-to-list 'flycheck-disabled-checkers 'python-flake8))
+
+  (with-eval-after-load 'python
+    (setq-default python-eldoc-get-doc nil))
 
   (with-eval-after-load 'vim-powerline-theme
     ;; Egh, doesn't really work.
@@ -457,6 +466,7 @@ you should place your code here."
     (setq lsp-ui-sideline-enable nil))
 
   (with-eval-after-load 'org
+    (setq org-link-file-path-type 'relative)
     (setq org-confirm-babel-evaluate nil)
     (setq org-default-notes-file (f-join user-home-directory "Documents" "notes.org")))
 

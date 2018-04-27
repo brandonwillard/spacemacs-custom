@@ -1,6 +1,63 @@
 #+TITLE: Emacs Config Notes
 #+AUTHOR: Brandon T. Willard
 
+* TODO [#A] Configure ~persp-mode~, ~projectile-mode~ and ~pyvenv~ to work together :python:projectile:persp:pyvenv:
+  - Note taken on [2018-01-28 Sun 12:54] \\
+    Extending [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-process-name%20(dedicated)][~python-shell-get-process-name~]] to include
+    ~projectile-project-name~ might enable per-project inferior processes.
+
+  - Note taken on [2018-01-19 Fri 14:46] \\
+    Perhaps the [[file:~/.emacs.d/layers/+spacemacs/spacemacs-layouts/funcs.el::(defun%20spacemacs/layout-switch-by-pos%20(pos)][spacemacs layout switching function]] should call
+    ~projectile-persp-switch-project~ instead of ~persp-switch~.  We could advise
+    ~persp-switch~ or simply replace ~spacemacs/layout-switch-by-pos~.  Either way, I
+    think we'll need to check for an associated project, get the name or location
+    and pass *that* to ~projectile-persp-switch-project~.
+    Also, check out [[https://gist.github.com/Bad-ptr/1aca1ec54c3bdb2ee80996eb2b68ad2d#file-persp-projectile-auto-persp-el][these customizations]].
+
+  - [X] Fix [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-buffer%20()][python-mode inferior buffer]] naming/initialization; we should be assigning inferior processes to
+    projects/perspectives, so naming could be one way to do that.
+
+  - [ ] Implement an alist with project/perspective-to-venv entries.
+    [[https://github.com/bbatsov/projectile/issues/139][Here's a discussion]] on project-local variables.  [[https://github.com/emacs-php/projectile-variable][This]] looks like an existing solution.
+    We need to add venv awareness to ~org-babel~ via
+    ~org-babel-prep-session:python~.  ~org-babel~ might only need
+    ~python-shell-virtualenv-root~ set in order to start a venv-ed inferior shell.
+
+  - [ ] Hook for project/perspective changes.
+    The correct "hook" may be ~persp-before-switch-functions~.
+    #+BEGIN_SRC elisp
+    (defun persp-pyvenv-switch ())
+    (add-to-list 'persp-before-switch-functions #'(lambda (persp-name frame-or-window)
+                                                    (message "Switching to %s" persp-name)))
+    #+END_SRC
+
+    #+BEGIN_SRC elisp
+    ;; TODO: After persp change, check for virtualenv change.
+    (cl-pushnew #'(lambda (window)
+                    (debug)
+                    ;; (safe-persp-parameters (get-current-persp))
+
+                    ;; XXX: This does a `locate-dominating-file' search.
+                    ;; (spacemacs//pyvenv-mode-set-local-virtualenv)
+
+                    ;; (when (and (bound-and-true-p project-pyvenv-virtual-env-name)
+                    ;;            (eq project-pyvenv-virtual-env-name pyvenv-virtual-env-name))
+                    ;;   (pyvenv-workon pyvenv-virtual-env-name))
+                    )
+                persp-activated-functions)
+    #+END_SRC
+
+* TODO [#A] Slowness with Python file loading                        :python:
+** Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
+* TODO [#A] Allow ~persp-mode~ to set ~projectile-mode~ project.
+  Viewing a buffer for a file in a different ~projectile-mode~ project from
+  within a ~persp-mode~ opened for a different project doesn't prioritize the
+  ~pesp-mode~-specific project when calling ~projectile-mode~ functions.
+
+  If we can get the ~projectile-mode~ project name/location from ~persp-mode~,
+  we might only need to set/wrap/override ~projectile-cached-project-root~,
+  ~projectile-cached-project-name~, ~projectile-project-name~, and/or ~projectile-project-root~.
+
 * TODO Font lock for ~org-mode~ inline source statements            :orgmode:
   The following is a start, but it breaks when header options in
   square brackets are not provided.
@@ -32,13 +89,9 @@
                              (4 'org-code) ; "code..." part.
                              )))
   #+END_SRC
-* TODO Clean up ~user-config~                                     :spacemacs:
-  [[file:init.el::(defun%20dotspacemacs/user-config%20()][~dotspacemacs/user-config~]] is too busy, and only getting busier.  Some of its
-  content should be broken off into new layers and/or packages.
 * TODO ~org-mode~ to Google Tasks, Calendar, etc.           :orgmode:syncing:
 ** There's a push/pull/sync tool [[https://bitbucket.org/edgimar/michel-orgmode][here]].
-
-* TODO Fix project-root finding in ~lsp-mode~
+* TODO Fix project-root finding in ~lsp-mode~                           :lsp:
   - Note taken on [2018-03-17 Sat 14:03] \\
     For example, =lsp-python= uses the following to find a project's root directory:
     #+BEGIN_SRC elisp
@@ -57,8 +110,6 @@
 * TODO Set up ~evil-extra-operator~
 * TODO Set up ~org-mode~ TODOs and GitHub issues sync       :orgmode:syncing:
 ** [[https://github.com/arbox/org-sync][Here's]] a library that does it.
-
-* TODO Try ~ob-async~ (again)                                       :orgmode:
 * TODO Fix/adjust folding in [[file:init.el::(with-eval-after-load%20'hideshow][init.el]]
   The meaning of "z[r|m]" is "level-folding" in Vim, but ~evil-commands~ has no
   notion of this.  For ~hideshow~ we can use ~hs-hide-level~ to better approximate
@@ -68,10 +119,6 @@
 
   Toggle fold, i.e. ~za~ doesn't work for code blocks in org-mode.  Default
   ~tab~ does work (it's bound to ~org-cycle~).
-
-* TODO [#A] Slowness with Python file loading                        :python:
-** Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
-
 * TODO Improve ~org-mode~ links in LaTeX export              :bibtex:orgmode:
   Find ~org-ref~ alternative and/or try [[https://github.com/andras-simonyi/citeproc-orgref][~citeproc-orgref~]].
   - Note taken on [2018-03-24 Sat 15:02] \\
@@ -114,63 +161,13 @@
   After making those changes, it seems like ~org-babel-python-evaluate-session~ might also need to
   be altered.
 
-* TODO [#A] Configure ~persp-mode~, ~projectile-mode~ and ~pyvenv~ to work together :python:
-  - Note taken on [2018-01-28 Sun 12:54] \\
-    Extending [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-process-name%20(dedicated)][~python-shell-get-process-name~]] to include
-    ~projectile-project-name~ might enable per-project inferior processes.
-
-  - Note taken on [2018-01-19 Fri 14:46] \\
-    Perhaps the [[file:~/.emacs.d/layers/+spacemacs/spacemacs-layouts/funcs.el::(defun%20spacemacs/layout-switch-by-pos%20(pos)][spacemacs layout switching function]] should call
-    ~projectile-persp-switch-project~ instead of ~persp-switch~.  We could advise
-    ~persp-switch~ or simply replace ~spacemacs/layout-switch-by-pos~.  Either way, I
-    think we'll need to check for an associated project, get the name or location
-    and pass *that* to ~projectile-persp-switch-project~.
-    Also, check out [[https://gist.github.com/Bad-ptr/1aca1ec54c3bdb2ee80996eb2b68ad2d#file-persp-projectile-auto-persp-el][these customizations]].
-
-  - [X] Fix [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-buffer%20()][python-mode inferior buffer]] naming/initialization; we should be assigning inferior processes to
-    projects/perspectives, so naming could be one way to do that.
-
-  - [ ] Implement an alist with project/perspective-to-venv entries.
-    [[https://github.com/bbatsov/projectile/issues/139][Here's a discussion]] on project-local variables.  [[https://github.com/emacs-php/projectile-variable][This]] looks like an existing solution.
-    We need to add venv awareness to ~org-babel~ via
-    ~org-babel-prep-session:python~.  ~org-babel~ might only need
-    ~python-shell-virtualenv-root~ set in order to start a venv-ed inferior shell.
-
-  - [ ] Hook for project/perspective changes.
-    The correct "hook" may be ~persp-before-switch-functions~.
-    #+BEGIN_SRC elisp
-    (add-to-list 'persp-before-switch-functions #'(lambda (persp-name frame-or-window)
-                                                    (message "Switching to %s" persp-name)))
-
-    #+END_SRC
-
-
-  Here's a functioning way to handle ~persp~ changes:
-  #+BEGIN_SRC elisp
-  ;; TODO: After persp change, check for virtualenv change.
-  (cl-pushnew #'(lambda (window)
-                  (debug)
-                  ;; (get-current-persp)
-
-                  ;; XXX: This does a `locate-dominating-file' search.
-                  ;; (spacemacs//pyvenv-mode-set-local-virtualenv)
-
-                  ;; (when (and (bound-and-true-p project-pyvenv-virtual-env-name)
-                  ;;            (eq project-pyvenv-virtual-env-name pyvenv-virtual-env-name))
-                  ;;   (pyvenv-workon pyvenv-virtual-env-name))
-                  )
-              persp-activated-functions)
-  #+END_SRC
-
-
-
+* TODO Auto-zoom Based on Current Resolution
+  Use functions like =(x-display-pixel-width)= to set the zoom level (with =(spacemacs/zoom-frm-out)=).
 * TODO Set up function syntax for different languages.
   [2018-03-07 Wed]
   [[file:~/.spacemacs.d/init.el::;;%20TODO:%20Set%20up%20function%20syntax%20for%20different%20languages.]]
 
-* TODO Should ~spacemacs|use-package-add-hook~ be used instead of ~with-eval-after-load~?
-  [2018-03-09 Fri]
-  [[file:~/.spacemacs.d/init.el::;;%20(spacemacs|use-package-add-hook%20org]]
+
 * Old Settings
 ** Conda
 #+BEGIN_SRC elisp
@@ -256,6 +253,19 @@ Defers to standard `conda--find-env-yml' otherwise."
 (add-hook 'tex-mode-hook 'btw/tex-mode-settings)
 #+END_SRC
 
+* DONE Try ~ob-async~ (again)                                       :orgmode:
+  CLOSED: [2018-04-22 Sun 14:20]
+
+* DONE Should ~spacemacs|use-package-add-hook~ be used instead of ~with-eval-after-load~?
+  CLOSED: [2018-04-22 Sun 14:20]
+  [2018-03-09 Fri]
+  [[file:~/.spacemacs.d/init.el::;;%20(spacemacs|use-package-add-hook%20org]]
+* DONE Clean up ~user-config~                                     :spacemacs:
+  CLOSED: [2018-04-27 Fri 10:32]
+  - Note taken on [2018-04-22 Sun 14:18] \\
+    Moved org-mode and Python settings and functions to the layers =org-extras= and =python-extras=.
+  [[file:init.el::(defun%20dotspacemacs/user-config%20()][~dotspacemacs/user-config~]] is too busy, and only getting busier.  Some of its
+  content should be broken off into new layers and/or packages.
 
 * DONE [#A] Fix flycheck for Python virtual envs.                    :python:
   CLOSED: [2018-03-17 Sat 14:20]
@@ -278,7 +288,6 @@ Defers to standard `conda--find-env-yml' otherwise."
 
   This was apparently due to the ~steef~ prompt I was using in ~zprezto~.  It must've
   been using special control characters.
-
 
 * DONE Fix "unbound helm-source-info-elisp" error
   Looks like my custom Emacs build caused a change in default

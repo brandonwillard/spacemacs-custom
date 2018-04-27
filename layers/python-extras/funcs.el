@@ -24,6 +24,7 @@ Makes shells specific to the active project."
 
 (when (configuration-layer/package-used-p 'pyvenv)
   (defun spacemacs//pyvenv-conda-activate-additions ()
+    (setq pyvenv-virtual-env-name-prev pyvenv-virtual-env-name)
     (when (and (boundp 'pyvenv-virtual-env)
                (boundp 'pyvenv-virtual-env-name))
       (setenv "CONDA_PREFIX"
@@ -50,7 +51,60 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
                                     (current-buffer)
                                   process)))
         (progn (message "sending %s to %S" command-string buffer-or-process)
-               (term-send-string buffer-or-process command-string))))))
+               (term-send-string buffer-or-process command-string)))))
+
+  (defun* spacemacs//pyvenv-mode-set-local-virtualenv (&optional (caller-name ""))
+    "If the buffer-local and global values differ, [re]activate the env."
+    ;; TODO: When `pyvenv-virtual-env-name' is initially set here, and not with a
+    ;; `setq' or `setq-default', all subsequent `setq' calls are applied to
+    ;; buffer-local values (if any).  This is a problem for the comparison below,
+    ;; since there will never be a non-nil `default-toplevel-value' and we'll
+    ;; needlessly [re]activate the venv.
+    ;; To work around this, we create a separate global variable that tracks
+    ;; the--potentially--local one.
+    ;; We could also use `(getenv "CONDA_DEFAULT_ENV")' (or another env var),
+    ;; but that's too conda/implementation-specific.
+    (when (and (boundp 'pyvenv-virtual-env-name)
+               (local-variable-p 'pyvenv-virtual-env-name)
+               (not (string-equal pyvenv-virtual-env-name
+                        (or (ignore-errors (default-toplevel-value 'pyvenv-virtual-env-name))
+                            pyvenv-virtual-env-name-prev))))
+      (message "(%s) setting local venv %s" caller-name pyvenv-virtual-env-name)
+      (pyvenv-workon pyvenv-virtual-env-name)
+      ;; TODO: Remove; it's just debugging.
+      (message "(%s) done setting local venv %s" caller-name pyvenv-virtual-env-name)))
+
+  (when (configuration-layer/package-used-p 'persp-mode)
+    (defun spacemacs//persp-after-switch-set-venv (frame-or-window)
+      ;; `persp-activate' calls `persp-restore-window-conf', which
+      ;; switches/restores the window config for the perspective.  If we don't
+      ;; work within buffer in new window config, then we're simply using the
+      ;; old perspective's buffer.
+      (with-current-buffer (window-buffer)
+        (spacemacs//pyvenv-mode-set-local-virtualenv "persp-switch"))))
+
+  (when (configuration-layer/package-used-p 'editorconfig)
+    (defun spacemacs//editorconfig-set-pyvenv (props)
+      "Set Anaconda virtual env variables `pyvenv-workon' and
+      `python-shell-virtualenv-root' from entry in editorconfig file.
+
+      The config file entry should be the env name, and `pyenv-workon-home' should be set."
+      (let ((env-name (gethash 'conda_env_name props)))
+        (when (and env-name
+                   (and (not (local-variable-p 'python-shell-virtualenv-root))
+                        (not (local-variable-p 'pyvenv-virtual-env-name))))
+          ;; We're setting this locally, but the variable is used globally, so we can
+          ;; compare the two for a hackish means of determining buffer-specific envs.
+          ;; See `spacemacs//pyvenv-mode-set-local-virtualenv'.
+          (message "(editorconfig) setting pyvenv-virtual-env-name to %s" env-name)
+          (setq-local pyvenv-virtual-env-name env-name)
+          ;; Activate the venv, if not already or currently in a different one.
+          (spacemacs//pyvenv-mode-set-local-virtualenv "editorconfig")
+          (when-let* ((workon-env (getenv "WORKON_HOME"))
+                      (venv-root (f-join (getenv "WORKON_HOME") env-name)))
+            ;; This is generally useful when using inferior shells.
+            (message "(editorconfig) setting python-shell-virtualenv-root to %s" venv-root)
+            (setq-local python-shell-virtualenv-root venv-root)))))))
 
 (defun spacemacs//python-shell-append-to-output (string)
   "Append STRING to `comint' display output."
@@ -110,7 +164,7 @@ Ignores beginning white-space."
           ;; (string (python-shell-buffer-substring start end (not send-main)))
           (process (python-shell-get-process-or-error msg))
           (original-string substring))
-    (spacemacs//python-shell-send-string-echo substring process)))
+    (spacemacs//python-shell-send-string-echo substring process msg)))
 
 (defun spacemacs//python-help--display-for-string (proc string)
   "Originally from `python-x.el'"

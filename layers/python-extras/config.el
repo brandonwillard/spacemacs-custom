@@ -22,3 +22,6 @@ except Exception:
    help(%1$s)
 "
       "Code used to extract help information from a comint REPL.")
+
+(defvar pyvenv-virtual-env-name-prev nil
+  "Name of the previously active virtual env; nil otherwise")

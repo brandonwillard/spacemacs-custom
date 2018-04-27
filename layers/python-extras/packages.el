@@ -44,39 +44,13 @@
     :init (add-hook 'python-mode-hook 'evil-text-object-python-add-bindings)))
 
 (defun python-extras/post-init-editorconfig ()
-
-  (defun python-extras/editorconfig-set-pyvenv (props)
-    "Set Anaconda virtual env from entry in editorconfig file.
-The config file entry should be the env name, and `pyenv-workon-home' should be
-set."
-    (let ((env-name (gethash 'conda_env_name props)))
-      ;; `pyvenv-workon' seems slow, so only set the bare minimum when
-      ;; the mode isn't python-specific.
-      (when (and env-name
-                 (not (local-variable-p 'python-shell-virtualenv-root)))
-        (cond
-         ;; FIXME: Inferior mode catch doesn't work here.  Should just
-         ;; use the mode's hooks or something.
-         ((or (string-equal major-mode "inferior-python-mode")
-              (bound-and-true-p python-mode))
-          (progn
-            (message "editorconfig setting pyvenv: %s"
-                     env-name)
-            (pyvenv-workon env-name)))
-         ((and (not (local-variable-p 'python-shell-virtualenv-root))
-               (getenv "WORKON_HOME"))
-          (progn
-            (message "editorconfig setting virtualenv-root")
-            ;; (require 'pyvenv)
-            (setq-local pyvenv-workon env-name)
-            (setq-local python-shell-virtualenv-root
-                        (f-join (getenv "WORKON_HOME")
-                                env-name))))))))
-  (add-hook 'editorconfig-custom-hooks #'python-extras/editorconfig-set-pyvenv))
+  (add-hook 'editorconfig-custom-hooks #'spacemacs//editorconfig-set-pyvenv))
 
 (defun python-extras/post-init-projectile ())
 
-(defun python-extras/post-init-persp-mode ())
+(defun python-extras/post-init-persp-mode ()
+  (when (configuration-layer/package-used-p 'pyvenv)
+    (add-to-list 'persp-activated-functions 'spacemacs//persp-after-switch-set-venv)))
 
 (defun python-extras/pre-init-python ()
   (spacemacs|use-package-add-hook python
@@ -126,30 +100,23 @@ From URL `https://emacs.stackexchange.com/a/12403'"
 
 (defun python-extras/post-init-pyvenv ()
 
-  ;; (defun python-extras/pyvenv-mode-set-local-virtualenv (&rest _)
-  ;;   ;; TODO: Lookup 'environment.yml', etc.
-  ;;   )
-  ;; (advice-add 'spacemacs//pyvenv-mode-set-local-virtualenv
-  ;;             :before
-  ;;             'python-extras/pyvenv-mode-set-local-virtualenv)
+  (defun python-extras//filter-venvwrapper-supported-anaconda-hooks (pyvenv-res &rest r)
+    "If we're using Anaconda envs, do not run virtualenvwrapper hooks."
+    (and pyvenv-res
+         (not (s-contains? (concat (f-path-separator) "anaconda")
+                           pyvenv-res
+                           t))))
 
-  ;; Add pyvenv changes when switching perspectives/projects.
-  (if (eq python-auto-set-local-pyvenv-virtualenv 'on-project-switch)
-      (add-hook 'persp-before-switch-functions
-                #'(lambda (persp-name frame-or-window)
-                    (spacemacs//pyvenv-mode-set-local-virtualenv))))
-
-  ;; If we're using conda, don't run virtualenvwrapper hooks:
   (advice-add 'pyvenv-virtualenvwrapper-supported
-              :filter-return #'(lambda (pyvenv-res &rest r)
-                                 (and pyvenv-res
-                                      (not (s-contains? (concat (f-path-separator) "anaconda")
-                                                        pyvenv-res
-                                                        t)))))
+              :filter-return 'python-extras//filter-venvwrapper-supported-anaconda-hooks)
 
   ;; If `pyvenv-workon' buffer-local variables is set, activate the corresponding
   ;; venv when entering the buffer.
   ;; (pyvenv-tracking-mode +1)
+
+  ;; (defun python-extras//track-previous-pyvenv (&res _)
+  ;;   ...)
+  ;; (advice-add 'pyvenv-activate :before 'python-extras//track-previous-pyvenv)
 
   (add-hook 'pyvenv-post-activate-hooks #'spacemacs//pyvenv-conda-activate-additions)
   (add-hook 'pyvenv-post-deactivate-hooks #'spacemacs//pyvenv-conda-deactivate-additions)
