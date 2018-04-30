@@ -24,7 +24,7 @@ Makes shells specific to the active project."
 
 (when (configuration-layer/package-used-p 'pyvenv)
   (defun spacemacs//pyvenv-conda-activate-additions ()
-    (setq pyvenv-virtual-env-name-prev pyvenv-virtual-env-name)
+    (setq spacemacs--pyvenv-virtual-env-name-prev pyvenv-virtual-env-name)
     (when (and (boundp 'pyvenv-virtual-env)
                (boundp 'pyvenv-virtual-env-name))
       (setenv "CONDA_PREFIX"
@@ -68,7 +68,7 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
                (local-variable-p 'pyvenv-virtual-env-name)
                (not (string-equal pyvenv-virtual-env-name
                         (or (ignore-errors (default-toplevel-value 'pyvenv-virtual-env-name))
-                            pyvenv-virtual-env-name-prev))))
+                            spacemacs--pyvenv-virtual-env-name-prev))))
       (message "(%s) setting local venv %s" caller-name pyvenv-virtual-env-name)
       (pyvenv-workon pyvenv-virtual-env-name)
       ;; TODO: Remove; it's just debugging.
@@ -80,8 +80,9 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
       ;; switches/restores the window config for the perspective.  If we don't
       ;; work within buffer in new window config, then we're simply using the
       ;; old perspective's buffer.
-      (with-current-buffer (window-buffer)
-        (spacemacs//pyvenv-mode-set-local-virtualenv "persp-switch"))))
+      (when (eq python-auto-set-local-pyvenv-virtualenv 'on-project-switch)
+        (with-current-buffer (window-buffer)
+          (spacemacs//pyvenv-mode-set-local-virtualenv "persp-switch")))))
 
   (when (configuration-layer/package-used-p 'editorconfig)
     (defun spacemacs//editorconfig-set-pyvenv (props)
@@ -170,7 +171,7 @@ Ignores beginning white-space."
   "Originally from `python-x.el'"
   (let ((buffer (get-buffer-create "*help[Python]*"))
         (output (python-shell-send-string-no-output
-                  (format python-help-setup-code string) proc)))
+                 (format spacemacs--python-help-setup-code string) proc)))
     (unless (s-blank? output)
       (with-current-buffer buffer
         ;; (special-mode)

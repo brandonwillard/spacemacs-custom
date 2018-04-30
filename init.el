@@ -45,7 +45,7 @@ values."
      (python :variables
              python-test-runner 'pytest
              python-auto-set-local-pyvenv-virtualenv 'on-project-switch
-             ;; python-backend 'lsp
+             python-backend nil
              :packages (not live-py-mode)
              )
      python-extras
@@ -360,8 +360,7 @@ values."
    ;; (default nil)
    dotspacemacs-whitespace-cleanup 'trailing
 
-   dotspacemacs-switch-to-buffer-prefers-purpose nil
-   ))
+   dotspacemacs-switch-to-buffer-prefers-purpose nil))
 
 (defun dotspacemacs/user-init ()
   "Initialization function for user code.
@@ -466,6 +465,10 @@ you should place your code here."
     (setq lsp-ui-sideline-enable nil))
 
   (with-eval-after-load 'org
+    ;; What to allow before and after markup
+    ;; See https://emacs.stackexchange.com/a/13828
+    (setcar (nthcdr 1 org-emphasis-regexp-components)
+            (concat (nth 0 org-emphasis-regexp-components) "s"))
     (setq org-link-file-path-type 'relative)
     (setq org-confirm-babel-evaluate nil)
     (setq org-default-notes-file (f-join user-home-directory "Documents" "notes.org")))

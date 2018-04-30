@@ -71,32 +71,32 @@
 
 (defun python-extras/post-init-company ()
 
+  (defun python--private-lessp (x y)
+    (cond
+     ((and (string-prefix-p "_" x)
+           (not (string-prefix-p "_" y))) nil)
+     ((and (string-prefix-p "_" y)
+           (not (string-prefix-p "_" x))) t)
+     (t (string-lessp x y))))
+
   (defun python-extras/company-transform-python (candidates)
-    "De-prioritize internal variables (i.e. '_blah') in completion list ordering.
+    "De-prioritize internal/private Python variables (e.g. '_blah') in completion list ordering.
 
-See `company-transformers'.
+See `company-transformers'."
+    (seq-sort-by 'company-strip-prefix #'python--private-lessp
+                 candidates))
 
-From URL `https://emacs.stackexchange.com/a/12403'"
-    (let ((deleted))
-      (mapcar #'(lambda (c)
-                  (if (or (string-prefix-p "_" c) (string-prefix-p "._" c))
-                      (progn
-                        (add-to-list 'deleted c)
-                        (setq candidates (delete c candidates)))))
-              candidates)
-      (append candidates (nreverse deleted))))
+  (defun python-extras/python-company-conf ()
+    (add-to-list 'company-transformers 'python-extras/company-transform-python
+                 t))
 
-  (defun python-extras/python-company-conf()
-    (setq-local company-transformers
-                (append company-transformers '(python-extras/company-transform-python))))
-
-  (add-hook 'python-mode-hook 'python-extras/python-company-conf t)
+  (spacemacs/add-to-hooks 'python-extras/python-company-conf
+                          '(python-mode-hook inferior-python-mode-hook))
 
   ;; Disable company idle/automatic completion.
   (advice-add 'spacemacs//init-company-vars-inferior-python-mode
-              :after
-              #'(lambda (&rest _)
-                  (setq-local company-idle-delay nil))))
+              :after #'(lambda (&rest _)
+                         (setq-local company-idle-delay nil))))
 
 (defun python-extras/post-init-pyvenv ()
 
@@ -118,6 +118,7 @@ From URL `https://emacs.stackexchange.com/a/12403'"
   ;;   ...)
   ;; (advice-add 'pyvenv-activate :before 'python-extras//track-previous-pyvenv)
 
+  ;; These
   (add-hook 'pyvenv-post-activate-hooks #'spacemacs//pyvenv-conda-activate-additions)
   (add-hook 'pyvenv-post-deactivate-hooks #'spacemacs//pyvenv-conda-deactivate-additions)
   (add-hook 'term-exec-hook #'spacemacs//pyvenv-conda-env-shell-init))

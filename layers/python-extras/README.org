@@ -1,0 +1,33 @@
+#+TITLE: python-extras layer
+
+* Table of Contents                                       :TOC_4_gh:noexport:
+- [[#description][Description]]
+  - [[#features][Features:]]
+- [[#install][Install]]
+- [[#key-bindings][Key bindings]]
+
+* Description
+This layer adds extra configuration and support for Python.
+
+** Features:
+   - =persp-mode= virtual environment switching
+   - Basic support for Anaconda virtual environments
+   - Inferior python shells are made project (via =projectile=) specific
+   - Python REPL send-functions that echo the sent text
+   - IPython/Jupyter help pop-ups
+
+The =persp-mode= additions piggy-back on the standard python layer's
+=python-auto-set-local-pyvenv-virtualenv= variable; set it to
+=on-project-switch= to activate =persp-mode= auto virtual env switching.
+
+* Install
+To use this configuration layer, add it to your =.spacemacs=.  You will need to
+add =python-extras= to the existing =dotspacemacs-configuration-layers= list in this
+file.
+
+* Key bindings
+
+| Key Binding | Description                        |
+|-------------+------------------------------------|
+| ~SPC m h h~ | Pop-up help for region or symbol   |
+| ~SPC m s l~ | Send line to Python inferior shell |

@@ -14,7 +14,7 @@
 ;; TODO: Consider adding a toggle for auto-pyvenv functionality
 ;; Use `spacemacs|add-toggle'.
 
-(defvar python-help-setup-code
+(defvar spacemacs--python-help-setup-code
       "
 try:
    get_ipython().inspector.pinfo(%1$s, detail_level=1)
@@ -23,5 +23,5 @@ except Exception:
 "
       "Code used to extract help information from a comint REPL.")
 
-(defvar pyvenv-virtual-env-name-prev nil
+(defvar spacemacs--pyvenv-virtual-env-name-prev nil
   "Name of the previously active virtual env; nil otherwise")

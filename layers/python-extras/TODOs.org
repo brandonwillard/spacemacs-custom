@@ -1,1 +1,6 @@
-
+* TODO Implement ~company-show-doc-buffer~
+  [2018-04-30 Mon]
+  This should be able to use inferior shell results (e.g. [[file:~/.spacemacs.d/layers/python-extras/funcs.el::(defun%20spacemacs//python-help-for-region-or-symbol%20(string)][~spacemacs//python-help-for-region-or-symbol~]])
+* TODO Get ansi fontification working
+  [2018-04-30 Mon]
+  This would occur within [[file:~/.spacemacs.d/layers/python-extras/funcs.el::(defun%20spacemacs//python-help-for-region-or-symbol%20(string)][~spacemacs//python-help-for-region-or-symbol~]] and/or [[file:funcs.el::(defun%20spacemacs//python-help--display-for-string%20(proc%20string)][~spacemacs//python-help--display-for-string~]].

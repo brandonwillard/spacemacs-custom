@@ -1,54 +1,8 @@
 #+TITLE: Emacs Config Notes
 #+AUTHOR: Brandon T. Willard
 
-* TODO [#A] Configure ~persp-mode~, ~projectile-mode~ and ~pyvenv~ to work together :python:projectile:persp:pyvenv:
-  - Note taken on [2018-01-28 Sun 12:54] \\
-    Extending [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-process-name%20(dedicated)][~python-shell-get-process-name~]] to include
-    ~projectile-project-name~ might enable per-project inferior processes.
-
-  - Note taken on [2018-01-19 Fri 14:46] \\
-    Perhaps the [[file:~/.emacs.d/layers/+spacemacs/spacemacs-layouts/funcs.el::(defun%20spacemacs/layout-switch-by-pos%20(pos)][spacemacs layout switching function]] should call
-    ~projectile-persp-switch-project~ instead of ~persp-switch~.  We could advise
-    ~persp-switch~ or simply replace ~spacemacs/layout-switch-by-pos~.  Either way, I
-    think we'll need to check for an associated project, get the name or location
-    and pass *that* to ~projectile-persp-switch-project~.
-    Also, check out [[https://gist.github.com/Bad-ptr/1aca1ec54c3bdb2ee80996eb2b68ad2d#file-persp-projectile-auto-persp-el][these customizations]].
-
-  - [X] Fix [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-buffer%20()][python-mode inferior buffer]] naming/initialization; we should be assigning inferior processes to
-    projects/perspectives, so naming could be one way to do that.
-
-  - [ ] Implement an alist with project/perspective-to-venv entries.
-    [[https://github.com/bbatsov/projectile/issues/139][Here's a discussion]] on project-local variables.  [[https://github.com/emacs-php/projectile-variable][This]] looks like an existing solution.
-    We need to add venv awareness to ~org-babel~ via
-    ~org-babel-prep-session:python~.  ~org-babel~ might only need
-    ~python-shell-virtualenv-root~ set in order to start a venv-ed inferior shell.
-
-  - [ ] Hook for project/perspective changes.
-    The correct "hook" may be ~persp-before-switch-functions~.
-    #+BEGIN_SRC elisp
-    (defun persp-pyvenv-switch ())
-    (add-to-list 'persp-before-switch-functions #'(lambda (persp-name frame-or-window)
-                                                    (message "Switching to %s" persp-name)))
-    #+END_SRC
-
-    #+BEGIN_SRC elisp
-    ;; TODO: After persp change, check for virtualenv change.
-    (cl-pushnew #'(lambda (window)
-                    (debug)
-                    ;; (safe-persp-parameters (get-current-persp))
-
-                    ;; XXX: This does a `locate-dominating-file' search.
-                    ;; (spacemacs//pyvenv-mode-set-local-virtualenv)
-
-                    ;; (when (and (bound-and-true-p project-pyvenv-virtual-env-name)
-                    ;;            (eq project-pyvenv-virtual-env-name pyvenv-virtual-env-name))
-                    ;;   (pyvenv-workon pyvenv-virtual-env-name))
-                    )
-                persp-activated-functions)
-    #+END_SRC
-
-* TODO [#A] Slowness with Python file loading                        :python:
-** Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
+* TODO [#A] Slowness with Python file/venv loading                   :python:
+  Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
 * TODO [#A] Allow ~persp-mode~ to set ~projectile-mode~ project.
   Viewing a buffer for a file in a different ~projectile-mode~ project from
   within a ~persp-mode~ opened for a different project doesn't prioritize the
@@ -57,6 +11,28 @@
   If we can get the ~projectile-mode~ project name/location from ~persp-mode~,
   we might only need to set/wrap/override ~projectile-cached-project-root~,
   ~projectile-cached-project-name~, ~projectile-project-name~, and/or ~projectile-project-root~.
+
+  - [X] Where do we store the project name value (relative to ~persp-mode~)?
+    #+BEGIN_SRC elisp
+    (get-current-persp)
+
+    ;; Set projectile name
+    (set-persp-parameter 'projectile-name (ignore-errors (projectile-project-name)))
+
+    ;; Get the name
+    (persp-parameter 'projectile-name)
+    #+END_SRC
+  - [ ] Where do we associate a project [name] with a perspective?
+    The main mechanism of project activation (for me) is the ~:source~ ~:action~
+    lambda in ~spacemacs/helm-persp-switch-project~?  This is an extremely fickle
+    tie-in, though.
+    Perhaps ~projectile-before-switch-project-hook~ is better.
+    #+BEGIN_SRC elisp
+    (defun persp-projectile-assign-project-name ()
+      )
+    (add-hook 'projectile-before-switch-project-hook
+              #'persp-projectile-assign-project-name)
+    #+END_SRC
 
 * TODO Font lock for ~org-mode~ inline source statements            :orgmode:
   The following is a start, but it breaks when header options in
@@ -252,6 +228,58 @@ Defers to standard `conda--find-env-yml' otherwise."
 
 (add-hook 'tex-mode-hook 'btw/tex-mode-settings)
 #+END_SRC
+
+* DONE [#A] Configure ~persp-mode~, ~projectile-mode~ and ~pyvenv~ to work together :python:projectile:persp:pyvenv:
+  CLOSED: [2018-04-27 Fri 19:21]
+  - Note taken on [2018-04-27 Fri 19:20] \\
+    The =python-extras= layer now provides venv switching functionality.
+  - Note taken on [2018-01-28 Sun 12:54] \\
+    Extending [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-process-name%20(dedicated)][~python-shell-get-process-name~]] to include
+    ~projectile-project-name~ might enable per-project inferior processes.
+
+  - Note taken on [2018-01-19 Fri 14:46] \\
+    Perhaps the [[file:~/.emacs.d/layers/+spacemacs/spacemacs-layouts/funcs.el::(defun%20spacemacs/layout-switch-by-pos%20(pos)][spacemacs layout switching function]] should call
+    ~projectile-persp-switch-project~ instead of ~persp-switch~.  We could advise
+    ~persp-switch~ or simply replace ~spacemacs/layout-switch-by-pos~.  Either way, I
+    think we'll need to check for an associated project, get the name or location
+    and pass *that* to ~projectile-persp-switch-project~.
+    Also, check out [[https://gist.github.com/Bad-ptr/1aca1ec54c3bdb2ee80996eb2b68ad2d#file-persp-projectile-auto-persp-el][these customizations]].
+
+  - [X] Fix [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-buffer%20()][python-mode inferior buffer]] naming/initialization; we should be assigning inferior processes to
+    projects/perspectives, so naming could be one way to do that.
+
+  - [-] Implement an alist with project/perspective-to-venv entries.
+    [[https://github.com/bbatsov/projectile/issues/139][Here's a discussion]] on project-local variables.  [[https://github.com/emacs-php/projectile-variable][This]] looks like an existing solution.
+    We need to add venv awareness to ~org-babel~ via
+    ~org-babel-prep-session:python~.  ~org-babel~ might only need
+    ~python-shell-virtualenv-root~ set in order to start a venv-ed inferior shell.
+    =blah=.
+
+    This doesn't need to be done.
+
+  - [X] Hook for project/perspective changes.
+    The correct "hook" may be ~persp-before-switch-functions~.
+    #+BEGIN_SRC elisp
+    (defun persp-pyvenv-switch ())
+    (add-to-list 'persp-before-switch-functions #'(lambda (persp-name frame-or-window)
+                                                    (message "Switching to %s" persp-name)))
+    #+END_SRC
+
+    #+BEGIN_SRC elisp
+    ;; TODO: After persp change, check for virtualenv change.
+    (cl-pushnew #'(lambda (window)
+                    (debug)
+                    ;; (safe-persp-parameters (get-current-persp))
+
+                    ;; XXX: This does a `locate-dominating-file' search.
+                    ;; (spacemacs//pyvenv-mode-set-local-virtualenv)
+
+                    ;; (when (and (bound-and-true-p project-pyvenv-virtual-env-name)
+                    ;;            (eq project-pyvenv-virtual-env-name pyvenv-virtual-env-name))
+                    ;;   (pyvenv-workon pyvenv-virtual-env-name))
+                    )
+                persp-activated-functions)
+    #+END_SRC
 
 * DONE Try ~ob-async~ (again)                                       :orgmode:
   CLOSED: [2018-04-22 Sun 14:20]
