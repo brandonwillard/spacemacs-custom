@@ -76,7 +76,6 @@ the current subtree upward."
 	                             (point)))
       (org-babel-execute-buffer arg)
       (widen))))
-
 (defun spacemacs//org-babel-load-session:python (session body params)
   "Load BODY into SESSION using python-shell-send-string-echo."
   (declare-function python-shell-send-string "python.el")
@@ -177,7 +176,7 @@ CONTENTS holds the contents of the item.  INFO is a plist holding
 contextual information.
 
 This is mostly the standard `ox-latex' with only the following differences:
-  1. Float placement options are honored now.
+  1. Float placement options for src blocks (e.g. listings) are now used.
   2. Generic custom language environments can be declared using the key language/symbol `all'.
 "
   (when (org-string-nw-p (org-element-property :value src-block))

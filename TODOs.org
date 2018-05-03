@@ -1,6 +1,9 @@
 #+TITLE: Emacs Config Notes
 #+AUTHOR: Brandon T. Willard
 
+* TODO [#A] Create Org LOB file for common export helpers and adjustments
+  Put code from [[file:../projects/papers/tex-project-templates/src/org/org-export-init.el][=org-export-init.el=]] into an independent, versioned Org file to
+  be loaded with ~org-babel-lob-ingest~.
 * TODO [#A] Slowness with Python file/venv loading                   :python:
   Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
 * TODO [#A] Allow ~persp-mode~ to set ~projectile-mode~ project.
@@ -66,7 +69,7 @@
                              )))
   #+END_SRC
 * TODO ~org-mode~ to Google Tasks, Calendar, etc.           :orgmode:syncing:
-** There's a push/pull/sync tool [[https://bitbucket.org/edgimar/michel-orgmode][here]].
+  There's a push/pull/sync tool [[https://bitbucket.org/edgimar/michel-orgmode][here]].
 * TODO Fix project-root finding in ~lsp-mode~                           :lsp:
   - Note taken on [2018-03-17 Sat 14:03] \\
     For example, =lsp-python= uses the following to find a project's root directory:
@@ -85,16 +88,18 @@
 
 * TODO Set up ~evil-extra-operator~
 * TODO Set up ~org-mode~ TODOs and GitHub issues sync       :orgmode:syncing:
-** [[https://github.com/arbox/org-sync][Here's]] a library that does it.
+  [[https://github.com/arbox/org-sync][Here's]] a library that does it.
 * TODO Fix/adjust folding in [[file:init.el::(with-eval-after-load%20'hideshow][init.el]]
-  The meaning of "z[r|m]" is "level-folding" in Vim, but ~evil-commands~ has no
-  notion of this.  For ~hideshow~ we can use ~hs-hide-level~ to better approximate
-  level-folding, but we would still have to work that into evil's framework via
-  ~evil-fold-list~ (e.g. new level-folding properties--perhaps with fall-backs,
-  too).  We also need an ~hs-show-level~ function.
+  The meaning of @@html:<kbd>@@ z [r|m] @@html:</kbd>@@ is "level-folding" in
+  Vim, but ~evil-commands~ has no notion of this.  For ~hideshow~ we can use
+  ~hs-hide-level~ to better approximate level-folding, but we would still have
+  to work that into evil's framework via ~evil-fold-list~ (e.g. new
+  level-folding properties--perhaps with fall-backs, too).  We also need an
+  ~hs-show-level~ function.
 
-  Toggle fold, i.e. ~za~ doesn't work for code blocks in org-mode.  Default
-  ~tab~ does work (it's bound to ~org-cycle~).
+  Toggle fold, i.e. @@html:<kbd>@@ za @@html:</kbd>@@ doesn't work for code
+  blocks in org-mode.  Default @@html:<kbd>@@ <tab> @@html:</kbd>@@ does work
+  (it's bound to ~org-cycle~).
 * TODO Improve ~org-mode~ links in LaTeX export              :bibtex:orgmode:
   Find ~org-ref~ alternative and/or try [[https://github.com/andras-simonyi/citeproc-orgref][~citeproc-orgref~]].
   - Note taken on [2018-03-24 Sat 15:02] \\
@@ -122,6 +127,9 @@
     #+END_SRC
     See [[https://orgmode.org/worg/org-contrib/org-exp-blocks.html][~org-exp-blocks~]] for ways to pre-process blocks on export.
 * TODO Better ~org-babel~ Python interaction                :python:orgbabel:
+  - Note taken on [2018-05-02 Wed 22:01] \\
+    A lot of this has been done in the ~org-extras~ layer.  There are still some
+    completion issues to fix, though.
   - Note taken on [2018-04-06 Fri 12:41] \\
     Consider adding a =org-babel-ipython-associate-session=.
   - Note taken on [2018-04-04 Wed 17:14] \\
