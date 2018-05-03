@@ -102,6 +102,8 @@ values."
                                       ox-jira
                                       ;; ox-confluence
 
+                                      ob-hy
+
                                       dockerfile-mode
 
                                       evil-extra-operator
@@ -390,6 +392,11 @@ before packages are loaded. If you are unsure, you should try in setting them in
   ;; (setq browse-url-browser-function 'eww-browse-url)
   ;; (setq browse-url-browser-function 'xwidget-webkit-browse-url)
 
+  ;; Helps with delays while handling very long lines.
+  (setq-default bidi-display-reordering nil)
+  (setq edebug-print-level 10)
+  (setq eval-expression-print-level 4)
+
   (defun btw/ad-timestamp-message (format-string &rest args)
     "Advice to run before `message' that prepends a timestamp to each message.
     Activate this advice with:
@@ -406,7 +413,8 @@ before packages are loaded. If you are unsure, you should try in setting them in
                 (newline))
             (insert (format-time-string "[%F %T.%3N] "))))))
 
-  (advice-add 'message :before 'btw/ad-timestamp-message))
+  ;; (advice-add 'message :before 'btw/ad-timestamp-message)
+  )
 
 (defun dotspacemacs/user-config ()
   "Configuration function for user code.
@@ -464,7 +472,23 @@ you should place your code here."
     (setq lsp-ui-sideline-show-hover nil)
     (setq lsp-ui-sideline-enable nil))
 
+  ;; (spacemacs|use-package-add-hook org
+  ;;   :post-config
+  ;;   )
+
   (with-eval-after-load 'org
+    (use-package ob-hy
+      :init
+      (progn
+        (add-to-list 'org-babel-load-languages '(hy . t))))
+    ;; (setq org-latex-custom-lang-environments
+;;      '((all "\\begin{multilisting}
+;; \\begin{minted}[%o]{%L}
+;; %s
+;; \\end{minted}
+;; \\captionof{listing}{%c}
+;; \\label{%l}
+;; \\end{multilisting}")))
     ;; What to allow before and after markup
     ;; See https://emacs.stackexchange.com/a/13828
     (setcar (nthcdr 1 org-emphasis-regexp-components)
@@ -502,7 +526,7 @@ you should place your code here."
   (evil-global-set-key 'normal "zM" 'evil-close-folds)
 
   (with-eval-after-load 'evil-lisp-state
-    ;; Let's get rid of the annoying mode switching.
+    ;; Let's get rid of that annoying mode switching.
     (dolist (x evil-lisp-state-commands)
       (let ((key (car x))
             (cmd (cdr x)))
@@ -537,20 +561,12 @@ From https://stackoverflow.com/a/37356659/3006474"
         (with-current-buffer buf
           (goto-char (point-max))))))
 
-  (advice-add 'message :after #'btw/messages-auto-tail)
+  ;; (advice-add 'message :after #'btw/messages-auto-tail)
 
   (with-eval-after-load 'persp-mode
-    ;; Add variables containing functions to be called after layout changes:
-    ;; See `persp-before-switch-functions'.
-
-    ;; Manually add certain buffers to the perspective
-    ;; (add-hook 'after-switch-to-buffer-functions
-    ;;           #'(lambda (bn) (when (and persp-mode
-    ;;                                     (not persp-temporarily-display-buffer))
-    ;;                            (persp-add-buffer bn))))
-
     ;; Add all opened buffers (filter certain ones below).
     (setq persp-add-buffer-on-after-change-major-mode t)
+
     ;; (add-hook 'persp-common-buffer-filter-functions
     ;;           ;; there is also `persp-add-buffer-on-after-change-major-mode-filter-functions'
     ;;           #'(lambda (b) (string-prefix-p "*" (buffer-name b))))
@@ -649,6 +665,8 @@ From https://stackoverflow.com/a/37356659/3006474"
 
   (with-eval-after-load 'evil-jumps
     (setq evil-jumps-cross-buffers nil))
+
+  (add-hook 'hy-mode-hook #'(lambda () (require 'spacemacs-hy)))
 
   (defun btw/clang-format-bindings ()
     (define-key c++-mode-map [tab] 'clang-format-buffer)

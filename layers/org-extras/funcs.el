@@ -14,21 +14,26 @@
 
 (when (configuration-layer/package-used-p 'projectile)
   (defun spacemacs//ob-ipython-project-dirs-setup ()
+    "Set `ob-ipython-resources-dir' to a directory in the current projectile project.
+
+Uses `org-projectile-resources-dir' and the projectile project's root directory."
     (let* ((projectile-require-project-root nil)
            (proj-root (projectile-project-root))
            (proj-figures-dir (when proj-root
-                               (f-join proj-root "figures"))))
+                               (f-join proj-root org-projectile-resources-dir))))
       (when (and proj-figures-dir
                  (f-exists? proj-figures-dir))
         (setq-local ob-ipython-resources-dir proj-figures-dir))))
 
   (defun spacemacs//org-export-output-project-file-name (orig-fun extension &optional subtreep pub-dir)
-    "Export to a project's corresponding source directory as determined by EXTENSION."
+    "Export to a project's corresponding source directory as determined by EXTENSION.
+
+Uses `projectile-src-directory' plus the EXTENSION to determine the exact output sub-directory."
     (let* ((projectile-require-project-root nil)
            (proj-root (projectile-project-root))
            (lang-src-dir (when proj-root
                            (f-join proj-root
-                                   "src"
+                                   (projectile-src-directory (projectile-project-type))
                                    (s-chop-prefix "." extension))))
            (pub-dir (if (and lang-src-dir
                              (f-exists? lang-src-dir))
@@ -38,12 +43,12 @@
       (funcall orig-fun extension subtreep pub-dir)))
 
   (defun spacemacs//org-latex-pdf-process (file-name)
-    "XXX: This will err-out because of org-export's assumption that the output should b
-in the local directory"
+    "XXX: This will err-out because of org-export's assumption that the output
+should be in the local directory"
     (let* ((projectile-require-project-root nil)
            (proj-root (projectile-project-root))
            (pdf-out-dir (when proj-root
-                          (f-join proj-root "output")))
+                          (f-join proj-root org-projectile-output-dir)))
            (pub-dir (if (and pdf-out-dir
                              (f-exists? pdf-out-dir))
                         pdf-out-dir
@@ -57,6 +62,20 @@ in the local directory"
                                       file-name))))
       (message "%s" compile-cmd)
       (compile compile-cmd))))
+
+(defun spacemacs//org-babel-execute-from-here (&optional arg)
+  "Execute source code blocks from the subtree at the current point upward.
+Call `org-babel-execute-src-block' on every source block in
+the current subtree upward."
+  (interactive "P")
+  (save-restriction
+    (save-excursion
+      (narrow-to-region (point-min)
+                        (progn (org-end-of-subtree t t)
+	                             (when (and (org-at-heading-p) (not (eobp))) (backward-char 1))
+	                             (point)))
+      (org-babel-execute-buffer arg)
+      (widen))))
 
 (defun spacemacs//org-babel-load-session:python (session body params)
   "Load BODY into SESSION using python-shell-send-string-echo."
@@ -152,3 +171,203 @@ in the local directory"
       (format "*%s*"
               (python-shell-get-process-name nil))
     (funcall orig-func session)))
+(defun spacemacs//org-latex-src-block (src-block _contents info)
+  "Transcode a SRC-BLOCK element from Org to LaTeX.
+CONTENTS holds the contents of the item.  INFO is a plist holding
+contextual information.
+
+This is mostly the standard `ox-latex' with only the following differences:
+  1. Float placement options are honored now.
+  2. Generic custom language environments can be declared using the key language/symbol `all'.
+"
+  (when (org-string-nw-p (org-element-property :value src-block))
+    (let* ((lang (org-element-property :language src-block))
+           (caption (org-element-property :caption src-block))
+           (caption-above-p (org-latex--caption-above-p src-block info))
+           (label (org-element-property :name src-block))
+           (custom-env (or (and lang
+                                (cadr (assq (intern lang) org-latex-custom-lang-environments)))
+                           nil
+                           ;; TODO: Allow an `all' entry that applies to all languages
+                           ;; (assoc-default (intern lang) org-latex-custom-lang-environments
+                           ;;                nil (assq 'all org-latex-custom-lang-environments))
+                           )
+                       )
+           (num-start (org-export-get-loc src-block info))
+           (retain-labels (org-element-property :retain-labels src-block))
+           (attributes (org-export-read-attribute :attr_latex src-block))
+           (placement (let ((place (plist-get attributes :placement)))
+                        (cond
+                         (place (format "%s" place))
+                         (t (plist-get info :latex-default-figure-position)))))
+           (float (plist-get attributes :float))
+           (listings (plist-get info :latex-listings)))
+      (cond
+       ;; Case 1.  No source fontification.
+       ((not listings)
+        (let* ((caption-str (org-latex--caption/label-string src-block
+                                                             info))
+               (float-env (cond
+                           ((string= "multicolumn" float)
+                            (format "\\begin{figure*}[%s]\n%s%%s\n%s\\end{figure*}"
+                                    placement
+                                    (if caption-above-p caption-str "")
+                                    (if caption-above-p "" caption-str)))
+                           (caption (concat (if caption-above-p caption-str "")
+                                            "%s"
+                                            (if caption-above-p
+                                                ""
+                                              (concat "\n" caption-str))))
+                           (t "%s"))))
+          (format float-env
+                  (concat (format "\\begin{verbatim}\n%s\\end{verbatim}"
+                                  (org-export-format-code-default src-block
+                                                                  info))))))
+       ;; Case 2.  Custom environment.
+
+       (custom-env (let ((caption-str (org-latex--caption/label-string src-block
+                                                                       info))
+                         (formatted-src (org-export-format-code-default src-block
+                                                                        info)))
+                     (if (string-match-p "\\`[a-zA-Z0-9]+\\'" custom-env)
+                         (format "\\begin{%s}\n%s\\end{%s}\n"
+                                 custom-env
+                                 (concat (and caption-above-p caption-str)
+                                         formatted-src
+                                         (and (not caption-above-p)
+                                              caption-str))
+                                 custom-env)
+                       (format-spec custom-env
+                                    `((?s . ,(or formatted-src ""))
+                                      (?c . ,(or caption ""))
+                                      (?f . ,(or float ""))
+                                      (?l . ,(or (org-latex--label src-block info) ""))
+                                      (?o . ,(or (plist-get attributes :options)
+                                                 "")))))))
+       ;; Case 3.  Use minted package.
+
+       ((eq listings 'minted)
+        (let* ((caption-str (org-latex--caption/label-string src-block
+                                                             info))
+               (float-env (cond
+                           ((string= "multicolumn" float)
+                            (format "\\begin{listing*}[%s]\n%s%%s\n%s\\end{listing*}"
+                                    placement
+                                    (if caption-above-p caption-str "")
+                                    (if caption-above-p "" caption-str)))
+                           (caption (format "\\begin{listing}[%s]\n%s%%s\n%s\\end{listing}"
+                                            placement
+                                            (if caption-above-p caption-str "")
+                                            (if caption-above-p "" caption-str)))
+                           ((string= "t" float)
+                            (concat (format "\\begin{listing}[%s]\n" placement)
+                                    "%s\n\\end{listing}"))
+                           (t "%s")))
+               (options (plist-get info :latex-minted-options))
+               (body (format "\\begin{minted}[%s]{%s}\n%s\\end{minted}"
+                             ;; Options.
+
+                             (concat (org-latex--make-option-string (if (or (not num-start)
+                                                                            (assoc "linenos" options))
+                                                                        options
+                                                                      (append `(("linenos")
+                                                                                ("firstnumber" ,(number-to-string (1+ num-start))))
+                                                                              options)))
+                                     (let ((local-options (plist-get attributes :options)))
+                                       (and local-options
+                                            (concat "," local-options))))
+                             ;; Language.
+                             (or (cadr (assq (intern lang)
+                                             (plist-get info :latex-minted-langs)))
+                                 (downcase lang))
+                             ;; Source code.
+                             (let* ((code-info (org-export-unravel-code src-block))
+                                    (max-width (apply 'max
+                                                      (mapcar 'length
+                                                              (org-split-string (car code-info)
+                                                                                "\n")))))
+                               (org-export-format-code (car code-info)
+                                                       (lambda (loc _num ref)
+                                                         (concat loc
+                                                                 (when ref
+                                                                   ;; Ensure references are flushed to the right,
+			                                                             ;; separated with 6 spaces from the widest line
+			                                                             ;; of code.
+                                                                   (concat (make-string (+ (- max-width
+                                                                                              (length loc))
+                                                                                           6)
+                                                                                        ?\
+                                                                                        s)
+                                                                           (format "(%s)" ref)))))
+                                                       nil
+                                                       (and retain-labels
+                                                            (cdr code-info)))))))
+          ;; Return value.
+
+          (format float-env body)))
+       ;; Case 4.  Use listings package.
+
+       (t (let ((lst-lang (or (cadr (assq (intern lang)
+                                          (plist-get info :latex-listings-langs)))
+                              lang))
+                (caption-str (when caption
+                               (let ((main (org-export-get-caption src-block))
+                                     (secondary (org-export-get-caption src-block t)))
+                                 (if (not secondary)
+                                     (format "{%s}"
+                                             (org-export-data main info))
+                                   (format "{[%s]%s}"
+                                           (org-export-data secondary info)
+                                           (org-export-data main info))))))
+                (lst-opt (plist-get info :latex-listings-options)))
+            (concat
+             ;; Options. (format
+	           "\\lstset{%s}\n"
+	           (concat (org-latex--make-option-string (append lst-opt
+                                                            (cond
+                                                             ((and (not float)
+                                                                   (plist-member attributes :float)) nil)
+                                                             ((string= "multicolumn" float) '(("float" "*")))
+                                                             ((and float
+                                                                   (not (assoc "float" lst-opt))) `(("float" ,placement))))
+                                                            `(("language" ,lst-lang))
+                                                            (if label
+                                                                `(("label" ,(org-latex--label src-block info)))
+                                                              '(("label" " ")))
+                                                            (if caption-str
+                                                                `(("caption" ,caption-str))
+                                                              '(("caption" " ")))
+                                                            `(("captionpos" ,(if caption-above-p "t" "b")))
+                                                            (cond
+                                                             ((assoc "numbers" lst-opt) nil)
+                                                             ((not num-start) '(("numbers" "none")))
+                                                             (t `(("firstnumber" ,(number-to-string (1+ num-start)))
+                                                                  ("numbers" "left"))))))
+                     (let ((local-options (plist-get attributes :options)))
+                       (and local-options
+                            (concat "," local-options)))))
+            ;; Source code.
+
+            (format
+	           "\\begin{lstlisting}\n%s\\end{lstlisting}"
+	           (let* ((code-info (org-export-unravel-code src-block))
+                    (max-width (apply 'max
+                                      (mapcar 'length
+                                              (org-split-string (car code-info)
+                                                                "\n")))))
+               (org-export-format-code (car code-info)
+                                       (lambda (loc _num ref)
+                                         (concat loc
+                                                 (when ref
+                                                   ;; Ensure references are flushed to the right,
+		                                               ;; separated with 6 spaces from the widest line of
+		                                               ;; code
+                                                   (concat (make-string (+ (- max-width
+                                                                              (length loc))
+                                                                           6)
+                                                                        ?\
+                                                                        s)
+                                                           (format "(%s)" ref)))))
+                                       nil
+                                       (and retain-labels
+                                            (cdr code-info)))))))))))

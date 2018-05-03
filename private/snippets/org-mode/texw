@@ -16,35 +16,78 @@
 
 #+PROPERTY: header-args :eval never-export :exports both :results output drawer replace
 #+PROPERTY: header-args+ :session
-# (ignore-errors (projectile-project-name))
 
 #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="../extra/custom.css" />
 
 #+LaTeX_CLASS: article
 #+LaTeX_HEADER: \usepackage{amsfonts}
 #+LaTeX_HEADER: \usepackage{setspace}
-#+LaTeX_HEADER: \usepackage{amssymb}
 #+LaTeX_HEADER: \usepackage{amsthm}
-#+LaTeX_HEADER: \usepackage{amsmath}
 #+LaTeX_HEADER: \usepackage{mathtools}
 #+LaTeX_HEADER: \usepackage{subcaption}
 #+LaTeX_HEADER: \usepackage{suffix}
 #+LaTeX_HEADER: \RequirePackage{color}
 #+LaTeX_HEADER: \usepackage{adjustbox}
-#+LaTeX_HEADER: \usepackage{todonotes}
-#+LaTeX_HEADER: \usepackage{draftwatermark}
-#+LaTeX_HEADER: \SetWatermarkScale{1}
-#+LaTeX_HEADER: \SetWatermarkLightness{0.90}
-#+LaTeX_HEADER: \definecolor{bg}{rgb}{0.95,0.95,0.95}
-#+LaTeX_HEADER: \usepackage[backgroundcolor=bg, topline=false, bottomline=false, leftline=false, rightline=false]{mdframed}
-#+LaTeX_HEADER: \setkeys{Gin}{keepaspectratio}
-#+LaTeX_HEADER: \usepackage{minted}
-#+LaTeX_HEADER: \setminted{fontsize=\footnotesize, breaklines=true, breakanywhere=true, breakautoindent=true}
+
+#+LaTeX_HEADER: \include{math-commands}
+
+#+LaTeX_HEADER_EXTRA: \usepackage{todonotes}
+#+LATEX_HEADER_EXTRA: \usepackage{draftwatermark}
+#+LATEX_HEADER_EXTRA: \SetWatermarkScale{1}
+#+LATEX_HEADER_EXTRA: \SetWatermarkLightness{0.90}
+#+LATEX_HEADER_EXTRA: \definecolor{bg}{rgb}{0.95,0.95,0.95}
+
+#+LaTeX_HEADER_EXTRA: \definecolor{bg}{rgb}{0.95,0.95,0.95}
+
+#+LaTeX_HEADER_EXTRA: \usepackage[authoryear]{natbib}
+#+LaTeX_HEADER_EXTRA: \usepackage{cleveref}
+
+#+LaTeX_HEADER_EXTRA: \allowdisplaybreaks
+#+LaTeX_HEADER_EXTRA: \setkeys{Gin}{keepaspectratio}
+#+LaTeX_HEADER_EXTRA: \graphicspath{{../../figures/}{../figures/}{./figures/}{./}}
+
+
+# #+LaTeX_HEADER_EXTRA: \usepackage[backgroundcolor=bg, topline=false, bottomline=false, leftline=false, rightline=false]{mdframed}
+#+LaTeX_HEADER_EXTRA: \setminted{fontsize=\footnotesize, breaklines=true, breakanywhere=true, breakautoindent=true}
+#+LaTeX_HEADER_EXTRA: \usepackage{tcolorbox}
+#+LaTeX_HEADER_EXTRA: \tcbuselibrary{minted, listings, breakable, skins}
+
+#+BEGIN_EXPORT latex
+\usepackage{tcolorbox}
+\tcbuselibrary{minted, listings, breakable, skins}
+
+% LaTeX multi-page listings setup
+% Use as follows:
+% \begin{multilisting}[title={This is a caption!}, label={src:name_similarity_func}]{python}
+% ...
+% \end{multilisting}
+
+%\AtBeginDocument{%
+  \newtcblisting[blend into=listings]{multilisting}[1][]{
+    breakable,
+    enhanced,
+    arc=0pt,
+    outer arc=0pt,
+    boxrule=0pt,
+    text only,
+    listing remove caption=false,
+    coltitle=black,
+    % boxed title style={empty, size=minimal},
+    % attach boxed title to bottom center={yshift=-10pt},
+    float,
+    floatplacement=\ifx\relax#1\relax htb\else #1\fi
+  }
+%}
+#+END_EXPORT
+
 # #+LaTeX_HEADER: \RequirePackage[hyphens]{url}
 # #+LaTeX_HEADER: \RequirePackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
+
 #+LaTeX_HEADER: \usepackage[authoryear]{natbib}
 #+LaTeX_HEADER: \usepackage{cleveref}
+
 #+LaTeX_HEADER: \allowdisplaybreaks
+#+LaTeX_HEADER: \setkeys{Gin}{keepaspectratio}
 #+LaTeX_HEADER: \include{math-commands}
 #+LaTeX_HEADER: \graphicspath{{../../figures/}{../figures/}{./figures/}{./}}
 

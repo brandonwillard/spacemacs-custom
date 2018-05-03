@@ -62,12 +62,18 @@
       (advice-add 'org-babel-load-session:python :override
                   #'spacemacs//org-babel-load-session:python)
 
+      (with-eval-after-load 'ox-latex
+        (advice-add 'org-latex-src-block :override 'spacemacs//org-latex-src-block))
+
       (setq org-latex-listings 'minted
             org-latex-prefer-user-labels t
             org-latex-packages-alist '(("" "minted")))
 
       (when (configuration-layer/package-used-p 'projectile)
         (setq org-latex-pdf-process #'spacemacs//org-latex-pdf-process))
+
+      (spacemacs/set-leader-keys-for-major-mode 'org-mode
+        "bh" 'spacemacs//org-babel-execute-from-here)
 
       ;; (add-to-list 'org-babel-load-languages '(R . t))
       ;; (add-to-list 'org-babel-load-languages '(sql. t))

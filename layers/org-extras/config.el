@@ -14,3 +14,13 @@
 (defvar ob-python-execute-echo
   nil
   "Echo input in Python inferior process")
+
+(defvar org-projectile-resources-dir
+  "figures"
+  "Name of the resources directory for a projectile project used to store
+figures and whatnot.")
+
+(defvar org-projectile-output-dir
+  "output"
+  "Name of the output directory for a projectile project used to store
+compiled results (e.g. PDFs).")
