@@ -1,0 +1,32 @@
+#+TITLE: org-extras layer
+
+* Table of Contents                                       :TOC_4_gh:noexport:
+- [[#description][Description]]
+  - [[#features][Features:]]
+- [[#install][Install]]
+- [[#key-bindings][Key bindings]]
+
+* Description
+This layer adds extra support for =org-mode=.
+
+** Features:
+  - Custom =org-latex= export functionality.
+    - Float placement options for src blocks (e.g. listings) are now used.
+    - Generic custom language environments can be declared using the key language/symbol =all=.
+  - Additional =projectile= settings.
+    - Prefix =org-babel= sessions with the project name from =projectile=.
+  - Echo sent Python code in the inferior shell via =org-babel=.
+  - =ob-ipython= interaction and output adjustments
+    - =:results value= output operates mostly as expected (e.g. without the shell prompt included).
+  - Add all projects' todos to =org-agenda=.
+
+* Install
+To use this configuration layer, add it to your =~/.spacemacs=. You will need to
+add =org-extras= to the existing =dotspacemacs-configuration-layers= list in this
+file.
+
+* Key bindings
+
+| Key Binding | Description                                                 |
+|-------------+-------------------------------------------------------------|
+| ~SPC , b h~ | Execute the source blocks from the current section backward |
