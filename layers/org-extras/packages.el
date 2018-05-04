@@ -51,6 +51,7 @@
                   #'spacemacs//org-babel-python-session-buffer)
 
       (when (configuration-layer/package-used-p 'projectile)
+        (advice-add 'org-compile-file :override 'spacemacs//org-compile-file)
         (advice-add 'org-export-output-file-name :around
                     #'spacemacs//org-export-output-project-file-name))
 
@@ -68,9 +69,6 @@
       (setq org-latex-listings 'minted
             org-latex-prefer-user-labels t
             org-latex-packages-alist '(("" "minted")))
-
-      (when (configuration-layer/package-used-p 'projectile)
-        (setq org-latex-pdf-process #'spacemacs//org-latex-pdf-process))
 
       (spacemacs/set-leader-keys-for-major-mode 'org-mode
         "bh" 'spacemacs//org-babel-execute-from-here)

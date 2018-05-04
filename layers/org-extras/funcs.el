@@ -24,7 +24,6 @@ Uses `org-projectile-resources-dir' and the projectile project's root directory.
       (when (and proj-figures-dir
                  (f-exists? proj-figures-dir))
         (setq-local ob-ipython-resources-dir proj-figures-dir))))
-
   (defun spacemacs//org-export-output-project-file-name (orig-fun extension &optional subtreep pub-dir)
     "Export to a project's corresponding source directory as determined by EXTENSION.
 
@@ -41,27 +40,49 @@ Uses `projectile-src-directory' plus the EXTENSION to determine the exact output
                       pub-dir)))
       (message "%s" pub-dir)
       (funcall orig-fun extension subtreep pub-dir)))
-
-  (defun spacemacs//org-latex-pdf-process (file-name)
-    "XXX: This will err-out because of org-export's assumption that the output
-should be in the local directory"
+  (defun spacemacs//org-compile-file (source process ext &optional err-msg log-buf spec)
+    "Same as `org-compile-file' but considers the variable `org-projectile-output-dir'
+for the output directory."
     (let* ((projectile-require-project-root nil)
            (proj-root (projectile-project-root))
-           (pdf-out-dir (when proj-root
-                          (f-join proj-root org-projectile-output-dir)))
-           (pub-dir (if (and pdf-out-dir
-                             (f-exists? pdf-out-dir))
-                        pdf-out-dir
-                      (f-dirname file-name)))
-           (compile-cmd (s-join " "
-                                (list "max_print_line=1000 error_line=254 half_error_line=238 openout_any=a"
-                                      "latexmk -pdf -bibtex -pdflatex='pdflatex -shell-escape -file-line-error -interaction=nonstopmode -synctex=1'"
-                                      (concat "-jobname="
-                                              (f-join pub-dir
-                                                      (f-base file-name)))
-                                      file-name))))
-      (message "%s" compile-cmd)
-      (compile compile-cmd))))
+           (base-name (file-name-base source))
+           (full-name (file-truename source))
+           (out-dir (or (f-join proj-root org-projectile-output-dir)
+                        (file-name-directory source)
+                        "./"))
+           (output (expand-file-name (concat base-name "." ext)
+                                     out-dir))
+           (time (current-time))
+           (err-msg (if (stringp err-msg)
+                        (concat ".  " err-msg)
+                      "")))
+      (save-window-excursion (pcase process
+                               ((pred functionp)
+                                (funcall process
+                                         (shell-quote-argument source)))
+                               ((pred consp)
+                                (let ((log-buf (and log-buf
+                                                    (get-buffer-create log-buf)))
+                                      (spec (append spec
+                                                    `((?b . ,(shell-quote-argument base-name))
+                                                      (?f . ,(shell-quote-argument source))
+                                                      (?F . ,(shell-quote-argument full-name))
+                                                      (?o . ,(shell-quote-argument out-dir))
+                                                      (?O . ,(shell-quote-argument output))))))
+                                  (dolist (command process)
+                                    (shell-command (format-spec command spec)
+                                                   log-buf))
+                                  (when log-buf
+                                    (with-current-buffer log-buf
+                                      (compilation-mode)))))
+                               (_ (error "No valid command to process %S%s"
+                                         source err-msg))))
+      ;; Check for process failure.  Output file is expected to be
+      ;; located in the same directory as SOURCE.
+      (unless (org-file-newer-than-p output time)
+        (error (format "File %S wasn't produced%s" output
+                       err-msg)))
+      output)))
 
 (defun spacemacs//org-babel-execute-from-here (&optional arg)
   "Execute source code blocks from the subtree at the current point upward.

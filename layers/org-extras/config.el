@@ -11,6 +11,10 @@
 
 ;;; Variables:
 
+(defvar org-latex-pdf-output-dir
+  nil
+  "Output directory for PDF files")
+
 (defvar ob-python-execute-echo
   nil
   "Echo input in Python inferior process")

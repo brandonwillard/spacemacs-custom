@@ -492,6 +492,24 @@ you should place your code here."
 ;; \\label{%l}
 ;; \\end{multilisting}")))
 
+    (defun spacemacs//org-latex-pdf-process (file-name)
+      "XXX: This will err-out because of org-export's assumption that the output
+    should be in the local directory"
+      (let* ((projectile-require-project-root nil)
+             (proj-root (projectile-project-root))
+             (pdf-out-dir (when proj-root
+                            (f-join proj-root org-projectile-output-dir)))
+             (pub-dir (if (and pdf-out-dir
+                               (f-exists? pdf-out-dir))
+                          pdf-out-dir
+                        (f-dirname file-name))))
+        (TeX-command latex-build-command
+                     (lambda (&rest _)
+                       file-name)
+                     -1)))
+
+    (setq org-latex-pdf-process #'spacemacs//org-latex-pdf-process)
+
     ;; What to allow before and after markup
     ;; See https://emacs.stackexchange.com/a/13828
     ;; (setcar (nthcdr 1 org-emphasis-regexp-components)
