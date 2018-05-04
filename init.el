@@ -502,10 +502,16 @@ you should place your code here."
              (pub-dir (if (and pdf-out-dir
                                (f-exists? pdf-out-dir))
                           pdf-out-dir
-                        (f-dirname file-name))))
+                        (f-dirname file-name)))
+             (TeX-process-asynchronous nil))
+        ;; Runs `compile', which starts an asych process.  We need it to finish
+        ;; *before* this function finishes; otherwise, `org-mode' will read any
+        ;; existing output immediately and the update times will not differ,
+        ;; making it believe that the compilation failed.
+        ;; `TeX-command-buffer' is the output buffer.
         (TeX-command latex-build-command
                      (lambda (&rest _)
-                       file-name)
+                       (f-filename (f-swap-ext file-name "pdf")))
                      -1)))
 
     (setq org-latex-pdf-process #'spacemacs//org-latex-pdf-process)
@@ -521,7 +527,7 @@ you should place your code here."
   (with-eval-after-load 'tex
     (defvar TeX-command-list)
     (add-to-list 'TeX-command-list
-                 '("Make" "make %o" TeX-run-compile nil t))
+                 '("Make" "make %o" TeX-run-command nil t))
     ;; XXX: Must have this set in the spacemacs tex layer!
     (setq TeX-command-default "Make"))
 
