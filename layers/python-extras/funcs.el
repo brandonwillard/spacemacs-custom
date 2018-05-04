@@ -25,8 +25,8 @@ Makes shells specific to the active project."
 (when (configuration-layer/package-used-p 'pyvenv)
   (defun spacemacs//pyvenv-conda-activate-additions ()
     (setq spacemacs--pyvenv-virtual-env-name-prev pyvenv-virtual-env-name)
-    (when (and (boundp 'pyvenv-virtual-env)
-               (boundp 'pyvenv-virtual-env-name))
+    (when (and (bound-and-true-p pyvenv-virtual-env)
+               (bound-and-true-p pyvenv-virtual-env-name))
       (setenv "CONDA_PREFIX"
               (string-remove-suffix "/" pyvenv-virtual-env))
       (setenv "CONDA_DEFAULT_ENV" pyvenv-virtual-env-name)))
@@ -39,10 +39,10 @@ Makes shells specific to the active project."
     "Activate the current env in a newly opened shell PROCESS.
 
 From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
-    (when (boundp 'pyvenv-virtual-env-name)
+    (when (bound-and-true-p pyvenv-virtual-env-name)
       (let* ((activate-command (if (eq system-type 'windows-nt)
                                    '("activate")
-                                        ;'("source" "activate")
+                                 ;'("source" "activate")
                                  '("conda" "activate")
                                  ))
              (full-command (append activate-command `(,pyvenv-virtual-env-name "\n")))
@@ -176,12 +176,17 @@ Ignores beginning white-space."
       (with-current-buffer buffer
         ;; (special-mode)
         (help-mode)
+        (buffer-disable-undo)
         (let ((inhibit-read-only t))
           (erase-buffer)
           (insert output)
           (ansi-color-apply-on-region (point-min) (point-max))
           (whitespace-cleanup)
           (goto-char (point-min)))
+        (set-buffer-modified-p nil)
+        (setq truncate-lines nil)
+        (setq word-wrap t)
+        ;; (setq font-lock-defaults python-font-lock-keywords)
         (setq python-help--parent-proc proc))
       (display-buffer buffer))))
 

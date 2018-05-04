@@ -17,7 +17,7 @@
 (defvar spacemacs--python-help-setup-code
       "
 try:
-   get_ipython().inspector.pinfo(%1$s, detail_level=1)
+   get_ipython().inspector.pinfo(%1$s, detail_level=0)
 except Exception:
    help(%1$s)
 "

@@ -46,24 +46,19 @@
 #+LaTeX_HEADER_EXTRA: \setkeys{Gin}{keepaspectratio}
 #+LaTeX_HEADER_EXTRA: \graphicspath{{../../figures/}{../figures/}{./figures/}{./}}
 
-
-# #+LaTeX_HEADER_EXTRA: \usepackage[backgroundcolor=bg, topline=false, bottomline=false, leftline=false, rightline=false]{mdframed}
+# Minted should be imported automatically by org-mode when `org-latex-listings` is `minted`.
 #+LaTeX_HEADER_EXTRA: \setminted{fontsize=\footnotesize, breaklines=true, breakanywhere=true, breakautoindent=true}
+
+# This env is really useful if you want to force tables into the page width.
+#+LaTeX_HEADER_EXTRA: \usepackage{adjustbox}
+#+LaTeX_HEADER_EXTRA: \newenvironment{adjusttabular}[1]{\begin{adjustbox}{max width=1.0\textwidth,tabular=#1}}{\end{adjustbox}}
+
+# This is how we produce multi-page listings that use minted.
 #+LaTeX_HEADER_EXTRA: \usepackage{tcolorbox}
 #+LaTeX_HEADER_EXTRA: \tcbuselibrary{minted, listings, breakable, skins}
-
 #+BEGIN_EXPORT latex
-\usepackage{tcolorbox}
-\tcbuselibrary{minted, listings, breakable, skins}
-
-% LaTeX multi-page listings setup
-% Use as follows:
-% \begin{multilisting}[title={This is a caption!}, label={src:name_similarity_func}]{python}
-% ...
-% \end{multilisting}
-
 %\AtBeginDocument{%
-  \newtcblisting[blend into=listings]{multilisting}[1][]{
+  \renewtcblisting[blend into=listings]{listing}[1][]{
     breakable,
     enhanced,
     arc=0pt,

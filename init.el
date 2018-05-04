@@ -462,7 +462,8 @@ you should place your code here."
 
   (with-eval-after-load 'org-ref
     (setq org-ref-pdf-directory "~/projects/papers/references"
-          org-ref-bibliography-notes "~/projects/papers/references/notes.org"))
+          org-ref-bibliography-notes "~/projects/papers/references/notes.org"
+          org-ref-prefer-bracket-links t))
 
   (with-eval-after-load 'lsp
     (setq lsp-enable-eldoc nil))
@@ -481,6 +482,7 @@ you should place your code here."
       :init
       (progn
         (add-to-list 'org-babel-load-languages '(hy . t))))
+
     ;; (setq org-latex-custom-lang-environments
 ;;      '((all "\\begin{multilisting}
 ;; \\begin{minted}[%o]{%L}
@@ -489,10 +491,11 @@ you should place your code here."
 ;; \\captionof{listing}{%c}
 ;; \\label{%l}
 ;; \\end{multilisting}")))
+
     ;; What to allow before and after markup
     ;; See https://emacs.stackexchange.com/a/13828
-    (setcar (nthcdr 1 org-emphasis-regexp-components)
-            (concat (nth 0 org-emphasis-regexp-components) "s"))
+    ;; (setcar (nthcdr 1 org-emphasis-regexp-components)
+    ;;         (concat (nth 0 org-emphasis-regexp-components) "s"))
     (setq org-link-file-path-type 'relative)
     (setq org-confirm-babel-evaluate nil)
     (setq org-default-notes-file (f-join user-home-directory "Documents" "notes.org")))
