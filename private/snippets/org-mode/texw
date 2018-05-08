@@ -51,13 +51,20 @@
 
 # This env is really useful if you want to force tables into the page width.
 #+LaTeX_HEADER_EXTRA: \usepackage{adjustbox}
-#+LaTeX_HEADER_EXTRA: \newenvironment{adjusttabular}[1]{\begin{adjustbox}{max width=1.0\textwidth,tabular=#1}}{\end{adjustbox}}
+#+LaTeX_HEADER_EXTRA: \newenvironment{adjusttabular}[1]{\begin{adjustbox}{max width=\maxtabfigwidth,max totalheight=\maxtabfigheight,center,tabular=#1}}{\end{adjustbox}}
+#+LaTeX_HEADER_EXTRA: \newlength{\maxtabfigwidth}
+#+LaTeX_HEADER_EXTRA: \newlength{\maxtabfigheight}
 
 # This is how we produce multi-page listings that use minted.
 #+LaTeX_HEADER_EXTRA: \usepackage{tcolorbox}
 #+LaTeX_HEADER_EXTRA: \tcbuselibrary{minted, listings, breakable, skins}
 #+BEGIN_EXPORT latex
 %\AtBeginDocument{%
+  \setlength{\maxtabfigwidth}{\textwidth}
+  \setlength{\maxtabfigheight}{\textheight}
+  % decrease height a bit letting captions fit to one page
+  \addtolength{\maxtabfigheight}{-2.5em}
+
   \renewtcblisting[blend into=listings]{listing}[1][]{
     breakable,
     enhanced,

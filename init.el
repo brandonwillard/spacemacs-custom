@@ -64,6 +64,8 @@ values."
      ;; FIXME: We get `semantic-idle-scheduler-function' errors in `polymode' modes.
      (semantic :enabled-for emacs-lisp common-lisp python)
      common-lisp
+     ;; This is supposed to be faster than `linum'.
+     nlinum
      )
    dotspacemacs-additional-packages '(
                                       ;; elisp file manipulation library
@@ -252,8 +254,12 @@ you should place your code here."
   (setq-mode-local makefile-mode indent-tabs-mode t)
 
   ;; `global-hl-line-mode' can slow down tracebacks considerably.
-  (add-hook 'edebug-mode-hook 'spacemacs/disable-hl-line-mode)
-  (add-hook 'debugger-mode-hook 'spacemacs/disable-hl-line-mode)
+  (add-hook 'edebug-mode-hook #'(lambda ()
+                                  (setq truncate-lines t)
+                                  (spacemacs/disable-hl-line-mode)))
+  (add-hook 'debugger-mode-hook #'(lambda ()
+                                    (setq truncate-lines t)
+                                    (spacemacs/disable-hl-line-mode)))
 
   (setq-default sentence-end-double-space t)
 
@@ -262,6 +268,10 @@ you should place your code here."
   (setq tab-always-indent t)
 
   (setq compilation-scroll-output #'first-error)
+
+  ;; Change default spacemacs keybinding.
+  (spacemacs/set-leader-keys "nd" 'narrow-to-defun)
+  (unbind-key (kbd "nf") spacemacs-default-map)
 
   (with-eval-after-load 'editorconfig
     (add-to-list 'editorconfig-exclude-modes 'help-mode)

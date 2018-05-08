@@ -34,6 +34,8 @@ This function sets and returns `org-ref-bibliography-files' obtained from
         (setq-local reftex-default-bibliography org-ref-bibliography-files)))
 
   (defun spacemacs//org-ref-parse-bib-latex-entries (tree backend info)
+    "Add an export block with the bibliography at the location of the last bibliography
+keyword."
     (let ((last-bib-elem))
       (org-element-map tree
           '(keyword)
@@ -50,7 +52,6 @@ This function sets and returns `org-ref-bibliography-files' obtained from
                  (parent (org-element-property :parent last-bib-elem))
                  (parent-end (org-element-property :end parent))
                  (new-bib-elem))
-
             (if (and bib-style (or (eq backend 'beamer) (eq backend 'latex)))
                 (setq bib-value (concat (format "\\bibliographystyle{%s}\n" bib-style) bib-value)))
             (setq new-bib-elem (org-element-create 'export-block
@@ -59,7 +60,7 @@ This function sets and returns `org-ref-bibliography-files' obtained from
                                                          :begin parent-end
                                                          :end (+ parent-end (seq-length bib-value)))))
             (org-element-set-element last-bib-elem new-bib-elem)))
-      tree))))
+      tree)))
 
 (when (configuration-layer/package-used-p 'projectile)
   (defun spacemacs//ob-ipython-project-dirs-setup ()

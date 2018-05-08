@@ -73,6 +73,8 @@
 
       (spacemacs/set-leader-keys-for-major-mode 'org-mode
         "bh" 'spacemacs//org-babel-execute-from-here)
+      (spacemacs/set-leader-keys-for-major-mode 'org-mode
+        "bD" 'org-babel-remove-result-one-or-many)
 
       ;; (add-to-list 'org-babel-load-languages '(R . t))
       ;; (add-to-list 'org-babel-load-languages '(sql. t))
@@ -88,7 +90,7 @@
                                 '(:bibliographystyle "BIBLIOGRAPHYSTYLE" nil
                                                      nil t))
                    (advice-add 'org-ref-find-bibliography :override 'spacemacs//org-ref-find-bibliography)
-                   (add-to-list 'org-export-filter-parse-tree-functions 'spacemacs//org-ref-parse-bib-latex-entries))
+                   (add-to-list 'org-export-filter-parse-tree-functions 'spacemacs//org-ref-parse-bib-latex-entries)
                    ;; TODO Allow options to be parsed '#+BIBLIOGRAPHY: (elisp-to-parse)'?
                    ;; (add-to-list 'org-element-parsed-keywords "BIBLIOGRAPHY")
                    (setq org-ref-prefer-bracket-links t))))
