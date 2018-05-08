@@ -14,6 +14,7 @@
 (defconst org-extras-packages
   '(
     org
+    org-ref
     org-agenda
     org-projectile
     f
@@ -77,6 +78,20 @@
       ;; (add-to-list 'org-babel-load-languages '(sql. t))
       ;; (add-to-list 'org-babel-load-languages '(shell . t))
       (add-to-list 'org-babel-load-languages '(emacs-lisp . t)))))
+
+(defun org-extras/pre-init-org-ref ()
+  (spacemacs|use-package-add-hook org-ref
+    :post-config (progn
+                   (add-to-list 'org-export-options-alist
+                                '(:bibliography "BIBLIOGRAPHY" nil nil split))
+                   (add-to-list 'org-export-options-alist
+                                '(:bibliographystyle "BIBLIOGRAPHYSTYLE" nil
+                                                     nil t))
+                   (advice-add 'org-ref-find-bibliography :override 'spacemacs//org-ref-find-bibliography)
+                   (add-to-list 'org-export-filter-parse-tree-functions 'spacemacs//org-ref-parse-bib-latex-entries))
+                   ;; TODO Allow options to be parsed '#+BIBLIOGRAPHY: (elisp-to-parse)'?
+                   ;; (add-to-list 'org-element-parsed-keywords "BIBLIOGRAPHY")
+                   (setq org-ref-prefer-bracket-links t))))
 
 (defun org-extras/pre-init-ob-ipython ()
   (spacemacs|use-package-add-hook org

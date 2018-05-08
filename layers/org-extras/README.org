@@ -19,6 +19,8 @@ This layer adds extra support for =org-mode=.
   - =ob-ipython= interaction and output adjustments
     - =:results value= output operates mostly as expected (e.g. without the shell prompt included).
   - Add all projects' todos to =org-agenda=.
+  - Override =org-ref= settings to use org options for =#+BIBLIOGRAPHY= and =#+BIBLIOGRAPHYSTYLE=.
+    - The bibliography block is printed in the location of the last =#+BIBLIOGRAPHY=.
 
 * Install
 To use this configuration layer, add it to your =~/.spacemacs=. You will need to

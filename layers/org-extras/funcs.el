@@ -11,6 +11,55 @@
 
 ;;; Code:
 
+(when (configuration-layer/package-used-p 'org-ref)
+  (defun spacemacs//org-ref-find-bibliography ()
+  "Find the bibliography files in the current buffer.
+
+This function sets and returns `org-ref-bibliography-files' obtained from
+#+BIBLIOGRAPHY options."
+    (prog1
+        ;; When called from within a bibtex file, assume we want it; otherwise,
+        ;; check the current file for a bibliography source.
+        (setq org-ref-bibliography-files (or (and (f-ext? buffer-file-name "bib")
+                                                  (list buffer-file-name))
+                                             (plist-get (org-export-get-environment)
+                                                        :bibliography)
+                                             org-ref-default-bibliography))
+
+        ;; TODO: Obtain items within latex tokens '\bibliography' and '\addbibresource'.
+        ;; Try `org-map-tree' and follow the example of `org-latex-math-block-tree-filter'
+        ;; (and/or `org-element-latex-fragment-parser').
+
+        ;; Set reftex-default-bibliography so we can search.
+        (setq-local reftex-default-bibliography org-ref-bibliography-files)))
+
+  (defun spacemacs//org-ref-parse-bib-latex-entries (tree backend info)
+    (let ((last-bib-elem))
+      (org-element-map tree
+          '(keyword)
+        (lambda (element)
+          (if (string-equal (org-element-property :key element) "BIBLIOGRAPHY")
+              (setq last-bib-elem element)))
+        info)
+      (if last-bib-elem
+          (let* ((bib-style (plist-get info :bibliographystyle))
+                 (bib-value (org-ref-bibliography-format
+                             (string-join (plist-get info :bibliography) ",")
+                             ;; (org-element-property :value last-bib-elem)
+                             nil backend))
+                 (parent (org-element-property :parent last-bib-elem))
+                 (parent-end (org-element-property :end parent))
+                 (new-bib-elem))
+
+            (if (and bib-style (or (eq backend 'beamer) (eq backend 'latex)))
+                (setq bib-value (concat (format "\\bibliographystyle{%s}\n" bib-style) bib-value)))
+            (setq new-bib-elem (org-element-create 'export-block
+                                                   (list :type (string-inflection-upcase-function (symbol-name backend))
+                                                         :value bib-value
+                                                         :begin parent-end
+                                                         :end (+ parent-end (seq-length bib-value)))))
+            (org-element-set-element last-bib-elem new-bib-elem)))
+      tree))))
 
 (when (configuration-layer/package-used-p 'projectile)
   (defun spacemacs//ob-ipython-project-dirs-setup ()
