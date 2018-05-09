@@ -324,3 +324,28 @@
 * TODO Use a function/callable to determine project source and/or resources directories.
   [2018-05-01 Tue]
   [[file:~/.spacemacs.d/layers/org-extras/config.el::"Name%20of%20the%20source%20directory%20for%20a%20projectile%20project.")][=org-projectile-src-dir=]]
+* TODO Better bibliography injection during export
+  See my comments in [[https://github.com/jkitchin/org-ref/issues/492][=org-ref= issue 492]].
+
+  #+BEGIN_SRC elisp
+  (cl-defgeneric spacemacs//org-export-filter-body (body backend info)
+    body)
+
+  (cl-defmethod spacemacs//org-export-filter-body ((body t) (backend (eql latex)) (info t))
+    (if-let* ((bib-style (or (plist-get info :bibliographystyle) ""))
+              (bib-value (plist-get info :bibliography)))
+        (progn
+          (setq bib-value (format "\\bibliography{%s}"
+                                  (replace-regexp-in-string "\\.bib"
+                                                            ""
+                                                            (mapconcat 'file-relative-name bib-value ","))))
+          (if (not (string-blank-p bib-style))
+              (concat (format "\\bibliographystyle{%s}\n" bib-style)
+                      bib-value))
+          (concat body "\n" bib-value))
+      body))
+
+  (add-to-list 'org-export-filter-body-functions 'spacemacs//org-export-filter-body)
+
+  (spacemacs//org-export-filter-body "hi" 'latex '(:bibliography ("blah" "bloh")))
+  #+END_SRC
