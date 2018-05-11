@@ -27,25 +27,6 @@
   (spacemacs|use-package-add-hook org
     :post-config
     (progn
-      (setq org-capture-templates
-            '(("t" "Tasks" entry
-              (file+headline org-default-notes-file "Tasks"))))
-
-      (setq org-highlight-latex-and-related '(latex script entities))
-
-      ;; Most often, we'll use inline src statements (e.g. src_python{...}) to
-      ;; simply display formatted text.
-      (setq org-babel-default-inline-header-args
-            '((:exports . "code")
-              (:eval . "never")
-              (:results . "none")))
-
-      (setq org-edit-src-content-indentation 0
-            org-src-tab-acts-natively t
-            org-src-window-setup 'current-window
-            org-src-fontify-natively t
-            org-support-shift-select 'always)
-
       (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
 
       (advice-add 'org-babel-python-session-buffer :around
@@ -65,11 +46,18 @@
                   #'spacemacs//org-babel-load-session:python)
 
       (with-eval-after-load 'ox-latex
-        (advice-add 'org-latex-src-block :override 'spacemacs//org-latex-src-block))
+        (advice-add 'org-latex-src-block :around 'spacemacs//org-latex-src-block)
+        ;; (advice-remove 'org-latex-src-block 'spacemacs//org-latex-src-block)
+        ;; (advice-add 'org-latex-src-block :override 'spacemacs//org-latex-src-block)
+        )
 
       (setq org-latex-listings 'minted
+            org-latex-listings-wrapper 'tcolorbox
+            org-latex-tcolorbox-default-options "arc=0pt, outer arc=0pt, boxrule=0pt, coltitle=black, colbacktitle=white"
+            ;; , boxed title style={empty, size=minimal}, attach boxed title to bottom center={yshift=-10pt}
             org-latex-prefer-user-labels t
-            org-latex-packages-alist '(("" "minted")))
+            org-latex-packages-alist '(("" "minted")
+                                       ("minted, listings, breakable, skins" "tcolorbox")))
 
       (spacemacs/set-leader-keys-for-major-mode 'org-mode
         "bh" 'spacemacs//org-babel-execute-from-here)
@@ -91,6 +79,13 @@
                                                      nil t))
                    (advice-add 'org-ref-find-bibliography :override 'spacemacs//org-ref-find-bibliography)
                    (add-to-list 'org-export-filter-parse-tree-functions 'spacemacs//org-ref-parse-bib-latex-entries)
+
+                   ;; Undo changes
+                   ;; (setq org-export-options-alist (assq-delete-all :bibliography org-export-options-alist))
+                   ;; (setq org-export-options-alist (assq-delete-all :bibliographystyle org-export-options-alist))
+                   ;; (advice-remove 'org-ref-find-bibliography 'spacemacs//org-ref-find-bibliography)
+                   ;; (remove-hook 'org-export-filter-parse-tree-functions 'spacemacs//org-ref-parse-bib-latex-entries)
+
                    ;; TODO Allow options to be parsed '#+BIBLIOGRAPHY: (elisp-to-parse)'?
                    ;; (add-to-list 'org-element-parsed-keywords "BIBLIOGRAPHY")
                    (setq org-ref-prefer-bracket-links t))))
