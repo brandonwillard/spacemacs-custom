@@ -228,10 +228,9 @@ the current subtree upward."
         (-when-let (val (cdr (assoc 'image/svg+xml values)))
           (funcall svg val))
         (-when-let (val (cdr (assoc 'text/plain values)))
-          (funcall txt val)))
-    ))
+          (funcall txt val)))))
 (defun spacemacs//ob-ipython--dump-error (err-msg)
-  "No-op used to get rid of separate trace buffer"
+  "No-op used to get rid of the separate trace buffer"
   ;; Drop into console instead?
   ;; (with-demoted-errors "Error: %S" (spacemacs//ob-jupyter-console-repl-refresh))
   (error "There was a fatal error trying to process the request."))
@@ -248,11 +247,12 @@ contextual information.
 
 This is mostly the standard `ox-latex' with only the following differences:
   1. Float placement options for src blocks (e.g. listings) are now used.
+  2. Optional tcolorbox listings environment for minted.
 "
   (when (org-string-nw-p (org-element-property :value src-block))
     (let* ((lang (org-element-property :language src-block))
            (caption (org-export-data (org-export-get-caption src-block) info)
-                    ;; TODO: There's also a caption option in attr
+                    ;; TODO: There's also a caption option in attr; prefer that one?
                     ;; (org-element-property :caption src-block)
                     )
            (caption-above-p (org-latex--caption-above-p src-block info))

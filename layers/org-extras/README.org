@@ -12,7 +12,11 @@ This layer adds extra support for =org-mode=.
 ** Features:
   - Custom =org-latex= export functionality.
     - Float placement options for src blocks (e.g. listings) are now used.
-    - Generic custom language environments can be declared using the key language/symbol =all=.
+    - Optional =tcolorbox= listings environment wrapper for minted.
+      - Set the variable =org-latex-listings-wrapper= to ='tcolorbox= to enable.
+      - =tcolorbox= options can be set using =org-latex-tcolorbox-default-options=, and
+        a custom name for the =tcolorbox= environment can be set using the option =listings-env-name=
+        in an =ATTR_LATEX= header.
   - Additional =projectile= settings.
     - Prefix =org-babel= sessions with the project name from =projectile=.
   - Echo sent Python code in the inferior shell via =org-babel=.
@@ -29,6 +33,7 @@ file.
 
 * Key bindings
 
-| Key Binding | Description                                                 |
-|-------------+-------------------------------------------------------------|
-| ~SPC , b h~ | Execute the source blocks from the current section backward |
+| Key Binding | Description                                                        |
+|-------------+--------------------------------------------------------------------|
+| ~SPC , b h~ | Execute the source blocks from the current section backward        |
+| ~SPC , b D~ | Remove source block output for block at point (or all with prefix) |

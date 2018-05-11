@@ -46,10 +46,7 @@
                   #'spacemacs//org-babel-load-session:python)
 
       (with-eval-after-load 'ox-latex
-        (advice-add 'org-latex-src-block :around 'spacemacs//org-latex-src-block)
-        ;; (advice-remove 'org-latex-src-block 'spacemacs//org-latex-src-block)
-        ;; (advice-add 'org-latex-src-block :override 'spacemacs//org-latex-src-block)
-        )
+        (advice-add 'org-latex-src-block :around 'spacemacs//org-latex-src-block))
 
       (setq org-latex-listings 'minted
             org-latex-prefer-user-labels t
@@ -83,8 +80,6 @@
                    ;; (advice-remove 'org-ref-find-bibliography 'spacemacs//org-ref-find-bibliography)
                    ;; (remove-hook 'org-export-filter-parse-tree-functions 'spacemacs//org-ref-parse-bib-latex-entries)
 
-                   ;; TODO Allow options to be parsed '#+BIBLIOGRAPHY: (elisp-to-parse)'?
-                   ;; (add-to-list 'org-element-parsed-keywords "BIBLIOGRAPHY")
                    (setq org-ref-prefer-bracket-links t))))
 
 (defun org-extras/pre-init-ob-ipython ()
