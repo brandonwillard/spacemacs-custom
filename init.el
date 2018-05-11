@@ -208,6 +208,7 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   ;; Helps with delays while handling very long lines.
   (setq-default bidi-display-reordering nil)
+  (setq debugger-stack-frame-as-list t)
   (setq edebug-print-circle t)
   (setq edebug-print-level 4)
   (setq print-level 4)
@@ -260,6 +261,8 @@ you should place your code here."
   (add-hook 'debugger-mode-hook #'(lambda ()
                                     (setq truncate-lines t)
                                     (spacemacs/disable-hl-line-mode)))
+
+  (setq debug-ignored-errors 'search-failed)
 
   (setq-default sentence-end-double-space t)
 
@@ -350,6 +353,25 @@ you should place your code here."
                      (lambda (&rest _)
                        (f-filename (f-swap-ext file-name "pdf")))
                      -1)))
+
+    (setq org-capture-templates
+          '(("t" "Tasks" entry
+             (file+headline org-default-notes-file "Tasks"))))
+
+    (setq org-highlight-latex-and-related '(latex script entities))
+
+    ;; Most often, we'll use inline src statements (e.g. src_python{...}) to
+    ;; simply display formatted text.
+    (setq org-babel-default-inline-header-args
+          '((:exports . "code")
+            (:eval . "never")
+            (:results . "none")))
+
+    (setq org-edit-src-content-indentation 0
+          org-src-tab-acts-natively t
+          org-src-window-setup 'current-window
+          org-src-fontify-natively t
+          org-support-shift-select 'always)
 
     (setq org-latex-pdf-process #'spacemacs//org-latex-pdf-process)
 
