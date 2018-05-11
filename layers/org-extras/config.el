@@ -15,6 +15,15 @@
   nil
   "Output directory for PDF files")
 
+(defvar org-latex-listings-wrapper
+  'tcolorbox
+  "Wrapper for listings (e.g. tcolorbox)")
+
+(defvar org-latex-tcolorbox-default-options
+  "arc=0pt, outer arc=0pt, boxrule=0pt, coltitle=black, colbacktitle=white"
+  ;; , boxed title style={empty, size=minimal}, attach boxed title to bottom center={yshift=-10pt}
+  "Default tcblistings options")
+
 (defvar ob-python-execute-echo
   nil
   "Echo input in Python inferior process")

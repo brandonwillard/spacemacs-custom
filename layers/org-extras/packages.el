@@ -52,9 +52,6 @@
         )
 
       (setq org-latex-listings 'minted
-            org-latex-listings-wrapper 'tcolorbox
-            org-latex-tcolorbox-default-options "arc=0pt, outer arc=0pt, boxrule=0pt, coltitle=black, colbacktitle=white"
-            ;; , boxed title style={empty, size=minimal}, attach boxed title to bottom center={yshift=-10pt}
             org-latex-prefer-user-labels t
             org-latex-packages-alist '(("" "minted")
                                        ("minted, listings, breakable, skins" "tcolorbox")))
