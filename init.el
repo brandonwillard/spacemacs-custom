@@ -203,7 +203,7 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   (setq custom-file (concat user-emacs-directory "private/custom-settings.el"))
 
-  ;; (setq browse-url-browser-function 'eww-browse-url)
+  (setq browse-url-browser-function 'eww-browse-url)
   ;; (setq browse-url-browser-function 'xwidget-webkit-browse-url)
 
   ;; Helps with delays while handling very long lines.
@@ -262,7 +262,7 @@ you should place your code here."
                                     (setq truncate-lines t)
                                     (spacemacs/disable-hl-line-mode)))
 
-  (setq debug-ignored-errors 'search-failed)
+  (add-to-list 'debug-ignored-errors 'search-failed)
 
   (setq-default sentence-end-double-space t)
 
