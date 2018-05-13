@@ -281,10 +281,9 @@ This is mostly the standard `ox-latex' with only the following differences:
                                         ",")))
       (cond
        ((eq org-latex-listings-wrapper 'tcolorbox)
-        (let* ((listings-env-name (or (plist-get attributes :listings-env-name) "tcblisting"))
-               (body (format "\\begin{%s}{breakable, enhanced, title after break={\\raggedleft\\lstlistingname\\ \\thelstlisting~ -- continued}, listing only, listing remove caption=false, listing engine=minted, minted language=%s, %s}\n%s\n\\end{%1$s}"
+        (let* ((listings-env-name (or (plist-get attributes :listings-env-name) "oxtcblisting"))
+               (body (format "\\begin{%s}{minted language=%s, %s}\n%s\n\\end{%1$s}"
                              ;;
-
                              listings-env-name
                              ;; Language.
                              (or (cadr (assq (intern lang)
@@ -294,14 +293,14 @@ This is mostly the standard `ox-latex' with only the following differences:
                              (mapconcat #'identity
                                         (remove nil
                                                 `(,(if (org-string-nw-p caption)
-                                                       (format "title={\\lstlistingname\\ \\thelstlisting: {%s}}" caption))
+                                                       (format "title={\\lstlistingname\\ \\thetcbcounter: {%s}}" caption))
                                                        ;; (format "listing options={caption={%s}}" caption))
                                                   ,(if (org-string-nw-p label)
                                                        (format "label type=listing, label={%s}" label))
                                                   ,(if (string= "t" float)
                                                        (format "float, floatplacement=%s" placement)
                                                      "nofloat")
-                                                  ,org-latex-tcolorbox-default-options
+                                                  ;; ,org-latex-tcolorbox-default-options
                                                   ,(plist-get attributes :options)))
                                         ",")
                              ;; Source code.

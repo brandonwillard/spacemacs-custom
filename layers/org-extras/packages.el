@@ -53,14 +53,21 @@
             org-latex-packages-alist '(("" "minted")
                                        ("minted, listings, breakable, skins" "tcolorbox")))
 
+      (defun spacemacs//org-export-latex-add-tcolorbox (body backend info)
+        "Add a custom tcolorbox listing environment to the latex-header-extra options."
+        (when (eq backend 'latex)
+          (concat org-latex-tcolorbox-listing-env "\n" body)
+          ;; (plist-put options :latex-header-extra `(,org-latex-tcolorbox-listing-env))
+          ))
+
+      ;; (add-to-list 'org-export-filter-options-functions 'spacemacs//org-export-latex-add-tcolorbox)
+      (add-to-list 'org-export-filter-body-functions 'spacemacs//org-export-latex-add-tcolorbox)
+
       (spacemacs/set-leader-keys-for-major-mode 'org-mode
         "bh" 'spacemacs//org-babel-execute-from-here)
       (spacemacs/set-leader-keys-for-major-mode 'org-mode
         "bD" 'org-babel-remove-result-one-or-many)
 
-      ;; (add-to-list 'org-babel-load-languages '(R . t))
-      ;; (add-to-list 'org-babel-load-languages '(sql. t))
-      ;; (add-to-list 'org-babel-load-languages '(shell . t))
       (add-to-list 'org-babel-load-languages '(emacs-lisp . t)))))
 
 (defun org-extras/pre-init-org-ref ()

@@ -19,10 +19,24 @@
   'tcolorbox
   "Wrapper for listings (e.g. tcolorbox)")
 
-(defvar org-latex-tcolorbox-default-options
-  "arc=0pt, outer arc=0pt, boxrule=0pt, coltitle=black, colbacktitle=white"
+(defvar org-latex-tcolorbox-listing-env
+  "\\newtcblisting[auto counter,number within=section]{oxtcblisting}[1]{%
+\tlisting only,
+\tlisting engine=minted,
+\tbreakable,
+\tenhanced,
+\ttitle after break={\\raggedleft\\lstlistingname\\ \\thetcbcounter~ -- continued},
+\tlisting remove caption=false,
+\tarc=0pt,
+\touter arc=0pt,
+\tboxrule=0pt,
+\tcoltitle=black,
+\tcolbacktitle=white,
+\tcenter title,
+\t#1
+}"
   ;; , boxed title style={empty, size=minimal}, attach boxed title to bottom center={yshift=-10pt}
-  "Default tcblistings options")
+  "Default tcolorbox listings environment")
 
 (defvar ob-python-execute-echo
   nil
