@@ -33,7 +33,7 @@ values."
      python-extras
      yaml
      sql
-     noweb
+     ;; noweb
      (c-c++ :variables
             c-c++-enable-clang-support t
             c-c++-default-mode-for-headers 'c++-mode
@@ -314,23 +314,23 @@ you should place your code here."
     (setq lsp-ui-sideline-enable nil))
 
   ;; (spacemacs|use-package-add-hook org
-  ;;   :post-config
-  ;;   )
+  ;;   :post-config (add-to-list 'org-babel-load-languages
+  ;;                             '(plantuml . t)))
 
   (with-eval-after-load 'org
     (use-package ob-hy
       :init
       (progn
-        (add-to-list 'org-babel-load-languages '(hy . t))))
+        (add-to-list 'org-babel-load-languages
+                     '(hy . t))))
 
-    ;; (setq org-latex-custom-lang-environments
-;;      '((all "\\begin{multilisting}
-;; \\begin{minted}[%o]{%L}
-;; %s
-;; \\end{minted}
-;; \\captionof{listing}{%c}
-;; \\label{%l}
-;; \\end{multilisting}")))
+    (when (f-exists-p "~/apps/plantuml.jar")
+
+      (setq org-plantuml-jar-path
+            (expand-file-name "~/apps/plantuml.jar"))
+
+      (add-to-list 'org-babel-load-languages
+                   '(plantuml . t)))
 
     (defun spacemacs//org-latex-pdf-process (file-name)
       "XXX: This will err-out because of org-export's assumption that the output
@@ -560,14 +560,15 @@ From https://stackoverflow.com/a/37356659/3006474"
 
   (add-hook 'c++-mode-hook 'btw/clang-format-bindings)
 
-  (defun btw/setup-term-mode ()
-    "From https://github.com/syl20bnr/spacemacs/issues/2345"
-    (evil-local-set-key 'insert (kbd "C-r") 'btw/send-C-r))
+  (declare-function term-send-raw-string "term.el")
 
   (defun btw/send-C-r ()
     (interactive)
-    (declare-function term-send-raw-string "term.el")
     (term-send-raw-string "\C-r"))
+
+  (defun btw/setup-term-mode ()
+    "From https://github.com/syl20bnr/spacemacs/issues/2345"
+    (evil-local-set-key 'insert (kbd "C-r") 'btw/send-C-r))
 
   (add-hook 'term-mode-hook
             (function
@@ -583,18 +584,22 @@ From https://stackoverflow.com/a/37356659/3006474"
 
   (add-hook 'term-mode-hook 'btw/setup-term-mode)
 
-  (defun btw/term-handle-more-ansi-escapes (proc char)
+  (defvar term-width)
+  ;; This was apparently renamed.
+  ;; (defvar term-terminal-parameter)
+  ;; (define-obsolete-variable-alias 'term-terminal-parameter 'term-terminal-undecoded-bytes)
+  (defvar term-terminal-undecoded-bytes)
+  (declare-function term-move-columns "term.el")
+  (declare-function term-current-column "term.el")
+
+  (defun btw/term-handle-more-ansi-escapes (proc params char)
     "Handle additional ansi escapes.
 From https://emacs.stackexchange.com/a/10698"
     (cond
      ;; \E[nG - Cursor Horizontal Absolute, e.g. move cursor to column n
      ((eq char ?G)
-      (defvar term-width)
-      (defvar term-terminal-parameter)
-      (declare-function term-move-columns "term.el")
-      (declare-function term-current-column "term.el")
       (let ((col (min term-width
-                      (max 0 term-terminal-parameter))))
+                      (max 0 (or term-terminal-undecoded-bytes 0)))))
         (term-move-columns (- col
                               (term-current-column)))))
      (t)))
