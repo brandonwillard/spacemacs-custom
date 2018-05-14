@@ -28,27 +28,24 @@ values."
              python-test-runner 'pytest
              python-auto-set-local-pyvenv-virtualenv 'on-project-switch
              python-backend nil
-             :packages (not live-py-mode)
-             )
+             :packages (not live-py-mode))
      python-extras
      yaml
      sql
      ;; noweb
      (c-c++ :variables
-            c-c++-enable-clang-support t
-            c-c++-default-mode-for-headers 'c++-mode
             ;; company-c-headers-path-user '("../include" "./include" "." "../../include" "../inc" "../../inc")
-            )
+            c-c++-enable-clang-support t
+            c-c++-default-mode-for-headers 'c++-mode)
      helm
      (auto-completion :variables
+                      ;; auto-completion-enable-sort-by-usage t
+                      ;; :packages (not auto-complete ac-ispell)
                       auto-completion-return-key-behavior nil
                       auto-completion-tab-key-behavior nil
                       auto-completion-complete-with-key-sequence "C-y"
                       auto-completion-enable-snippets-in-popup t
-                      auto-completion-enable-help-tooltip 'manual
-                      ;; auto-completion-enable-sort-by-usage t
-                      ;; :packages (not auto-complete ac-ispell)
-                      )
+                      auto-completion-enable-help-tooltip 'manual)
      emacs-lisp
      git
      scheme
@@ -65,8 +62,7 @@ values."
      (semantic :enabled-for emacs-lisp common-lisp python)
      common-lisp
      ;; This is supposed to be faster than `linum'.
-     nlinum
-     )
+     nlinum)
    dotspacemacs-additional-packages '(
                                       ;; elisp file manipulation library
                                       f
@@ -81,6 +77,7 @@ values."
 
                                       ox-jira
                                       ;; ox-confluence
+                                      plantuml-mode
 
                                       ob-hy
 
@@ -324,13 +321,11 @@ you should place your code here."
         (add-to-list 'org-babel-load-languages
                      '(hy . t))))
 
-    (when (f-exists-p "~/apps/plantuml.jar")
+    (defvaralias 'org-plantuml-jar-path 'plantuml-jar-path)
+    ;; (setq org-plantuml-jar-path plantuml-jar-path)
 
-      (setq org-plantuml-jar-path
-            (expand-file-name "~/apps/plantuml.jar"))
-
-      (add-to-list 'org-babel-load-languages
-                   '(plantuml . t)))
+    (add-to-list 'org-babel-load-languages
+                  '(plantuml . t))
 
     (defun spacemacs//org-latex-pdf-process (file-name)
       "XXX: This will err-out because of org-export's assumption that the output
@@ -478,6 +473,9 @@ From https://stackoverflow.com/a/37356659/3006474"
               #'btw/comint-preoutput-turn-buffer-read-only
               'append))
 
+  (use-package plantuml-mode
+    :init (setq plantuml-jar-path (expand-file-name "~/apps/plantuml.jar")))
+
   (use-package embrace
     :init (progn
             (add-hook 'LaTeX-mode-hook 'embrace-LaTeX-mode-hook)
@@ -510,7 +508,7 @@ From https://stackoverflow.com/a/37356659/3006474"
     (setq-default evil-want-visual-char-semi-exclusive t)
     (setq-default evil-move-curser-back nil)
     (setq-default evil-escape-key-sequence nil)
-    (setq-default evil-emacs-state-modes nil)
+    ;; (setq-default evil-emacs-state-modes nil)
     (setq-default evil-insert-state-modes '(magit-popup-mode))
     (setq evil-kill-on-visual-paste nil)
     ;; (setq-default evil-motion-state-modes nil)
