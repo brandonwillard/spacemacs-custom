@@ -107,6 +107,32 @@ From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
             (message "(editorconfig) setting python-shell-virtualenv-root to %s" venv-root)
             (setq-local python-shell-virtualenv-root venv-root)))))))
 
+(defun spacemacs//python-shell-send-string (string &optional process msg)
+  "Send STRING to inferior IPython PROCESS.  Uses %cpaste for multiline input.
+
+When optional argument MSG is non-nil, forces display of a
+user-friendly message if there's no process running; defaults to
+t when called interactively."
+  (interactive (list (read-string "Python command: ")
+                     nil
+                     t))
+  (let ((process (or process
+                     (python-shell-get-process-or-error msg)))
+        (process-executable (car (process-command process))))
+    (if (string-match ".\n+." string) ;Multiline.
+        (if (or (s-contains? process-executable "jupyter" t)
+                (s-contains? process-executable "ipython" t))
+            (comint-send-string process (format "%%cpaste\n%s\n--\n" string))
+          (let* ((temp-file-name (python-shell--save-temp-file string))
+                 (file-name (or (buffer-file-name)
+                                temp-file-name)))
+            (python-shell-send-file file-name process
+                                    temp-file-name t)))
+      (comint-send-string process string)
+      (when (or (not (string-match "\n\\'" string))
+                (string-match "\n[ \t].*\n?\\'" string))
+        (comint-send-string process "\n")))))
+
 (defun spacemacs//python-shell-append-to-output (string)
   "Append STRING to `comint' display output."
   (let ((buffer (current-buffer))

@@ -61,6 +61,9 @@
       (add-to-list 'python-shell-completion-native-disabled-interpreters "jupyter")
       (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython")
 
+      (advice-add 'python-shell-send-string :override
+                  #'spacemacs//python-shell-send-string)
+
       (advice-add 'python-shell-get-process-name :around
                   #'spacemacs//python-shell-get-process-name)
 
