@@ -353,7 +353,7 @@ you should place your code here."
           '(("t" "Tasks" entry
              (file+headline org-default-notes-file "Tasks"))))
 
-    (setq org-highlight-latex-and-related '(latex script entities))
+    (setq org-highlight-latex-and-related '(latex entities))
 
     ;; Most often, we'll use inline src statements (e.g. src_python{...}) to
     ;; simply display formatted text.

@@ -37,37 +37,6 @@
               #'persp-projectile-assign-project-name)
     #+END_SRC
 
-* TODO Font lock for ~org-mode~ inline source statements            :orgmode:
-  The following is a start, but it breaks when header options in
-  square brackets are not provided.
-  #+BEGIN_SRC elisp
-  ;; Some testing...
-  (font-lock-remove-keywords 'org-mode
-                             '(("\\(src_\\)\\([^[{]+\\)\\(\\[:.*\\]\\)?{\\([^}]*\\)}"
-                                (1 '(:foreground "black" :weight 'normal
-                                                 :height 10)) ; src_ part
-                                (2 '(:foreground "cyan" :weight 'bold
-                                                 :height 75
-                                                 :underline "red")) ; "lang" part.
-                                (3 '(:foreground "#555555" :height 70)) ; [:header arguments] part.
-                                (4 'org-code) ; "code..." part.
-                                )))
-
-  (string-match "\\(src_\\)\\(\\w+\\)\\(\\[.*?\\]\\){\\([^}]*\\)}"
-                "blah blah src_python[]{print({\"hi\": 1})} blah")
-  (print (match-string 0))
-
-  (font-lock-add-keywords 'org-mode
-                          '(("\\(src_\\)\\([^[{]+\\)\\(\\[:.*\\]\\)?{\\([^}]*\\)}"
-                             (1 '(:foreground "black" :weight 'normal
-                                              :height 10)) ; src_ part
-                             (2 '(:foreground "cyan" :weight 'bold
-                                              :height 75
-                                              :underline "red")) ; "lang" part.
-                             (3 '(:foreground "#555555" :height 70)) ; [:header arguments] part.
-                             (4 'org-code) ; "code..." part.
-                             )))
-  #+END_SRC
 * TODO ~org-mode~ to Google Tasks, Calendar, etc.           :orgmode:syncing:
   There's a push/pull/sync tool [[https://bitbucket.org/edgimar/michel-orgmode][here]].
 * TODO Fix project-root finding in ~lsp-mode~                           :lsp:

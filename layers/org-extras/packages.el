@@ -48,6 +48,10 @@
       (with-eval-after-load 'ox-latex
         (advice-add 'org-latex-src-block :around 'spacemacs//org-latex-src-block))
 
+      (spacemacs/toggle-org-highlight-inline-src-on)
+
+      (spacemacs/toggle-org-inline-src-in-links-on)
+
       (setq org-latex-listings 'minted
             org-latex-prefer-user-labels t
             org-latex-packages-alist '(("" "minted")

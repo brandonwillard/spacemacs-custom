@@ -15,12 +15,59 @@
   nil
   "Output directory for PDF files")
 
+(defvar org-inline-src-keyword
+  `(,(rx (seq
+          ;; 1. src_<name>
+          (submatch "src_"
+                    (one-or-more word))
+          ;; 2. header args (i.e. '[:eval never :results none]')
+          (submatch (zero-or-one (seq "["
+                                      (zero-or-more not-newline)
+                                      "]")))
+          "{"
+          ;; 3. code
+          (submatch (zero-or-more not-newline))
+          "}"))
+    (1 'org-special-keyword)
+    (2 'org-special-keyword)
+    (3 'org-code))
+  "Font-lock keyword for inline org-babel src statements")
+
+(spacemacs|add-toggle org-highlight-inline-src
+  :documentation
+  "Enable highlighting for inline src statements (i.e. 'src_<lang>[...]{...}')"
+  :status (let ((org-mode-keywords (assq 'org-mode font-lock-keywords-alist)))
+            (member (list (list org-inline-src-keyword)) org-mode-keywords))
+  :on (font-lock-add-keywords 'org-mode
+                              (list org-inline-src-keyword))
+  :off (font-lock-remove-keywords 'org-mode
+                                  (list org-inline-src-keyword)))
+
+(defvar org-babel-inline-src-rx
+  '(seq "src_"
+        (one-or-more word)
+        (zero-or-one (seq "["
+                          (zero-or-more not-newline)
+                          "]"))
+        "{"
+        (zero-or-more not-newline)
+        "}")
+  "Elisp rx form for matching inline org src statements.")
+
+(spacemacs|add-toggle org-inline-src-in-links
+  :documentation
+  "Allow inline org src statements inside link descriptions."
+  :status (advice-member-p 'spacemacs//org-make-link-regexps 'org-make-link-regexps)
+  :on (advice-add 'org-make-link-regexps :after 'spacemacs//org-make-link-regexps)
+  :off (advice-remove 'org-make-link-regexps 'spacemacs//org-make-link-regexps))
+
 (defvar org-latex-listings-wrapper
   'tcolorbox
   "Wrapper for listings (e.g. tcolorbox)")
 
 (defvar org-latex-tcolorbox-listing-env
   "\\newtcblisting[auto counter,number within=section]{oxtcblisting}[1]{%
+\tframe hidden,
 \tlisting only,
 \tlisting engine=minted,
 \tbreakable,

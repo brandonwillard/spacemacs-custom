@@ -134,6 +134,35 @@ for the output directory."
                        err-msg)))
       output)))
 
+(defun spacemacs//org-make-link-regexps ()
+    "Update the link regular expressions.
+  This should be called after the variable `org-link-types' has changed."
+    (let ((types-re (regexp-opt (org-link-types)
+                                        t)))
+      (setq org-bracket-link-regexp
+            (rx-to-string `(seq "[["
+                     (submatch
+                      (one-or-more
+                       (not
+                        (any ?[ ?]))))
+                     "]"
+                     (zero-or-one
+                      (submatch "["
+                                (submatch
+                                 (one-or-more
+                                  ;; Simply add an exception for inline babel src statements.
+                                  (or
+                                   ;; Org inline src block/statement
+                                   (zero-or-one ,org-babel-inline-src-rx)
+                                   ;; This is the original condition.
+                                   (not
+                                    (any ?[ ?])))))
+                                "]"))
+                     "]"))
+            org-any-link-re
+            (concat "\\(" org-bracket-link-regexp "\\)\\|\\("
+                    org-angle-link-re "\\)\\|\\("
+                    org-plain-link-re "\\)"))))
 (defun spacemacs//org-babel-execute-from-here (&optional arg)
   "Execute source code blocks from the subtree at the current point upward.
 Call `org-babel-execute-src-block' on every source block in

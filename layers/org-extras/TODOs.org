@@ -1,3 +1,5 @@
+#+TITLE: org-extras TODOs
+
 * TODO Implement Python src block caching
   - Note taken on [2018-04-13 Fri 18:34] \\
     For variable dependency tracking (and more), try [[https://srossross.github.io/Meta/html/api/asttools.html][=meta.asttools=]], [[https://github.com/vstinner/bytecode][=bytecode=]] and [[https://github.com/davidfraser/pyan][=pyan=]].
@@ -348,4 +350,81 @@
   (add-to-list 'org-export-filter-body-functions 'spacemacs//org-export-filter-body)
 
   (spacemacs//org-export-filter-body "hi" 'latex '(:bibliography ("blah" "bloh")))
+  #+END_SRC
+* DONE Fix source in links
+  CLOSED: [2018-05-19 Sat 18:50]
+  <2018-05-18 Fri>
+  Links like this should render/resolve/whatever and export (e.g. to LaTeX)
+  without an issue: [[*Fix source in links][src_python[:eval never]{import sys}]].
+  The problem appears to be embedded square brackets.
+
+  There's a solution [[https://emacs.stackexchange.com/a/7795][here]] that seems worth trying.
+  #+BEGIN_SRC elisp
+  (setq org-babel-inline-src-rx '(seq "src_"
+                                      (one-or-more word)
+                                      (zero-or-one (seq "["
+                                                        (zero-or-more not-newline)
+                                                        "]"))
+                                      "{"
+                                      (zero-or-more not-newline)
+                                      "}"))
+
+  (defun btw/org-make-link-regexps ()
+    "Update the link regular expressions.
+  This should be called after the variable `org-link-types' has changed."
+    (let ((types-re (regexp-opt (org-link-types)
+                                        t)))
+      (setq org-bracket-link-regexp
+            (rx-to-string `(seq "[["
+                     (submatch
+                      (one-or-more
+                       (not
+                        (any ?[ ?]))))
+                     "]"
+                     (zero-or-one
+                      (submatch "["
+                                (submatch
+                                 (one-or-more
+                                  ;; Simply add an exception for inline babel src statements.
+                                  (or
+                                   ;; Org inline src block/statement
+                                   (zero-or-one ,org-babel-inline-src-rx)
+                                   ;; This is the original condition.
+                                   (not
+                                    (any ?[ ?])))))
+                                "]"))
+                     "]"))
+            org-any-link-re
+            (concat "\\(" org-bracket-link-regexp "\\)\\|\\("
+                    org-angle-link-re "\\)\\|\\("
+                    org-plain-link-re "\\)"))))
+
+  (advice-add 'org-make-link-regexps :after 'btw/org-make-link-regexps)
+  #+END_SRC
+
+  #+RESULTS:
+
+* DONE Font lock for ~org-mode~ inline source statements            :orgmode:
+  CLOSED: [2018-05-19 Sat 18:33]
+  The following should be font-lock highlighted in a reasonable way:
+  src_python[:eval never]{import sys}.
+
+  #+BEGIN_SRC elisp
+  (font-lock-add-keywords 'org-mode
+                          `((,(rx (seq
+                                   ;; 1. src_<name>
+                                   (submatch "src_"
+                                             (one-or-more word))
+                                   ;; 2. header args (i.e. '[:eval never :results none]')
+                                   (submatch (zero-or-one (seq "["
+                                                               (zero-or-more not-newline)
+                                                               "]")))
+                                   "{"
+                                   ;; 3. code
+                                   (submatch (zero-or-more not-newline))
+                                   "}"))
+                            (1 'org-special-keyword)
+                            (2 'org-special-keyword)
+                            (3 'org-code)
+                            )))
   #+END_SRC
