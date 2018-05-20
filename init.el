@@ -30,6 +30,7 @@ values."
              python-backend nil
              :packages (not live-py-mode))
      python-extras
+     hy
      yaml
      sql
      ;; noweb
@@ -62,6 +63,7 @@ values."
      (semantic :enabled-for emacs-lisp common-lisp python)
      common-lisp
      ;; This is supposed to be faster than `linum'.
+     ;; TODO: Use Emacs 26 native line numbers.
      nlinum)
    dotspacemacs-additional-packages '(
                                       ;; elisp file manipulation library
@@ -79,7 +81,8 @@ values."
                                       ;; ox-confluence
                                       plantuml-mode
 
-                                      ob-hy
+                                      ;; Now in hy layer.
+                                      ;; ob-hy
 
                                       dockerfile-mode
 
@@ -284,6 +287,8 @@ you should place your code here."
   (with-eval-after-load 'python
     (setq-default python-eldoc-get-doc nil))
 
+  ;; (add-hook 'hy-mode-hook #'(lambda () (require 'spacemacs-hy)))
+
   (with-eval-after-load 'vim-powerline-theme
     ;; Egh, doesn't really work.
     (setq winum-auto-setup-mode-line t)
@@ -315,11 +320,11 @@ you should place your code here."
   ;;                             '(plantuml . t)))
 
   (with-eval-after-load 'org
-    (use-package ob-hy
-      :init
-      (progn
-        (add-to-list 'org-babel-load-languages
-                     '(hy . t))))
+    ;; (use-package ob-hy
+    ;;   :init
+    ;;   (progn
+    ;;     (add-to-list 'org-babel-load-languages
+    ;;                  '(hy . t))))
 
     (defvaralias 'org-plantuml-jar-path 'plantuml-jar-path)
     ;; (setq org-plantuml-jar-path plantuml-jar-path)
@@ -549,8 +554,6 @@ From https://stackoverflow.com/a/37356659/3006474"
 
   (with-eval-after-load 'evil-jumps
     (setq evil-jumps-cross-buffers nil))
-
-  (add-hook 'hy-mode-hook #'(lambda () (require 'spacemacs-hy)))
 
   (defun btw/clang-format-bindings ()
     (define-key c++-mode-map [tab] 'clang-format-buffer)

@@ -144,7 +144,7 @@ for the output directory."
                      (submatch
                       (one-or-more
                        (not
-                        (any ?[ ?]))))
+                        (any ?\[ ?\]))))
                      "]"
                      (zero-or-one
                       (submatch "["
@@ -156,7 +156,7 @@ for the output directory."
                                    (zero-or-one ,org-babel-inline-src-rx)
                                    ;; This is the original condition.
                                    (not
-                                    (any ?[ ?])))))
+                                    (any ?\[ ?\])))))
                                 "]"))
                      "]"))
             org-any-link-re
@@ -212,7 +212,7 @@ the current subtree upward."
       (car (->> (-map (-partial 'ob-ipython--render file)
                       (list (cdr (assoc :value result))
                             (cdr (assoc :display result))))
-                (remove-if-not nil))))))
+                (cl-remove-if-not nil))))))
 (defun spacemacs//ob-jupyter-console-repl-refresh ()
   " Manually--and hackishly--'refresh' a Jupyter console session with a
       remote kernel (opening one if not present) and display results echoed from
@@ -348,8 +348,7 @@ This is mostly the standard `ox-latex' with only the following differences:
                                                                    (concat (make-string (+ (- max-width
                                                                                               (length loc))
                                                                                            6)
-                                                                                        ?\
-                                                                                        s)
+                                                                                        ?\s)
                                                                            (format "(%s)" ref)))))
                                                        nil
                                                        (and retain-labels
@@ -408,8 +407,7 @@ This is mostly the standard `ox-latex' with only the following differences:
                                                                    (concat (make-string (+ (- max-width
                                                                                               (length loc))
                                                                                            6)
-                                                                                        ?\
-                                                                                        s)
+                                                                                        ?\s)
                                                                            (format "(%s)" ref)))))
                                                        nil
                                                        (and retain-labels
