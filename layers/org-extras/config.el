@@ -16,18 +16,7 @@
   "Output directory for PDF files")
 
 (defvar org-inline-src-keyword
-  `(,(rx (seq
-          ;; 1. src_<name>
-          (submatch "src_"
-                    (one-or-more word))
-          ;; 2. header args (i.e. '[:eval never :results none]')
-          (submatch (zero-or-one (seq "["
-                                      (zero-or-more not-newline)
-                                      "]")))
-          "{"
-          ;; 3. code
-          (submatch (zero-or-more not-newline))
-          "}"))
+  '(spacemacs//org-element-inline-src-block-parser
     (1 'org-special-keyword)
     (2 'org-special-keyword)
     (3 'org-code))

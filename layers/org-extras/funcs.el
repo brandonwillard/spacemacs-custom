@@ -417,3 +417,35 @@ This is mostly the standard `ox-latex' with only the following differences:
 
        ;; Case 4.  Use listings package.
        (t (funcall oldfun src-block _contents info))))))
+(defun spacemacs//org-element-inline-src-block-parser (limit)
+  (when-let* (((let ((case-fold-search nil))
+                  (re-search-forward (rx (seq bow
+                                              (submatch "src_"
+                                                        (one-or-more (not (any blank ?\[ ?\\ ?\{))))))
+                                    limit
+                                    t)))
+              ;; Start with the matched 'src_<lang>'
+              (match-data-res (list (copy-marker (match-beginning 1))
+                                    (point-marker)))
+              ;; Add the matched block parameters
+              (match-data-res (append match-data-res
+                                      (list (point-marker))))
+              (params-marker (progn
+                                (org-element--parse-paired-brackets ?\[)
+                                (point-marker)))
+              (match-data-res (append match-data-res
+                                      (list params-marker)))
+              ;; Add the matched body
+              (match-data-res (append match-data-res
+                                      (list (point-marker))))
+              (body-marker (progn
+                              (org-element--parse-paired-brackets ?\{)
+                              (point-marker)))
+              ;; Also push ranges for the entire pattern
+              (match-data-res (append (list (car match-data-res))
+                                      (list body-marker)
+                                      match-data-res
+                                      (list body-marker))))
+    ;; Set and return the `match-data'
+    (set-match-data match-data-res)
+    match-data-res))
