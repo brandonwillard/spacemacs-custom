@@ -163,112 +163,40 @@ for the output directory."
             (concat "\\(" org-bracket-link-regexp "\\)\\|\\("
                     org-angle-link-re "\\)\\|\\("
                     org-plain-link-re "\\)"))))
-(defun spacemacs//org-babel-execute-from-here (&optional arg)
-  "Execute source code blocks from the subtree at the current point upward.
-Call `org-babel-execute-src-block' on every source block in
-the current subtree upward."
-  (interactive "P")
-  (save-restriction
-    (save-excursion
-      (narrow-to-region (point-min)
-                        (progn (org-end-of-subtree t t)
-	                             (when (and (org-at-heading-p) (not (eobp))) (backward-char 1))
-	                             (point)))
-      (org-babel-execute-buffer arg)
-      (widen))))
-(defun spacemacs//org-babel-load-session:python (session body params)
-  "Load BODY into SESSION using python-shell-send-string-echo."
-  (declare-function python-shell-send-string "python.el")
-  (save-window-excursion
-    (let ((buffer (org-babel-prep-session:python session params))
-          (python-shell-send (if (and ob-python-execute-echo
-                                      (fboundp 'python-shell-send-string-echo))
-                                 'python-shell-send-string-echo
-                               'python-shell-send-string)))
-      (with-current-buffer buffer
-        (funcall python-shell-send
-                 (org-babel-chomp body)
-                 (get-buffer-process (current-buffer))))
-      buffer)))
-(defun spacemacs//ob-ipython--create-repl (name)
-  "Use `python-shell-get-process-name' for buffer processes."
-  (let ((python-shell-completion-native-enable nil)
-        (cmd (s-join " "
-                     (ob-ipython--kernel-repl-cmd name)))
-        (process-name (if (string= "default" name)
-                          (python-shell-get-process-name nil)
-                        (format "%s:%s"
-                                (python-shell-get-process-name nil)
-                                name))))
-    (get-buffer-process (python-shell-make-comint cmd process-name
-                                                  nil))
-    (format "*%s*" process-name)))
-(defun spacemacs//ob-ipython--process-response (ret file result-type)
-  "Don't append 'Out[...]:\n' junk to value-type output!"
-  (let ((result (cdr (assoc :result ret)))
-        (output (cdr (assoc :output ret))))
-    (if (eq result-type 'output)
-        output
-      (car (->> (-map (-partial 'ob-ipython--render file)
-                      (list (cdr (assoc :value result))
-                            (cdr (assoc :display result))))
-                (cl-remove-if-not nil))))))
-(defun spacemacs//ob-jupyter-console-repl-refresh ()
-  " Manually--and hackishly--'refresh' a Jupyter console session with a
-      remote kernel (opening one if not present) and display results echoed from
-      a remote kernel.
-
-      XXX: Requires 'c.ZMQTerminalInteractiveShell.include_other_output = True' in
-      the jupyter console config.  Could add this to `ob-ipython' console initiation
-      just to be sure."
-  (with-demoted-errors "Error: %S"
-    ;; FIXME: Does not seem to find the correct/any session!
-    (let ((session-buffer (org-babel-initiate-session)))
-      ;; (let* ((info (or info (org-babel-get-src-block-info)))
-      ;;        (lang (nth 0 info))
-      ;;        (params (nth 2 info))
-      ;;        (session (cdr (assq :session params))))
-      (when session-buffer
-        (save-mark-and-excursion (with-current-buffer session-buffer
-                                   (python-shell-send-string "pass"
-                                                             (python-shell-get-process))))))))
-(defun spacemacs//ob-ipython--render (file-or-nil values)
-  "Display `value' output without prepended prompt."
-  (let ((org (lambda (value)
-               value))
-        (png (lambda (value)
-               (let ((file (or file-or-nil
-                               (ob-ipython--generate-file-name ".png"))))
-                 (ob-ipython--write-base64-string file value)
-                 (format "[[file:%s]]" file))))
-        (svg (lambda (value)
-               (let ((file (or file-or-nil
-                               (ob-ipython--generate-file-name ".svg"))))
-                 (ob-ipython--write-string-to-file file value)
-                 (format "[[file:%s]]" file))))
-        (html (lambda (value)))
-        (txt (lambda (value)
-               (when (s-present? value)
-                 (s-replace "'" "" value)))))
-    (or (-when-let (val (cdr (assoc 'text/org values)))
-          (funcall org val))
-        (-when-let (val (cdr (assoc 'image/png values)))
-          (funcall png val))
-        (-when-let (val (cdr (assoc 'image/svg+xml values)))
-          (funcall svg val))
-        (-when-let (val (cdr (assoc 'text/plain values)))
-          (funcall txt val)))))
-(defun spacemacs//ob-ipython--dump-error (err-msg)
-  "No-op used to get rid of the separate trace buffer"
-  ;; Drop into console instead?
-  ;; (with-demoted-errors "Error: %S" (spacemacs//ob-jupyter-console-repl-refresh))
-  (error "There was a fatal error trying to process the request."))
-(defun spacemacs//org-babel-python-session-buffer (orig-func session)
-  "Make org-babel's default python session buffer naming follow `python-mode'."
-  (if (eq session :default)
-      (format "*%s*"
-              (python-shell-get-process-name nil))
-    (funcall orig-func session)))
+(defun spacemacs//org-element-inline-src-block-parser (limit)
+  (when-let* (((let ((case-fold-search nil))
+                  (re-search-forward (rx (seq bow
+                                              (submatch "src_"
+                                                        (one-or-more (not (any blank ?\[ ?\\ ?\{))))))
+                                    limit
+                                    t)))
+              ;; Start with the matched 'src_<lang>'
+              (match-data-res (list (copy-marker (match-beginning 1))
+                                    (point-marker)))
+              ;; Add the matched block parameters
+              (match-data-res (append match-data-res
+                                      (list (point-marker))))
+              (params-marker (progn
+                                (org-element--parse-paired-brackets ?\[)
+                                (when (< (point) limit)
+                                    (point-marker))))
+              (match-data-res (append match-data-res
+                                      (list params-marker)))
+              ;; Add the matched body
+              (match-data-res (append match-data-res
+                                      (list (point-marker))))
+              (body-marker (progn
+                              (org-element--parse-paired-brackets ?\{)
+                              (when (< (point) limit)
+                                (point-marker))))
+              ;; Also push ranges for the entire pattern
+              (match-data-res (append (list (car match-data-res))
+                                      (list body-marker)
+                                      match-data-res
+                                      (list body-marker))))
+    ;; Set and return the `match-data'
+    (set-match-data match-data-res)
+    match-data-res))
 (defun spacemacs//org-latex-src-block (oldfun src-block _contents info)
   "Transcode a SRC-BLOCK element from Org to LaTeX.
 CONTENTS holds the contents of the item.  INFO is a plist holding
@@ -417,35 +345,109 @@ This is mostly the standard `ox-latex' with only the following differences:
 
        ;; Case 4.  Use listings package.
        (t (funcall oldfun src-block _contents info))))))
-(defun spacemacs//org-element-inline-src-block-parser (limit)
-  (when-let* (((let ((case-fold-search nil))
-                  (re-search-forward (rx (seq bow
-                                              (submatch "src_"
-                                                        (one-or-more (not (any blank ?\[ ?\\ ?\{))))))
-                                    limit
-                                    t)))
-              ;; Start with the matched 'src_<lang>'
-              (match-data-res (list (copy-marker (match-beginning 1))
-                                    (point-marker)))
-              ;; Add the matched block parameters
-              (match-data-res (append match-data-res
-                                      (list (point-marker))))
-              (params-marker (progn
-                                (org-element--parse-paired-brackets ?\[)
-                                (point-marker)))
-              (match-data-res (append match-data-res
-                                      (list params-marker)))
-              ;; Add the matched body
-              (match-data-res (append match-data-res
-                                      (list (point-marker))))
-              (body-marker (progn
-                              (org-element--parse-paired-brackets ?\{)
-                              (point-marker)))
-              ;; Also push ranges for the entire pattern
-              (match-data-res (append (list (car match-data-res))
-                                      (list body-marker)
-                                      match-data-res
-                                      (list body-marker))))
-    ;; Set and return the `match-data'
-    (set-match-data match-data-res)
-    match-data-res))
+(defun spacemacs//org-babel-python-session-buffer (orig-func session)
+  "Make org-babel's default python session buffer naming follow `python-mode'."
+  (if (eq session :default)
+      (format "*%s*"
+              (python-shell-get-process-name nil))
+    (funcall orig-func session)))
+(defun spacemacs//org-babel-execute-from-here (&optional arg)
+  "Execute source code blocks from the subtree at the current point upward.
+Call `org-babel-execute-src-block' on every source block in
+the current subtree upward."
+  (interactive "P")
+  (save-restriction
+    (save-excursion
+      (narrow-to-region (point-min)
+                        (progn (org-end-of-subtree t t)
+	                             (when (and (org-at-heading-p) (not (eobp))) (backward-char 1))
+	                             (point)))
+      (org-babel-execute-buffer arg)
+      (widen))))
+(defun spacemacs//org-babel-load-session:python (session body params)
+  "Load BODY into SESSION using python-shell-send-string-echo."
+  (declare-function python-shell-send-string "python.el")
+  (save-window-excursion
+    (let ((buffer (org-babel-prep-session:python session params))
+          (python-shell-send (if (and ob-python-execute-echo
+                                      (fboundp 'python-shell-send-string-echo))
+                                 'python-shell-send-string-echo
+                               'python-shell-send-string)))
+      (with-current-buffer buffer
+        (funcall python-shell-send
+                 (org-babel-chomp body)
+                 (get-buffer-process (current-buffer))))
+      buffer)))
+(defun spacemacs//ob-ipython--create-repl (name)
+  "Use `python-shell-get-process-name' for buffer processes."
+  (let ((python-shell-completion-native-enable nil)
+        (cmd (s-join " "
+                     (ob-ipython--kernel-repl-cmd name)))
+        (process-name (if (string= "default" name)
+                          (python-shell-get-process-name nil)
+                        (format "%s:%s"
+                                (python-shell-get-process-name nil)
+                                name))))
+    (get-buffer-process (python-shell-make-comint cmd process-name
+                                                  nil))
+    (format "*%s*" process-name)))
+(defun spacemacs//ob-ipython--process-response (ret file result-type)
+  "Don't append 'Out[...]:\n' junk to value-type output!"
+  (let ((result (cdr (assoc :result ret)))
+        (output (cdr (assoc :output ret))))
+    (if (eq result-type 'output)
+        output
+      (car (->> (-map (-partial 'ob-ipython--render file)
+                      (list (cdr (assoc :value result))
+                            (cdr (assoc :display result))))
+                (cl-remove-if-not nil))))))
+(defun spacemacs//ob-jupyter-console-repl-refresh ()
+  " Manually--and hackishly--'refresh' a Jupyter console session with a
+      remote kernel (opening one if not present) and display results echoed from
+      a remote kernel.
+
+      XXX: Requires 'c.ZMQTerminalInteractiveShell.include_other_output = True' in
+      the jupyter console config.  Could add this to `ob-ipython' console initiation
+      just to be sure."
+  (with-demoted-errors "Error: %S"
+    ;; FIXME: Does not seem to find the correct/any session!
+    (let ((session-buffer (org-babel-initiate-session)))
+      ;; (let* ((info (or info (org-babel-get-src-block-info)))
+      ;;        (lang (nth 0 info))
+      ;;        (params (nth 2 info))
+      ;;        (session (cdr (assq :session params))))
+      (when session-buffer
+        (save-mark-and-excursion (with-current-buffer session-buffer
+                                   (python-shell-send-string "pass"
+                                                             (python-shell-get-process))))))))
+(defun spacemacs//ob-ipython--render (file-or-nil values)
+  "Display `value' output without prepended prompt."
+  (let ((org (lambda (value)
+               value))
+        (png (lambda (value)
+               (let ((file (or file-or-nil
+                               (ob-ipython--generate-file-name ".png"))))
+                 (ob-ipython--write-base64-string file value)
+                 (format "[[file:%s]]" file))))
+        (svg (lambda (value)
+               (let ((file (or file-or-nil
+                               (ob-ipython--generate-file-name ".svg"))))
+                 (ob-ipython--write-string-to-file file value)
+                 (format "[[file:%s]]" file))))
+        (html (lambda (value)))
+        (txt (lambda (value)
+               (when (s-present? value)
+                 (s-replace "'" "" value)))))
+    (or (-when-let (val (cdr (assoc 'text/org values)))
+          (funcall org val))
+        (-when-let (val (cdr (assoc 'image/png values)))
+          (funcall png val))
+        (-when-let (val (cdr (assoc 'image/svg+xml values)))
+          (funcall svg val))
+        (-when-let (val (cdr (assoc 'text/plain values)))
+          (funcall txt val)))))
+(defun spacemacs//ob-ipython--dump-error (err-msg)
+  "No-op used to get rid of the separate trace buffer"
+  ;; Drop into console instead?
+  ;; (with-demoted-errors "Error: %S" (spacemacs//ob-jupyter-console-repl-refresh))
+  (error "There was a fatal error trying to process the request."))
