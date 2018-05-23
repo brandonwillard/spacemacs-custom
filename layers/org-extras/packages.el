@@ -29,6 +29,10 @@
     (progn
       (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
 
+      (setq-mode-local org-mode
+                       fill-nobreak-predicate
+                       (cl-pushnew #'spacemacs//in-org-src-inline fill-nobreak-predicate))
+
       (advice-add 'org-babel-python-session-buffer :around
                   #'spacemacs//org-babel-python-session-buffer)
 
@@ -123,10 +127,10 @@
   (spacemacs|use-package-add-hook org-projectile
     :post-config (let ((existing-todos (-filter 'f-exists-p
                                                 (org-projectile-todo-files))))
+                   ;; Add todo files from existing projects.
                    (setq org-agenda-files (append org-agenda-files existing-todos)))))
 
-(defun org-extras/post-init-org-projectile ()
-  (setq org-projectile-capture-template "* TODO %?\n  %u\n  %a"))
+(defun org-extras/post-init-org-projectile ())
 
 (defun org-extras/init-ob-async ()
   (use-package ob-async))

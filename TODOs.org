@@ -116,9 +116,72 @@
 
 * TODO Auto-zoom Based on Current Resolution
   Use functions like =(x-display-pixel-width)= to set the zoom level (with =(spacemacs/zoom-frm-out)=).
-* TODO Set up function syntax for different languages.
-  [2018-03-07 Wed]
-  [[file:~/.spacemacs.d/init.el::;;%20TODO:%20Set%20up%20function%20syntax%20for%20different%20languages.]]
+
+* DONE Stop fill from breaking some syntax elements in ~org-mode~   :orgmode:
+  CLOSED: [2018-05-23 Wed 13:24]
+  <2018-05-23 Wed>
+  The following will split within the src statement; any way to change that?
+  #+BEGIN_SRC org :eval never
+
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa src_python[:eval never :exports code]{print("hi")}
+
+  #+END_SRC
+
+  Looks like src_elisp{fill-nobreak-predicate} is an answer.
+  #+BEGIN_SRC elisp :results none
+  (defun spacemacs//in-org-src-inline ()
+    (let ((element (org-element-context)))
+      (eq (nth 0 element) 'inline-src-block)))
+
+  (setq-mode-local org-mode
+                   fill-nobreak-predicate
+                   (cl-pushnew #'spacemacs//in-org-src-inline fill-nobreak-predicate))
+  #+END_SRC
+
+* TODO Fix ~srefactor~ for Elisp
+  <2018-05-23 Wed>
+  ~srefactor-lisp-format-sexpr~ will break the following two forms:
+  #+BEGIN_SRC elisp
+  (defun blah ()
+    (rx (
+        seq ?\[
+        ?\{)))
+
+  (use-package 'blah
+    :init (blah blah iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii)
+    :post-init (blah blah blah)
+    )
+  #+END_SRC
+
+  My guess is that it has to do with sub-form processing.
+
+  For the latter example, [[file:../.emacs.d/elpa/develop/srefactor-20170223.540/srefactor-lisp.el::(defun%20srefactor--lisp-format-one-or-multi-lines%20(beg%20end%20orig-point%20format-type%20&optional][the function that parses these forms]] is probably not
+  appending a space after the end of a sub-form when it's followed by a keyword.
+
+  #+BEGIN_SRC elisp :results pp :wrap "SRC elisp :eval never :results none"
+  (with-temp-buffer
+    (semantic-default-elisp-setup)
+    (emacs-lisp-mode)
+    (semantic-lex-init)
+    (insert "(use-package 'blah
+              :init (blah blah iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii)
+              :post-init (blah blah blah)
+              )")
+    (semantic-emacs-lisp-lexer (point-min) (point-max) 1))
+  #+END_SRC
+
+  #+RESULTS:
+  #+BEGIN_SRC elisp :eval never :results none
+  ((open-paren 1 . 2)
+   (symbol 2 . 13)
+   (punctuation 14 . 15)
+   (symbol 15 . 19)
+   (symbol 32 . 37)
+   (semantic-list 38 . 92)
+   (symbol 105 . 115)
+   (semantic-list 116 . 132)
+   (close-paren 145 . 146))
+  #+END_SRC
 
 
 * Old Settings
@@ -205,6 +268,7 @@ Defers to standard `conda--find-env-yml' otherwise."
 
 (add-hook 'tex-mode-hook 'btw/tex-mode-settings)
 #+END_SRC
+
 
 * DONE [#A] Configure ~persp-mode~, ~projectile-mode~ and ~pyvenv~ to work together :python:projectile:persp:pyvenv:
   CLOSED: [2018-04-27 Fri 19:21]

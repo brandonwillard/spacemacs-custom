@@ -59,6 +59,7 @@
 \tframe hidden,
 \tlisting only,
 \tlisting engine=minted,
+\tminted options={fontsize=\\footnotesize},
 \tbreakable,
 \tenhanced,
 \ttitle after break={\\raggedleft\\lstlistingname\\ \\thetcbcounter~ -- continued},

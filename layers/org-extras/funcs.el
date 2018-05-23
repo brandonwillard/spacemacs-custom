@@ -134,6 +134,9 @@ for the output directory."
                        err-msg)))
       output)))
 
+(defun spacemacs//in-org-src-inline ()
+  (let ((element (org-element-context)))
+    (eq (nth 0 element) 'inline-src-block)))
 (defun spacemacs//org-make-link-regexps ()
     "Update the link regular expressions.
   This should be called after the variable `org-link-types' has changed."

@@ -47,7 +47,7 @@
 #+LaTeX_HEADER_EXTRA: \graphicspath{{../../figures/}{../figures/}{./figures/}{./}}
 
 # Minted should be imported automatically by org-mode when \`org-latex-listings\` is \`minted\`.
-#+LaTeX_HEADER_EXTRA: \setminted{fontsize=\footnotesize, breaklines=true, breakanywhere=true, breakautoindent=true}
+#+LaTeX_HEADER_EXTRA: \setminted{fontsize=\footnotesize, breaklines=true, breakanywhere=false, breakautoindent=false}
 
 # This env is really useful if you want to force tables into the page width.
 #+LaTeX_HEADER_EXTRA: \usepackage{adjustbox}
@@ -55,31 +55,11 @@
 #+LaTeX_HEADER_EXTRA: \newlength{\maxtabfigwidth}
 #+LaTeX_HEADER_EXTRA: \newlength{\maxtabfigheight}
 
-# This is how we produce multi-page listings that use minted.
-#+LaTeX_HEADER_EXTRA: \usepackage{tcolorbox}
-#+LaTeX_HEADER_EXTRA: \tcbuselibrary{minted, listings, breakable, skins}
 #+BEGIN_EXPORT latex
-%\AtBeginDocument{%
-  \setlength{\maxtabfigwidth}{\textwidth}
-  \setlength{\maxtabfigheight}{\textheight}
-  % decrease height a bit letting captions fit to one page
-  \addtolength{\maxtabfigheight}{-2.5em}
-
-  \renewtcblisting[blend into=listings]{listing}[1][]{
-    breakable,
-    enhanced,
-    arc=0pt,
-    outer arc=0pt,
-    boxrule=0pt,
-    text only,
-    listing remove caption=false,
-    coltitle=black,
-    % boxed title style={empty, size=minimal},
-    % attach boxed title to bottom center={yshift=-10pt},
-    float,
-    floatplacement=\ifx\relax#1\relax htb\else #1\fi
-  }
-%}
+\setlength{\maxtabfigwidth}{\textwidth}
+\setlength{\maxtabfigheight}{\textheight}
+% decrease height a bit to let captions fit on one page
+\addtolength{\maxtabfigheight}{-2.5em}
 #+END_EXPORT
 
 #+BEGIN_abstract
@@ -112,21 +92,20 @@
 
 * post-org-setup                                                           :noexport:
 
-#+NAME: figure_wrap
-#+HEADER: :var data=""
-#+HEADER: :var caption=""
-#+HEADER: :var label=""
-#+HEADER: :var orgwidth="400"
-#+HEADER: :var width="1.0\\textwidth"
-#+BEGIN_SRC elisp :exports none :results silent value
-(s-join "\n"
-        \`(;; Correct the below setting when org doesn't understand the value
-          ;; (e.g. "\textwidth").
-          ,(format "#+ATTR_ORG: :width %s" orgwidth)
-          ,(format "#+ATTR_LATEX: :width %s :float t"
-                   width)
-          ,(format "#+CAPTION: %s" caption)
-          ,(format "#+NAME: %s" label)
-          ,(format "[[file:%s]]"
-                   (s-trim data))))
+#+NAME: org_table_wrap
+#+HEADER: :var data="" :var name="" :var caption=""
+#+BEGIN_SRC elisp :exports none :results value
+;; Example usage:
+;; #+HEADER: :post org_table_wrap(data=*this*, caption="Company name similarity measure example.")
+(let* ((block-name (if (s-blank? name)
+                        (save-excursion
+                          (goto-char org-babel-current-src-block-location)
+                          (nth 4
+                              (org-babel-get-src-block-info)))
+                      name)))
+  (s-join "\n"
+          "#+ATTR_LATEX: :mode table :float t :center t :environment adjusttabular"
+          (format "#+CAPTION: %s" caption)
+          (format "#+NAME: tab:%s" block-name)
+          data))
 #+END_SRC

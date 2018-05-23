@@ -125,7 +125,7 @@ t when called interactively."
                 (s-contains? process-executable "ipython"
                              t))
             (comint-send-string process
-                                (format "get_ipython().run_line_magic('cpaste', '')\n%s\n--\n" string))
+                                (format "get_ipython().run_line_magic('cpaste', '-q')\n%s\n--\n" string))
           (let* ((temp-file-name (python-shell--save-temp-file string))
                  (file-name (or (buffer-file-name)
                                 temp-file-name)))
