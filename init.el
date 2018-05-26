@@ -276,6 +276,8 @@ you should place your code here."
   (spacemacs/set-leader-keys "nd" 'narrow-to-defun)
   (unbind-key (kbd "nf") spacemacs-default-map)
 
+  (setq fill-indent-according-to-mode t)
+
   (with-eval-after-load 'editorconfig
     (add-to-list 'editorconfig-exclude-modes 'help-mode)
     (add-to-list 'editorconfig-exclude-modes 'edebug-mode)
@@ -325,6 +327,9 @@ you should place your code here."
     ;;   (progn
     ;;     (add-to-list 'org-babel-load-languages
     ;;                  '(hy . t))))
+
+    ;; TODO: Consider this...
+    ;; (org-babel-make-language-alias "python" "ipython")
 
     (defvaralias 'org-plantuml-jar-path 'plantuml-jar-path)
     ;; (setq org-plantuml-jar-path plantuml-jar-path)
@@ -392,6 +397,11 @@ you should place your code here."
 
   (with-eval-after-load 'projectile
     (setq projectile-use-git-grep t))
+
+  (with-eval-after-load 'org-projectile
+    (setq org-projectile-capture-template "* TODO %?
+  %u
+  %a"))
 
   (with-eval-after-load 'hideshow
     (setq hs-allow-nesting t)
