@@ -134,6 +134,9 @@ for the output directory."
                        err-msg)))
       output)))
 
+(defun spacemacs//set-nobreak-predicate ()
+  (setq fill-nobreak-predicate
+        (cl-pushnew #'spacemacs//in-org-src-inline fill-nobreak-predicate)))
 (defun spacemacs//in-org-src-inline ()
   (let ((element (org-element-context)))
     (eq (nth 0 element) 'inline-src-block)))

@@ -27,17 +27,15 @@
   (spacemacs|use-package-add-hook org
     :post-config
     (progn
-      (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
+      (add-hook 'org-babel-after-execute-hook #'org-display-inline-images 'append)
 
-      (setq-mode-local org-mode
-                       fill-nobreak-predicate
-                       (cl-pushnew #'spacemacs//in-org-src-inline fill-nobreak-predicate))
+      (add-hook 'org-mode-hook #'spacemacs//set-nobreak-predicate)
 
       (advice-add 'org-babel-python-session-buffer :around
                   #'spacemacs//org-babel-python-session-buffer)
 
       (when (configuration-layer/package-used-p 'projectile)
-        (advice-add 'org-compile-file :override 'spacemacs//org-compile-file)
+        (advice-add 'org-compile-file :override #'spacemacs//org-compile-file)
         (advice-add 'org-export-output-file-name :around
                     #'spacemacs//org-export-output-project-file-name))
 
@@ -50,7 +48,7 @@
                   #'spacemacs//org-babel-load-session:python)
 
       (with-eval-after-load 'ox-latex
-        (advice-add 'org-latex-src-block :around 'spacemacs//org-latex-src-block))
+        (advice-add 'org-latex-src-block :around #'spacemacs//org-latex-src-block))
 
       (spacemacs/toggle-org-highlight-inline-src-on)
 
