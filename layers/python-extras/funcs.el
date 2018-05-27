@@ -11,16 +11,18 @@
 
 
 (when (configuration-layer/package-used-p 'projectile)
-  (defun spacemacs//python-shell-get-process-name (orig-func dedicated)
-    "Append project name to shell process name.
-Makes shells specific to the active project."
-    ;; FYI: Could just use a python-mode hook that sets `python-shell-buffer-name'.
-    (let ((proc-name (funcall orig-func dedicated))
-          (proj-name (with-demoted-errors "Error: %S" (projectile-project-name))))
+  ;; See `hy-shell-buffer-name' and `hy-shell-internal-buffer-name'.
+  ;; `hy-shell-get-process'
+  (defun spacemacs//project-process-name (proc-name)
+    (let ((proj-name (with-demoted-errors "Error: %S" (projectile-project-name))))
       (if (and proj-name
                (not (s-suffix? (format "(%s)" proj-name) proc-name)))
           (format "%s(%s)" proc-name proj-name)
-        proc-name))))
+        proc-name)))
+  (defun spacemacs//hy--shell-format-process-name (orig-func proc-name)
+    (funcall orig-func (spacemacs//project-process-name proc-name)))
+  (defun spacemacs//python-shell-get-process-name (orig-func dedicated)
+    (spacemacs//project-process-name (funcall orig-func dedicated))))
 
 (when (configuration-layer/package-used-p 'pyvenv)
   (defun spacemacs//pyvenv-conda-activate-additions ()

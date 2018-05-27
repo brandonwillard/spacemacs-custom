@@ -21,6 +21,7 @@
     s
     dash
     ob-async
+    ob-hy
     ob-ipython))
 
 (defun org-extras/pre-init-org ()
@@ -94,6 +95,16 @@
                    ;; (remove-hook 'org-export-filter-parse-tree-functions 'spacemacs//org-ref-parse-bib-latex-entries)
 
                    (setq org-ref-prefer-bracket-links t))))
+
+(defun org-extras/pre-init-ob-hy ()
+  (spacemacs|use-package-add-hook org
+    :post-config
+    (use-package ob-hy
+      :init (progn
+              (add-to-list 'org-babel-load-languages '(hy . t))
+              (advice-add #'org-babel-hy-session-buffer :around
+                          #'spacemacs//org-babel-hy-session-buffer)))))
+(defun org-extras/init-ob-hy ())
 
 (defun org-extras/pre-init-ob-ipython ()
   (spacemacs|use-package-add-hook org

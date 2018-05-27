@@ -22,6 +22,7 @@
     s
     pyvenv
     persp-mode
+    hy-mode
     (company-anaconda :excluded t)
     (anaconda-mode :excluded t)
     (pylookup :excluded t)
@@ -41,7 +42,7 @@
 
 (defun python-extras/init-evil-text-object-python ()
   (use-package evil-text-object-python
-    :init (add-hook 'python-mode-hook 'evil-text-object-python-add-bindings)))
+    :init (add-hook 'python-mode-hook #'evil-text-object-python-add-bindings)))
 
 (defun python-extras/post-init-editorconfig ()
   (add-hook 'editorconfig-custom-hooks #'spacemacs//editorconfig-set-pyvenv))
@@ -50,7 +51,13 @@
 
 (defun python-extras/post-init-persp-mode ()
   (when (configuration-layer/package-used-p 'pyvenv)
-    (add-to-list 'persp-activated-functions 'spacemacs//persp-after-switch-set-venv)))
+    (add-to-list 'persp-activated-functions #'spacemacs//persp-after-switch-set-venv)))
+
+(defun python-extras/post-init-hy-mode ()
+  (when (configuration-layer/package-used-p 'projectile)
+    (declare-function hy--shell-format-process-name "hy-mode.el")
+    (advice-add #'hy--shell-format-process-name :around
+                #'spacemacs//hy--shell-format-process-name)))
 
 (defun python-extras/pre-init-python ()
   (spacemacs|use-package-add-hook python
@@ -61,16 +68,17 @@
       (add-to-list 'python-shell-completion-native-disabled-interpreters "jupyter")
       (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython")
 
-      (advice-add 'python-shell-send-string :override
+      (advice-add #'python-shell-send-string :override
                   #'spacemacs//python-shell-send-string)
 
-      (advice-add 'python-shell-get-process-name :around
-                  #'spacemacs//python-shell-get-process-name)
+      (when (configuration-layer/package-used-p 'projectile)
+        (advice-add #'python-shell-get-process-name :around
+                    #'spacemacs//python-shell-get-process-name))
 
       (spacemacs/set-leader-keys-for-major-mode 'python-mode
-        "hh" 'spacemacs//python-help-for-region-or-symbol
-        "sr" 'spacemacs//python-shell-send-region-echo
-        "sl" 'spacemacs//python-shell-send-line-echo))))
+        "hh" #'spacemacs//python-help-for-region-or-symbol
+        "sr" #'spacemacs//python-shell-send-region-echo
+        "sl" #'spacemacs//python-shell-send-line-echo))))
 
 (defun python-extras/post-init-company ()
 
@@ -86,18 +94,18 @@
     "De-prioritize internal/private Python variables (e.g. '_blah') in completion list ordering.
 
 See `company-transformers'."
-    (seq-sort-by 'company-strip-prefix #'python--private-lessp
+    (seq-sort-by #'company-strip-prefix #'python--private-lessp
                  candidates))
 
   (defun python-extras/python-company-conf ()
-    (add-to-list 'company-transformers 'python-extras/company-transform-python
+    (add-to-list 'company-transformers #'python-extras/company-transform-python
                  t))
 
   (spacemacs/add-to-hooks 'python-extras/python-company-conf
                           '(python-mode-hook inferior-python-mode-hook))
 
   ;; Disable company idle/automatic completion.
-  (advice-add 'spacemacs//init-company-vars-inferior-python-mode
+  (advice-add #'spacemacs//init-company-vars-inferior-python-mode
               :after #'(lambda (&rest _)
                          (setq-local company-idle-delay nil))))
 
@@ -110,8 +118,8 @@ See `company-transformers'."
                            pyvenv-res
                            t))))
 
-  (advice-add 'pyvenv-virtualenvwrapper-supported
-              :filter-return 'python-extras//filter-venvwrapper-supported-anaconda-hooks)
+  (advice-add #'pyvenv-virtualenvwrapper-supported
+              :filter-return #'python-extras//filter-venvwrapper-supported-anaconda-hooks)
 
   ;; If `pyvenv-workon' buffer-local variables is set, activate the corresponding
   ;; venv when entering the buffer.
@@ -119,7 +127,7 @@ See `company-transformers'."
 
   ;; (defun python-extras//track-previous-pyvenv (&res _)
   ;;   ...)
-  ;; (advice-add 'pyvenv-activate :before 'python-extras//track-previous-pyvenv)
+  ;; (advice-add #'pyvenv-activate :before #'python-extras//track-previous-pyvenv)
 
   ;; These
   (add-hook 'pyvenv-post-activate-hooks #'spacemacs//pyvenv-conda-activate-additions)

@@ -351,8 +351,14 @@ This is mostly the standard `ox-latex' with only the following differences:
 
        ;; Case 4.  Use listings package.
        (t (funcall oldfun src-block _contents info))))))
+(defun spacemacs//org-babel-hy-session-buffer (orig-func session)
+  "Make org-babel's default Hy session buffer naming follow `hy-mode'."
+  (if (eq session :default)
+      ;; From `hy-shell-get-process'
+      (hy--shell-format-process-name hy-shell-buffer-name)
+    (funcall orig-func session)))
 (defun spacemacs//org-babel-python-session-buffer (orig-func session)
-  "Make org-babel's default python session buffer naming follow `python-mode'."
+  "Make org-babel's default Python session buffer naming follow `python-mode'."
   (if (eq session :default)
       (format "*%s*"
               (python-shell-get-process-name nil))

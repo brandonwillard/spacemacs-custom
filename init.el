@@ -211,11 +211,7 @@ before packages are loaded. If you are unsure, you should try in setting them in
   (setq debugger-stack-frame-as-list t)
   (setq edebug-print-circle t)
   (setq edebug-print-level 4)
-  (setq print-level 4)
-  (setq print-length 4)
   (setq print-circle t)
-  (setq eval-expression-print-level 4)
-  (setq eval-expression-print-length 4)
 
   (defun btw/ad-timestamp-message (format-string &rest args)
     "Advice to run before `message' that prepends a timestamp to each message.
@@ -254,13 +250,17 @@ you should place your code here."
   (setq-mode-local prog-mode scroll-margin 10)
   (setq-mode-local makefile-mode indent-tabs-mode t)
 
-  ;; `global-hl-line-mode' can slow down tracebacks considerably.
-  (add-hook 'edebug-mode-hook #'(lambda ()
-                                  (setq truncate-lines t)
-                                  (spacemacs/disable-hl-line-mode)))
-  (add-hook 'debugger-mode-hook #'(lambda ()
-                                    (setq truncate-lines t)
-                                    (spacemacs/disable-hl-line-mode)))
+  (defun btw//lightweight-debug-settings ()
+      (setq-local truncate-lines t)
+      (setq-local print-level 4)
+      (setq-local print-length 4)
+      (setq-local eval-expression-print-level 4)
+      (setq-local eval-expression-print-length 4)
+      ;; `global-hl-line-mode' can slow down tracebacks considerably.
+      (spacemacs/disable-hl-line-mode))
+
+  (add-hook 'edebug-mode-hook #'btw//lightweight-debug-settings)
+  (add-hook 'debugger-mode-hook #'btw//lightweight-debug-settings)
 
   (add-to-list 'debug-ignored-errors 'search-failed)
 

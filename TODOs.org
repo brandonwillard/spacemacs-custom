@@ -1,188 +1,296 @@
-#+TITLE: Emacs Config Notes
+#+TITLE: Emacs Config
 #+AUTHOR: Brandon T. Willard
 
-* TODO [#A] Create Org LOB file for common export helpers and adjustments
-  Put code from [[file:../projects/papers/tex-project-templates/src/org/org-export-init.el][=org-export-init.el=]] into an independent, versioned Org file to
-  be loaded with ~org-babel-lob-ingest~.
-* TODO [#A] Slowness with Python file/venv loading                   :python:
-  Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
-* TODO [#A] Allow ~persp-mode~ to set ~projectile-mode~ project.
-  Viewing a buffer for a file in a different ~projectile-mode~ project from
-  within a ~persp-mode~ opened for a different project doesn't prioritize the
-  ~pesp-mode~-specific project when calling ~projectile-mode~ functions.
+* Tasks
+** TODO [#A] Create Org LOB file for common export helpers and adjustments
+   Put code from [[file:../projects/papers/tex-project-templates/src/org/org-export-init.el][=org-export-init.el=]] into an independent, versioned Org file to
+   be loaded with ~org-babel-lob-ingest~.
+** TODO [#A] Slowness with Python file/venv loading                  :python:
+   Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
+** TODO [#A] Allow ~persp-mode~ to set ~projectile-mode~ project.
+   Viewing a buffer for a file in a different ~projectile-mode~ project from
+   within a ~persp-mode~ opened for a different project doesn't prioritize the
+   ~pesp-mode~-specific project when calling ~projectile-mode~ functions.
 
-  If we can get the ~projectile-mode~ project name/location from ~persp-mode~,
-  we might only need to set/wrap/override ~projectile-cached-project-root~,
-  ~projectile-cached-project-name~, ~projectile-project-name~, and/or ~projectile-project-root~.
+   If we can get the ~projectile-mode~ project name/location from ~persp-mode~,
+   we might only need to set/wrap/override ~projectile-cached-project-root~,
+   ~projectile-cached-project-name~, ~projectile-project-name~, and/or ~projectile-project-root~.
 
-  - [X] Where do we store the project name value (relative to ~persp-mode~)?
-    #+BEGIN_SRC elisp
-    (get-current-persp)
+   - [X] Where do we store the project name value (relative to ~persp-mode~)?
+     #+BEGIN_SRC elisp
+     (get-current-persp)
 
-    ;; Set projectile name
-    (set-persp-parameter 'projectile-name (ignore-errors (projectile-project-name)))
+     ;; Set projectile name
+     (set-persp-parameter 'projectile-name (ignore-errors (projectile-project-name)))
 
-    ;; Get the name
-    (persp-parameter 'projectile-name)
-    #+END_SRC
-  - [ ] Where do we associate a project [name] with a perspective?
-    The main mechanism of project activation (for me) is the ~:source~ ~:action~
-    lambda in ~spacemacs/helm-persp-switch-project~?  This is an extremely fickle
-    tie-in, though.
-    Perhaps ~projectile-before-switch-project-hook~ is better.
-    #+BEGIN_SRC elisp
-    (defun persp-projectile-assign-project-name ()
-      )
-    (add-hook 'projectile-before-switch-project-hook
-              #'persp-projectile-assign-project-name)
-    #+END_SRC
+     ;; Get the name
+     (persp-parameter 'projectile-name)
+     #+END_SRC
+   - [ ] Where do we associate a project [name] with a perspective?
+     The main mechanism of project activation (for me) is the ~:source~ ~:action~
+     lambda in ~spacemacs/helm-persp-switch-project~?  This is an extremely fickle
+     tie-in, though.
+     Perhaps ~projectile-before-switch-project-hook~ is better.
+     #+BEGIN_SRC elisp
+     (defun persp-projectile-assign-project-name ()
+       )
+     (add-hook 'projectile-before-switch-project-hook
+               #'persp-projectile-assign-project-name)
+     #+END_SRC
 
-* TODO ~org-mode~ to Google Tasks, Calendar, etc.           :orgmode:syncing:
-  There's a push/pull/sync tool [[https://bitbucket.org/edgimar/michel-orgmode][here]].
-* TODO Fix project-root finding in ~lsp-mode~                           :lsp:
-  - Note taken on [2018-03-17 Sat 14:03] \\
-    For example, =lsp-python= uses the following to find a project's root directory:
-    #+BEGIN_SRC elisp
-    (lsp-define-stdio-client lsp-python "python"
-                             (lsp-make-traverser #'(lambda (dir)
-                                                     (directory-files
-                                                      dir
-                                                      nil
-                                                      "\\(__init__\\|setup\\)\\.py")))
-                             '("pyls"))
-    #+END_SRC
+** TODO What to do about Spacemacs private directory?
+   [2018-05-26 Sat]
+   [[file:~/.spacemacs.d/init.el::(setq%20custom-file%20(concat%20user-emacs-directory%20"private/custom-settings.el"))][custom-settings.el]]
+   We could automatically set up sym-links to files from =~/.spacemacs.d=.
+   #+BEGIN_SRC elisp :eval never
+   (if (not (f-symlink-p (concat user-emacs-directory "private")))
+       (f-symlink (f-join dotspacemacs-directory "private")
+                  (concat user-emacs-directory "private")))
+   #+END_SRC
+** TODO ~org-mode~ to Google Tasks, Calendar, etc.          :orgmode:syncing:
+   There's a push/pull/sync tool [[https://bitbucket.org/edgimar/michel-orgmode][here]].
+** TODO Fix project-root finding in ~lsp-mode~                          :lsp:
+   - Note taken on [2018-03-17 Sat 14:03] \\
+     For example, =lsp-python= uses the following to find a project's root directory:
+     #+BEGIN_SRC elisp
+     (lsp-define-stdio-client lsp-python "python"
+                              (lsp-make-traverser #'(lambda (dir)
+                                                      (directory-files
+                                                       dir
+                                                       nil
+                                                       "\\(__init__\\|setup\\)\\.py")))
+                              '("pyls"))
+     #+END_SRC
 
-    This only applies to projects that are Python packages.  Even then, I'm not sure it does
-    well, because I'm always getting errors.
+     This only applies to projects that are Python packages.  Even then, I'm not sure it does
+     well, because I'm always getting errors.
 
-* TODO Set up ~evil-extra-operator~
-* TODO Set up ~org-mode~ TODOs and GitHub issues sync       :orgmode:syncing:
-  [[https://github.com/arbox/org-sync][Here's]] a library that does it.
-* TODO Fix/adjust folding in [[file:init.el::(with-eval-after-load%20'hideshow][init.el]]
-  The meaning of @@html:<kbd>@@ z [r|m] @@html:</kbd>@@ is "level-folding" in
-  Vim, but ~evil-commands~ has no notion of this.  For ~hideshow~ we can use
-  ~hs-hide-level~ to better approximate level-folding, but we would still have
-  to work that into evil's framework via ~evil-fold-list~ (e.g. new
-  level-folding properties--perhaps with fall-backs, too).  We also need an
-  ~hs-show-level~ function.
+** TODO Set up ~evil-extra-operator~
+** TODO Set up ~org-mode~ TODOs and GitHub issues sync      :orgmode:syncing:
+   [[https://github.com/arbox/org-sync][Here's]] a library that does it.
+** TODO Fix/adjust folding in [[file:init.el::(with-eval-after-load%20'hideshow][init.el]]
+   The meaning of @@html:<kbd>@@ z [r|m] @@html:</kbd>@@ is "level-folding" in
+   Vim, but ~evil-commands~ has no notion of this.  For ~hideshow~ we can use
+   ~hs-hide-level~ to better approximate level-folding, but we would still have
+   to work that into evil's framework via ~evil-fold-list~ (e.g. new
+   level-folding properties--perhaps with fall-backs, too).  We also need an
+   ~hs-show-level~ function.
 
-  Toggle fold, i.e. @@html:<kbd>@@ za @@html:</kbd>@@ doesn't work for code
-  blocks in org-mode.  Default @@html:<kbd>@@ <tab> @@html:</kbd>@@ does work
-  (it's bound to ~org-cycle~).
-* TODO Improve ~org-mode~ links in LaTeX export              :bibtex:orgmode:
-  Find ~org-ref~ alternative and/or try [[https://github.com/andras-simonyi/citeproc-orgref][~citeproc-orgref~]].
-  - Note taken on [2018-03-24 Sat 15:02] \\
-    An example of a custom export filter:
-    #+BEGIN_SRC elisp
-    (defun my-latex-export-example-blocks (text backend info)
-      "Export example blocks as listings env."
-      (when (org-export-derived-backend-p backend 'latex)
-        (with-temp-buffer
-          (insert text)
-          ;; replace verbatim env by listings
-          (goto-char (point-min))
-          (replace-string "\\begin{verbatim}" "\\begin{lstlisting}")
-          (replace-string "\\end{verbatim}" "\\end{lstlisting}")
-          (buffer-substring-no-properties (point-min) (point-max)))))
+   Toggle fold, i.e. @@html:<kbd>@@ za @@html:</kbd>@@ doesn't work for code
+   blocks in org-mode.  Default @@html:<kbd>@@ <tab> @@html:</kbd>@@ does work
+   (it's bound to ~org-cycle~).
+** TODO Improve ~org-mode~ links in LaTeX export             :bibtex:orgmode:
+   Find ~org-ref~ alternative and/or try [[https://github.com/andras-simonyi/citeproc-orgref][~citeproc-orgref~]].
+   - Note taken on [2018-03-24 Sat 15:02] \\
+     An example of a custom export filter:
+     #+BEGIN_SRC elisp
+     (defun my-latex-export-example-blocks (text backend info)
+       "Export example blocks as listings env."
+       (when (org-export-derived-backend-p backend 'latex)
+         (with-temp-buffer
+           (insert text)
+           ;; replace verbatim env by listings
+           (goto-char (point-min))
+           (replace-string "\\begin{verbatim}" "\\begin{lstlisting}")
+           (replace-string "\\end{verbatim}" "\\end{lstlisting}")
+           (buffer-substring-no-properties (point-min) (point-max)))))
 
-    (add-to-list 'org-export-filter-example-block-functions
-             'my-latex-export-example-blocks)
-    #+END_SRC
-  - Note taken on [2018-03-11 Sun 18:20] \\
-    Look at [[https://code.orgmode.org/bzg/org-mode/raw/master/contrib/lisp/ox-bibtex.el][ox-bibtex.el]] for ways to implement better syntax than ~org-ref~.
-    For instance, here's how we can add custom link types:
-    #+BEGIN_SRC elisp :eval never
-    (org-link-set-parameters "code" :follow follow :export export)
-    #+END_SRC
-    See [[https://orgmode.org/worg/org-contrib/org-exp-blocks.html][~org-exp-blocks~]] for ways to pre-process blocks on export.
-* TODO Better ~org-babel~ Python interaction                :python:orgbabel:
-  - Note taken on [2018-05-02 Wed 22:01] \\
-    A lot of this has been done in the ~org-extras~ layer.  There are still some
-    completion issues to fix, though.
-  - Note taken on [2018-04-06 Fri 12:41] \\
-    Consider adding a =org-babel-ipython-associate-session=.
-  - Note taken on [2018-04-04 Wed 17:14] \\
-    =ob-ipython='s completion is terribly slow; consider refactoring to keep a
-    low-level network connection, instead of calling a python script that
-    re-connects to the kernel every time =ob-ipython= issues a command.
+     (add-to-list 'org-export-filter-example-block-functions
+              'my-latex-export-example-blocks)
+     #+END_SRC
+   - Note taken on [2018-03-11 Sun 18:20] \\
+     Look at [[https://code.orgmode.org/bzg/org-mode/raw/master/contrib/lisp/ox-bibtex.el][ox-bibtex.el]] for ways to implement better syntax than ~org-ref~.
+     For instance, here's how we can add custom link types:
+     #+BEGIN_SRC elisp :eval never
+     (org-link-set-parameters "code" :follow follow :export export)
+     #+END_SRC
+     See [[https://orgmode.org/worg/org-contrib/org-exp-blocks.html][~org-exp-blocks~]] for ways to pre-process blocks on export.
+** TODO Better ~org-babel~ Python interaction               :python:orgbabel:
+   - Note taken on [2018-05-02 Wed 22:01] \\
+     A lot of this has been done in the ~org-extras~ layer.  There are still some
+     completion issues to fix, though.
+   - Note taken on [2018-04-06 Fri 12:41] \\
+     Consider adding a =org-babel-ipython-associate-session=.
+   - Note taken on [2018-04-04 Wed 17:14] \\
+     =ob-ipython='s completion is terribly slow; consider refactoring to keep a
+     low-level network connection, instead of calling a python script that
+     re-connects to the kernel every time =ob-ipython= issues a command.
 
-  @@html:<kbd>@@ , , @@html:</kbd>@@ naively sends buffer lines, which breaks python code sent to
-  the default IPython parser.  The function being called is ~org-babel-load-in-session~
-  and/or ~org-babel-load-session:python~.  There's an ~insert~ line that should probably use
-  ~python-shell-send-string-echo~ instead.
+   @@html:<kbd>@@ , , @@html:</kbd>@@ naively sends buffer lines, which breaks python code sent to
+   the default IPython parser.  The function being called is ~org-babel-load-in-session~
+   and/or ~org-babel-load-session:python~.  There's an ~insert~ line that should probably use
+   ~python-shell-send-string-echo~ instead.
 
-  After making those changes, it seems like ~org-babel-python-evaluate-session~ might also need to
-  be altered.
+   After making those changes, it seems like ~org-babel-python-evaluate-session~ might also need to
+   be altered.
 
-* TODO Auto-zoom Based on Current Resolution
-  Use functions like =(x-display-pixel-width)= to set the zoom level (with =(spacemacs/zoom-frm-out)=).
+** TODO Auto-zoom Based on Current Resolution
+   Use functions like =(x-display-pixel-width)= to set the zoom level (with =(spacemacs/zoom-frm-out)=).
 
-* DONE Stop fill from breaking some syntax elements in ~org-mode~   :orgmode:
-  CLOSED: [2018-05-23 Wed 13:24]
-  <2018-05-23 Wed>
-  The following will split within the src statement; any way to change that?
-  #+BEGIN_SRC org :eval never
+** TODO Fix ~srefactor~ for Elisp
+   <2018-05-23 Wed>
+   ~srefactor-lisp-format-sexpr~ will break the following two forms:
+   #+BEGIN_SRC elisp
+   (defun blah ()
+     (rx (
+         seq ?\[
+         ?\{)))
 
-  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa src_python[:eval never :exports code]{print("hi")}
+   (use-package 'blah
+     :init (blah blah iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii)
+     :post-init (blah blah blah)
+     )
+   #+END_SRC
 
-  #+END_SRC
+   My guess is that it has to do with sub-form processing.
 
-  Looks like src_elisp{fill-nobreak-predicate} is an answer.
-  #+BEGIN_SRC elisp :results none
-  (defun spacemacs//in-org-src-inline ()
-    (let ((element (org-element-context)))
-      (eq (nth 0 element) 'inline-src-block)))
+   For the latter example, [[file:../.emacs.d/elpa/develop/srefactor-20170223.540/srefactor-lisp.el::(defun%20srefactor--lisp-format-one-or-multi-lines%20(beg%20end%20orig-point%20format-type%20&optional][the function that parses these forms]] is probably not
+   appending a space after the end of a sub-form when it's followed by a keyword.
 
-  (setq-mode-local org-mode
-                   fill-nobreak-predicate
-                   (cl-pushnew #'spacemacs//in-org-src-inline fill-nobreak-predicate))
-  #+END_SRC
+   #+BEGIN_SRC elisp :results pp :wrap "SRC elisp :eval never :results none"
+   (with-temp-buffer
+     (semantic-default-elisp-setup)
+     (emacs-lisp-mode)
+     (semantic-lex-init)
+     (insert "(use-package 'blah
+               :init (blah blah iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii)
+               :post-init (blah blah blah)
+               )")
+     (semantic-emacs-lisp-lexer (point-min) (point-max) 1))
+   #+END_SRC
 
-* TODO Fix ~srefactor~ for Elisp
-  <2018-05-23 Wed>
-  ~srefactor-lisp-format-sexpr~ will break the following two forms:
-  #+BEGIN_SRC elisp
-  (defun blah ()
-    (rx (
-        seq ?\[
-        ?\{)))
+   #+RESULTS:
+   #+BEGIN_SRC elisp :eval never :results none
+   ((open-paren 1 . 2)
+    (symbol 2 . 13)
+    (punctuation 14 . 15)
+    (symbol 15 . 19)
+    (symbol 32 . 37)
+    (semantic-list 38 . 92)
+    (symbol 105 . 115)
+    (semantic-list 116 . 132)
+    (close-paren 145 . 146))
+   #+END_SRC
 
-  (use-package 'blah
-    :init (blah blah iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii)
-    :post-init (blah blah blah)
-    )
-  #+END_SRC
+** DONE Stop fill from breaking some syntax elements in ~org-mode~  :orgmode:
+   CLOSED: [2018-05-23 Wed 13:24]
+   <2018-05-23 Wed>
+   The following will split within the src statement; any way to change that?
+   #+BEGIN_SRC org :eval never
 
-  My guess is that it has to do with sub-form processing.
+   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa src_python[:eval never :exports code]{print("hi")}
 
-  For the latter example, [[file:../.emacs.d/elpa/develop/srefactor-20170223.540/srefactor-lisp.el::(defun%20srefactor--lisp-format-one-or-multi-lines%20(beg%20end%20orig-point%20format-type%20&optional][the function that parses these forms]] is probably not
-  appending a space after the end of a sub-form when it's followed by a keyword.
+   #+END_SRC
 
-  #+BEGIN_SRC elisp :results pp :wrap "SRC elisp :eval never :results none"
-  (with-temp-buffer
-    (semantic-default-elisp-setup)
-    (emacs-lisp-mode)
-    (semantic-lex-init)
-    (insert "(use-package 'blah
-              :init (blah blah iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii)
-              :post-init (blah blah blah)
-              )")
-    (semantic-emacs-lisp-lexer (point-min) (point-max) 1))
-  #+END_SRC
+   Looks like src_elisp{fill-nobreak-predicate} is an answer.
+   #+BEGIN_SRC elisp :results none
+   (defun spacemacs//in-org-src-inline ()
+     (let ((element (org-element-context)))
+       (eq (nth 0 element) 'inline-src-block)))
 
-  #+RESULTS:
-  #+BEGIN_SRC elisp :eval never :results none
-  ((open-paren 1 . 2)
-   (symbol 2 . 13)
-   (punctuation 14 . 15)
-   (symbol 15 . 19)
-   (symbol 32 . 37)
-   (semantic-list 38 . 92)
-   (symbol 105 . 115)
-   (semantic-list 116 . 132)
-   (close-paren 145 . 146))
-  #+END_SRC
+   (setq-mode-local org-mode
+                    fill-nobreak-predicate
+                    (cl-pushnew #'spacemacs//in-org-src-inline fill-nobreak-predicate))
+   #+END_SRC
 
+** DONE [#A] Configure ~persp-mode~, ~projectile-mode~ and ~pyvenv~ to work together :python:projectile:persp:pyvenv:
+   CLOSED: [2018-04-27 Fri 19:21]
+   - Note taken on [2018-04-27 Fri 19:20] \\
+     The =python-extras= layer now provides venv switching functionality.
+   - Note taken on [2018-01-28 Sun 12:54] \\
+     Extending [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-process-name%20(dedicated)][~python-shell-get-process-name~]] to include
+     ~projectile-project-name~ might enable per-project inferior processes.
+
+   - Note taken on [2018-01-19 Fri 14:46] \\
+     Perhaps the [[file:~/.emacs.d/layers/+spacemacs/spacemacs-layouts/funcs.el::(defun%20spacemacs/layout-switch-by-pos%20(pos)][spacemacs layout switching function]] should call
+     ~projectile-persp-switch-project~ instead of ~persp-switch~.  We could advise
+     ~persp-switch~ or simply replace ~spacemacs/layout-switch-by-pos~.  Either way, I
+     think we'll need to check for an associated project, get the name or location
+     and pass *that* to ~projectile-persp-switch-project~.
+     Also, check out [[https://gist.github.com/Bad-ptr/1aca1ec54c3bdb2ee80996eb2b68ad2d#file-persp-projectile-auto-persp-el][these customizations]].
+
+   - [X] Fix [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-buffer%20()][python-mode inferior buffer]] naming/initialization; we should be assigning inferior processes to
+     projects/perspectives, so naming could be one way to do that.
+
+   - [-] Implement an alist with project/perspective-to-venv entries.
+     [[https://github.com/bbatsov/projectile/issues/139][Here's a discussion]] on project-local variables.  [[https://github.com/emacs-php/projectile-variable][This]] looks like an existing solution.
+     We need to add venv awareness to ~org-babel~ via
+     ~org-babel-prep-session:python~.  ~org-babel~ might only need
+     ~python-shell-virtualenv-root~ set in order to start a venv-ed inferior shell.
+     =blah=.
+
+     This doesn't need to be done.
+
+   - [X] Hook for project/perspective changes.
+     The correct "hook" may be ~persp-before-switch-functions~.
+     #+BEGIN_SRC elisp
+     (defun persp-pyvenv-switch ())
+     (add-to-list 'persp-before-switch-functions #'(lambda (persp-name frame-or-window)
+                                                     (message "Switching to %s" persp-name)))
+     #+END_SRC
+
+     #+BEGIN_SRC elisp
+     ;; TODO: After persp change, check for virtualenv change.
+     (cl-pushnew #'(lambda (window)
+                     (debug)
+                     ;; (safe-persp-parameters (get-current-persp))
+
+                     ;; XXX: This does a `locate-dominating-file' search.
+                     ;; (spacemacs//pyvenv-mode-set-local-virtualenv)
+
+                     ;; (when (and (bound-and-true-p project-pyvenv-virtual-env-name)
+                     ;;            (eq project-pyvenv-virtual-env-name pyvenv-virtual-env-name))
+                     ;;   (pyvenv-workon pyvenv-virtual-env-name))
+                     )
+                 persp-activated-functions)
+     #+END_SRC
+
+** DONE Try ~ob-async~ (again)                                      :orgmode:
+   CLOSED: [2018-04-22 Sun 14:20]
+
+** DONE Should ~spacemacs|use-package-add-hook~ be used instead of ~with-eval-after-load~?
+   CLOSED: [2018-04-22 Sun 14:20]
+   [2018-03-09 Fri]
+   [[file:~/.spacemacs.d/init.el::;;%20(spacemacs|use-package-add-hook%20org]]
+** DONE Clean up ~user-config~                                    :spacemacs:
+   CLOSED: [2018-04-27 Fri 10:32]
+   - Note taken on [2018-04-22 Sun 14:18] \\
+     Moved org-mode and Python settings and functions to the layers =org-extras= and =python-extras=.
+   [[file:init.el::(defun%20dotspacemacs/user-config%20()][~dotspacemacs/user-config~]] is too busy, and only getting busier.  Some of its
+   content should be broken off into new layers and/or packages.
+
+** DONE [#A] Fix flycheck for Python virtual envs.                   :python:
+   CLOSED: [2018-03-17 Sat 14:20]
+   See variables involving ~python-pylint~ and ~python-pycompile~.
+** DONE [#B] Fix ~ansi-term~ redraws
+   CLOSED: [2018-01-14 Sun 19:15]
+   A new line and prompt is printed when the terminal window is resized.
+   Might be related to this: ~window-adjust-process-window-size-function~.
+   This little bit of debugging might be useful:
+   #+BEGIN_SRC elisp
+   (with-current-buffer (get-buffer "*ansi-term-1*"))
+   (cl-pushnew #'(lambda (&rest args) (debug)) before-change-functions)
+   #+END_SRC
+
+   and to undo this debug setting...
+   #+BEGIN_SRC elisp
+   (with-current-buffer (get-buffer "*ansi-term-1*"))
+   (pop before-change-functions)
+   #+END_SRC
+
+   This was apparently due to the ~steef~ prompt I was using in ~zprezto~.  It must've
+   been using special control characters.
+
+** DONE Fix "unbound helm-source-info-elisp" error
+   Looks like my custom Emacs build caused a change in default
+   directories?  This fixed it:
+   #+BEGIN_SRC elisp
+   (with-eval-after-load 'info
+     (customize-save-variable
+      'Info-default-directory-list
+      '("/usr/share/info/emacs-27" "/usr/local/share/info/"
+        "/usr/share/info/" "/usr/share/info/")))
+   #+END_SRC
 
 * Old Settings
 ** Conda
@@ -268,103 +376,3 @@ Defers to standard `conda--find-env-yml' otherwise."
 
 (add-hook 'tex-mode-hook 'btw/tex-mode-settings)
 #+END_SRC
-
-
-* DONE [#A] Configure ~persp-mode~, ~projectile-mode~ and ~pyvenv~ to work together :python:projectile:persp:pyvenv:
-  CLOSED: [2018-04-27 Fri 19:21]
-  - Note taken on [2018-04-27 Fri 19:20] \\
-    The =python-extras= layer now provides venv switching functionality.
-  - Note taken on [2018-01-28 Sun 12:54] \\
-    Extending [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-process-name%20(dedicated)][~python-shell-get-process-name~]] to include
-    ~projectile-project-name~ might enable per-project inferior processes.
-
-  - Note taken on [2018-01-19 Fri 14:46] \\
-    Perhaps the [[file:~/.emacs.d/layers/+spacemacs/spacemacs-layouts/funcs.el::(defun%20spacemacs/layout-switch-by-pos%20(pos)][spacemacs layout switching function]] should call
-    ~projectile-persp-switch-project~ instead of ~persp-switch~.  We could advise
-    ~persp-switch~ or simply replace ~spacemacs/layout-switch-by-pos~.  Either way, I
-    think we'll need to check for an associated project, get the name or location
-    and pass *that* to ~projectile-persp-switch-project~.
-    Also, check out [[https://gist.github.com/Bad-ptr/1aca1ec54c3bdb2ee80996eb2b68ad2d#file-persp-projectile-auto-persp-el][these customizations]].
-
-  - [X] Fix [[file:/usr/share/emacs/27.0.50/lisp/progmodes/python.el.gz::(defun%20python-shell-get-buffer%20()][python-mode inferior buffer]] naming/initialization; we should be assigning inferior processes to
-    projects/perspectives, so naming could be one way to do that.
-
-  - [-] Implement an alist with project/perspective-to-venv entries.
-    [[https://github.com/bbatsov/projectile/issues/139][Here's a discussion]] on project-local variables.  [[https://github.com/emacs-php/projectile-variable][This]] looks like an existing solution.
-    We need to add venv awareness to ~org-babel~ via
-    ~org-babel-prep-session:python~.  ~org-babel~ might only need
-    ~python-shell-virtualenv-root~ set in order to start a venv-ed inferior shell.
-    =blah=.
-
-    This doesn't need to be done.
-
-  - [X] Hook for project/perspective changes.
-    The correct "hook" may be ~persp-before-switch-functions~.
-    #+BEGIN_SRC elisp
-    (defun persp-pyvenv-switch ())
-    (add-to-list 'persp-before-switch-functions #'(lambda (persp-name frame-or-window)
-                                                    (message "Switching to %s" persp-name)))
-    #+END_SRC
-
-    #+BEGIN_SRC elisp
-    ;; TODO: After persp change, check for virtualenv change.
-    (cl-pushnew #'(lambda (window)
-                    (debug)
-                    ;; (safe-persp-parameters (get-current-persp))
-
-                    ;; XXX: This does a `locate-dominating-file' search.
-                    ;; (spacemacs//pyvenv-mode-set-local-virtualenv)
-
-                    ;; (when (and (bound-and-true-p project-pyvenv-virtual-env-name)
-                    ;;            (eq project-pyvenv-virtual-env-name pyvenv-virtual-env-name))
-                    ;;   (pyvenv-workon pyvenv-virtual-env-name))
-                    )
-                persp-activated-functions)
-    #+END_SRC
-
-* DONE Try ~ob-async~ (again)                                       :orgmode:
-  CLOSED: [2018-04-22 Sun 14:20]
-
-* DONE Should ~spacemacs|use-package-add-hook~ be used instead of ~with-eval-after-load~?
-  CLOSED: [2018-04-22 Sun 14:20]
-  [2018-03-09 Fri]
-  [[file:~/.spacemacs.d/init.el::;;%20(spacemacs|use-package-add-hook%20org]]
-* DONE Clean up ~user-config~                                     :spacemacs:
-  CLOSED: [2018-04-27 Fri 10:32]
-  - Note taken on [2018-04-22 Sun 14:18] \\
-    Moved org-mode and Python settings and functions to the layers =org-extras= and =python-extras=.
-  [[file:init.el::(defun%20dotspacemacs/user-config%20()][~dotspacemacs/user-config~]] is too busy, and only getting busier.  Some of its
-  content should be broken off into new layers and/or packages.
-
-* DONE [#A] Fix flycheck for Python virtual envs.                    :python:
-  CLOSED: [2018-03-17 Sat 14:20]
-  See variables involving ~python-pylint~ and ~python-pycompile~.
-* DONE [#B] Fix ~ansi-term~ redraws
-  CLOSED: [2018-01-14 Sun 19:15]
-  A new line and prompt is printed when the terminal window is resized.
-  Might be related to this: ~window-adjust-process-window-size-function~.
-  This little bit of debugging might be useful:
-  #+BEGIN_SRC elisp
-  (with-current-buffer (get-buffer "*ansi-term-1*"))
-  (cl-pushnew #'(lambda (&rest args) (debug)) before-change-functions)
-  #+END_SRC
-
-  and to undo this debug setting...
-  #+BEGIN_SRC elisp
-  (with-current-buffer (get-buffer "*ansi-term-1*"))
-  (pop before-change-functions)
-  #+END_SRC
-
-  This was apparently due to the ~steef~ prompt I was using in ~zprezto~.  It must've
-  been using special control characters.
-
-* DONE Fix "unbound helm-source-info-elisp" error
-  Looks like my custom Emacs build caused a change in default
-  directories?  This fixed it:
-  #+BEGIN_SRC elisp
-  (with-eval-after-load 'info
-    (customize-save-variable
-     'Info-default-directory-list
-     '("/usr/share/info/emacs-27" "/usr/local/share/info/"
-       "/usr/share/info/" "/usr/share/info/")))
-  #+END_SRC
