@@ -61,10 +61,7 @@ values."
      syntax-checking
      ;; FIXME: We get `semantic-idle-scheduler-function' errors in `polymode' modes.
      (semantic :enabled-for emacs-lisp common-lisp python)
-     common-lisp
-     ;; This is supposed to be faster than `linum'.
-     ;; TODO: Use Emacs 26 native line numbers.
-     nlinum)
+     common-lisp)
    dotspacemacs-additional-packages '(
                                       ;; elisp file manipulation library
                                       f
@@ -87,6 +84,11 @@ values."
                                       dockerfile-mode
 
                                       evil-extra-operator
+
+                                      ;; Override with local versions.
+                                      ;; XXX: Make sure package locations are on the `load-path'.
+                                      (hy-mode :location local)
+                                      (org-ref :location local)
 
                                       ;; Use a newer version of python.el.
                                       (python :location elpa :min-version "0.26.1"))
@@ -156,16 +158,16 @@ values."
    dotspacemacs-mode-line-unicode-symbols t
    dotspacemacs-smooth-scrolling nil
    dotspacemacs-line-numbers '(:relative nil
-                               :disabled-for-modes dired-mode
-                                                   doc-view-mode
-                                                   markdown-mode
-                                                   ;; org-mode
-                                                   pdf-view-mode
-                                                   ;; text-mode
-                                                   xwidget-webkit-mode
-                                                   edebug-mode
-                                                   debugger-mode
-
+                               :enabled-for-modes emacs-lisp-mode
+                                                  ; prog-mode
+                                                  ; text-mode
+                               ;; :disabled-for-modes dired-mode
+                               ;;                     doc-view-mode
+                               ;;                     markdown-mode
+                               ;;                     pdf-view-mode
+                               ;;                     xwidget-webkit-mode
+                               ;;                     edebug-mode
+                               ;;                     debugger-mode
                                :size-limit-kb 1000)
    dotspacemacs-folding-method 'evil
    dotspacemacs-smartparens-strict-mode nil
@@ -188,15 +190,17 @@ before packages are loaded. If you are unsure, you should try in setting them in
 
   ;; (toggle-debug-on-error)
 
-  (setq load-path (append '("~/.spacemacs.d/") load-path))
+  (dolist (file (seq-take-while #'file-exists-p
+                                '("~/.spacemacs.d/"
+                                  "~/projects/code/emacs/hy-mode"
+                                  "~/projects/code/emacs/org-ref")))
+    (add-to-list 'load-path file))
 
   (setq Info-default-directory-list
     '("/usr/share/info/emacs-27" "/usr/local/share/info/" "/usr/share/info/"))
 
   ;; Viper is loaded/installed automatically, but we want it disabled.
-  (setq package-load-list '(all
-                            (viper nil)
-                            ))
+  (setq package-load-list '(all (viper nil)))
 
   ;; Fix for anaconda env interaction with pyvenv.
   (setenv "WORKON_HOME" "~/apps/anaconda3/envs")
@@ -278,6 +282,11 @@ you should place your code here."
 
   (setq fill-indent-according-to-mode t)
 
+  (with-eval-after-load 'magit
+    (setq magit-repository-directories '(("~/projects/code" . 3)
+                                         ("~/projects/papers" . 3)
+                                         ("~/projects/citybase" . 3))))
+
   (with-eval-after-load 'editorconfig
     (add-to-list 'editorconfig-exclude-modes 'help-mode)
     (add-to-list 'editorconfig-exclude-modes 'edebug-mode)
@@ -288,8 +297,6 @@ you should place your code here."
 
   (with-eval-after-load 'python
     (setq-default python-eldoc-get-doc nil))
-
-  ;; (add-hook 'hy-mode-hook #'(lambda () (require 'spacemacs-hy)))
 
   (with-eval-after-load 'vim-powerline-theme
     ;; Egh, doesn't really work.

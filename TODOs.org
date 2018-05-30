@@ -292,6 +292,19 @@
         "/usr/share/info/" "/usr/share/info/")))
    #+END_SRC
 
+** TODO Re-purpose existing =use-package= calls in order to set custom package location.
+   [2018-05-30 Wed]
+   [[file:~/.spacemacs.d/init.el::;;%20(use-package%20org-ref]]
+
+   For example, src_elisp{org-ref}'s src_elisp{use-package} can be found in src_elisp{bibtex/init-org-ref}.
+
+   #+BEGIN_SRC elisp
+   ;; (use-package org-ref
+   ;;   :defer t
+   ;;   :load-path ("~/projects/code/emacs/org-ref"))
+
+   (symbol-function bibtex/init-org-ref)
+   #+END_SRC
 * Old Settings
 ** Conda
 #+BEGIN_SRC elisp
