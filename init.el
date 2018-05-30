@@ -50,6 +50,7 @@ values."
      emacs-lisp
      git
      scheme
+     pdf-tools
      (org :variables
           org-enable-github-support t
           org-projectile-file "TODOs.org")
@@ -158,16 +159,15 @@ values."
    dotspacemacs-mode-line-unicode-symbols t
    dotspacemacs-smooth-scrolling nil
    dotspacemacs-line-numbers '(:relative nil
-                               :enabled-for-modes emacs-lisp-mode
-                                                  ; prog-mode
-                                                  ; text-mode
-                               ;; :disabled-for-modes dired-mode
-                               ;;                     doc-view-mode
-                               ;;                     markdown-mode
-                               ;;                     pdf-view-mode
-                               ;;                     xwidget-webkit-mode
-                               ;;                     edebug-mode
-                               ;;                     debugger-mode
+                               :enabled-for-modes prog-mode
+                                                  text-mode
+                               :disabled-for-modes dired-mode
+                                                   doc-view-mode
+                                                   markdown-mode
+                                                   pdf-view-mode
+                                                   xwidget-webkit-mode
+                                                   edebug-mode
+                                                   debugger-mode
                                :size-limit-kb 1000)
    dotspacemacs-folding-method 'evil
    dotspacemacs-smartparens-strict-mode nil
@@ -188,7 +188,7 @@ executes.
 before packages are loaded. If you are unsure, you should try in setting them in
 `dotspacemacs/user-config' first."
 
-  ;; (toggle-debug-on-error)
+  (toggle-debug-on-error)
 
   (dolist (file (seq-take-while #'file-exists-p
                                 '("~/.spacemacs.d/"
