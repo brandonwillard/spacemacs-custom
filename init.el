@@ -35,7 +35,8 @@ values."
      sql
      ;; noweb
      (c-c++ :variables
-            ;; company-c-headers-path-user '("../include" "./include" "." "../../include" "../inc" "../../inc")
+            ;; company-c-headers-path-user '("../include" "./include" "." "../../include"
+            ;;                               "../inc" "../../inc")
             c-c++-enable-clang-support t
             c-c++-default-mode-for-headers 'c++-mode)
      helm
@@ -185,19 +186,22 @@ values."
 It is called immediately after `dotspacemacs/init', before layer configuration
 executes.
  This function is mostly useful for variables that need to be set
-before packages are loaded. If you are unsure, you should try in setting them in
+before packages are loaded. If you are unsure, you should try setting them in
 `dotspacemacs/user-config' first."
 
   (toggle-debug-on-error)
 
-  (dolist (file (seq-take-while #'file-exists-p
-                                '("~/.spacemacs.d/"
-                                  "~/projects/code/emacs/hy-mode"
-                                  "~/projects/code/emacs/org-ref")))
-    (add-to-list 'load-path file))
+  (cl-defun btw/add-valid-paths-to-list (target-list object-list &optional append)
+    (dolist (file (seq-take-while #'file-exists-p object-list))
+      (add-to-list target-list (expand-file-name file) append)))
 
-  (setq Info-default-directory-list
-    '("/usr/share/info/emacs-27" "/usr/local/share/info/" "/usr/share/info/"))
+  (btw/add-valid-paths-to-list 'load-path
+                               '("~/.spacemacs.d" "~/projects/code/emacs/hy-mode"
+                                 "~/projects/code/emacs/org-ref"))
+
+  (btw/add-valid-paths-to-list 'Info-default-directory-list
+                               '("/usr/share/info/emacs-27" "/usr/local/share/info"
+                                 "/usr/share/info"))
 
   ;; Viper is loaded/installed automatically, but we want it disabled.
   (setq package-load-list '(all (viper nil)))
@@ -255,13 +259,13 @@ you should place your code here."
   (setq-mode-local makefile-mode indent-tabs-mode t)
 
   (defun btw//lightweight-debug-settings ()
-      (setq-local truncate-lines t)
-      (setq-local print-level 4)
-      (setq-local print-length 4)
-      (setq-local eval-expression-print-level 4)
-      (setq-local eval-expression-print-length 4)
-      ;; `global-hl-line-mode' can slow down tracebacks considerably.
-      (spacemacs/disable-hl-line-mode))
+    (setq-local truncate-lines t)
+    (setq-local print-level 4)
+    (setq-local print-length 4)
+    (setq-local eval-expression-print-level 4)
+    (setq-local eval-expression-print-length 4)
+    ;; `global-hl-line-mode' can slow down tracebacks considerably.
+    (spacemacs/disable-hl-line-mode))
 
   (add-hook 'edebug-mode-hook #'btw//lightweight-debug-settings)
   (add-hook 'debugger-mode-hook #'btw//lightweight-debug-settings)
@@ -273,14 +277,15 @@ you should place your code here."
   ;; XXX: This will stop completion with TAB (but also fix annoying noops when
   ;; attempting to indent lines).
   (setq tab-always-indent t)
+  (setq fill-indent-according-to-mode t)
+
+  (spacemacs/toggle-aggressive-indent-on)
 
   (setq compilation-scroll-output #'first-error)
 
   ;; Change default spacemacs keybinding.
   (spacemacs/set-leader-keys "nd" 'narrow-to-defun)
   (unbind-key (kbd "nf") spacemacs-default-map)
-
-  (setq fill-indent-according-to-mode t)
 
   (with-eval-after-load 'magit
     (setq magit-repository-directories '(("~/projects/code" . 3)
@@ -342,7 +347,7 @@ you should place your code here."
     ;; (setq org-plantuml-jar-path plantuml-jar-path)
 
     (add-to-list 'org-babel-load-languages
-                  '(plantuml . t))
+                 '(plantuml . t))
 
     (defun spacemacs//org-latex-pdf-process (file-name)
       "XXX: This will err-out because of org-export's assumption that the output
@@ -447,8 +452,8 @@ you should place your code here."
 
 From https://stackoverflow.com/a/37356659/3006474"
     (let* ((buf-name "*Messages*")
-          ;; Create *Messages* buffer if it does not exist
-          (buf (get-buffer-create buf-name)))
+           ;; Create *Messages* buffer if it does not exist
+           (buf (get-buffer-create buf-name)))
       ;; Activate this advice only if the point is _not_ in the *Messages* buffer
       ;; to begin with. This condition is required; otherwise you will not be
       ;; able to use `isearch' and other stuff within the *Messages* buffer as
@@ -496,7 +501,12 @@ From https://stackoverflow.com/a/37356659/3006474"
               'append))
 
   (use-package plantuml-mode
-    :init (setq plantuml-jar-path (expand-file-name "~/apps/plantuml.jar")))
+    :init (setq plantuml-jar-path (expand-file-name "~/apps/plantuml.jar"))
+    :config (progn
+              (defun btw/plantuml-custom-graphvizdot-location (cmd-list)
+                (append cmd-list (list "-graphvizdot" (executable-find "dot"))))
+              (advice-add #'plantuml-render-command :filter-return
+                          #'btw/plantuml-custom-graphvizdot-location)))
 
   (use-package embrace
     :init (progn
