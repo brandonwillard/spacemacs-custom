@@ -51,7 +51,7 @@ values."
      emacs-lisp
      git
      scheme
-     pdf-tools
+     pdf
      (org :variables
           org-enable-github-support t
           org-projectile-file "TODOs.org")
