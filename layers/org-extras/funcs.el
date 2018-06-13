@@ -134,6 +134,22 @@ for the output directory."
                        err-msg)))
       output)))
 
+(defun spacemacs//org-remove-headlines (backend)
+  "Remove headlines with :no_title: tag.
+
+From https://emacs.stackexchange.com/a/9494/19170"
+  (org-map-entries (lambda ()
+                     (let ((beg (point)))
+                       (outline-next-visible-heading 1)
+                       (backward-char)
+                       (delete-region beg
+                                      (point))))
+                   "no_export"
+                   tree)
+  (org-map-entries (lambda ()
+                     (delete-region (point-at-bol)
+                                    (point-at-eol)))
+                   "no_title"))
 (defun spacemacs//set-nobreak-predicate ()
   (setq fill-nobreak-predicate
         (cl-pushnew #'spacemacs//in-org-src-inline fill-nobreak-predicate)))

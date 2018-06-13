@@ -27,6 +27,7 @@ This layer adds extra support for =org-mode=.
     - The bibliography block is printed in the location of the last =#+BIBLIOGRAPHY=.
   - Syntax highlighting for inline src statements (i.e. =src_<lang>[...]{...}=).
     - Support for non-breaking text fill (e.g. =fill-region=) of inline src statements.
+  - =:no_title:= tag removes appearance/name of headlines
 
 * Install
 To use this configuration layer, add it to your =~/.spacemacs=. You will need to

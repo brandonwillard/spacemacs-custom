@@ -32,6 +32,8 @@
 
       (add-hook 'org-mode-hook #'spacemacs//set-nobreak-predicate)
 
+      (add-hook 'org-export-before-processing-hook #'spacemacs//org-remove-headlines)
+
       (advice-add 'org-babel-python-session-buffer :around
                   #'spacemacs//org-babel-python-session-buffer)
 
