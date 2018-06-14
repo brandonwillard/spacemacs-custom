@@ -104,8 +104,8 @@
                               (org-babel-get-src-block-info)))
                       name)))
   (s-join "\n"
-          "#+ATTR_LATEX: :mode table :float t :center t :environment adjusttabular"
-          (format "#+CAPTION: %s" caption)
-          (format "#+NAME: tab:%s" block-name)
-          data))
+          \`("#+ATTR_LATEX: :mode table :float t :center t :environment adjusttabular"
+            ,(format "#+CAPTION: %s" caption)
+            ,(format "#+NAME: tab:%s" block-name)
+            ,data)))
 #+END_SRC
