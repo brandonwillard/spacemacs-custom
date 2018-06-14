@@ -21,6 +21,7 @@ values."
      (latex :variables
             latex-build-command "Make")
      bibtex
+     graphviz
      ;; (ess :variables
      ;;      ess-disable-underscore-assign t
      ;;      :packages (not ess-R-object-popup))
@@ -90,7 +91,7 @@ values."
                                       ;; Override with local versions.
                                       ;; XXX: Make sure package locations are on the `load-path'.
                                       (hy-mode :location local)
-                                      (org-ref :location local)
+                                      ;; (org-ref :location local)
 
                                       ;; Use a newer version of python.el.
                                       (python :location elpa :min-version "0.26.1"))
@@ -115,7 +116,7 @@ values."
    dotspacemacs-startup-lists '((recents . 5)
                                 (projects . 7))
    dotspacemacs-startup-buffer-responsive t
-   dotspacemacs-scratch-mode 'org-mode
+   ;; dotspacemacs-scratch-mode 'org-mode
    dotspacemacs-themes '(spacemacs-dark
                          spacemacs-light)
    dotspacemacs-colorize-cursor-according-to-state t
@@ -248,6 +249,11 @@ This is the place where most of your configurations should be done. Unless it is
 explicitly specified that a variable should be set before a package is loaded,
 you should place your code here."
 
+  ;; Hack for `exec-path' not being used by `shell-command-to-string'.
+  ;; We're basically setting `process-environment', which is used by those shell commands.
+  ;; (seq-filter (lambda (var) (s-contains-p "PATH=" var)) process-environment)
+  (setenv "PATH" (s-join ":" (delete-dups exec-path)))
+
   (setq comment-empty-lines t)
   (setq evil-move-beyond-eol t)
   (setq evil-search-wrap nil)
@@ -348,6 +354,8 @@ you should place your code here."
 
     (add-to-list 'org-babel-load-languages
                  '(plantuml . t))
+    (add-to-list 'org-babel-load-languages
+                 '(dot . t))
 
     (defun spacemacs//org-latex-pdf-process (file-name)
       "XXX: This will err-out because of org-export's assumption that the output
