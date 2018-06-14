@@ -12,6 +12,20 @@
 ;;; Code:
 
 (when (configuration-layer/package-used-p 'org-ref)
+  (defun spacemacs//org-ref-enable-bib-as-option ()
+    (add-to-list 'org-export-options-alist
+                 '(:bibliography "BIBLIOGRAPHY" nil nil split))
+    (add-to-list 'org-export-options-alist
+                 '(:bibliographystyle "BIBLIOGRAPHYSTYLE" nil
+                                      nil t))
+    (advice-add 'org-ref-find-bibliography :override 'spacemacs//org-ref-find-bibliography)
+    (add-to-list 'org-export-filter-parse-tree-functions
+                 'spacemacs//org-ref-parse-bib-latex-entries))
+  (defun spacemacs//org-ref-disable-bib-as-option ()
+    (setq org-export-options-alist (assq-delete-all :bibliography org-export-options-alist))
+    (setq org-export-options-alist (assq-delete-all :bibliographystyle org-export-options-alist))
+    (advice-remove 'org-ref-find-bibliography 'spacemacs//org-ref-find-bibliography)
+    (remove-hook 'org-export-filter-parse-tree-functions 'spacemacs//org-ref-parse-bib-latex-entries))
   (defun spacemacs//org-ref-find-bibliography ()
   "Find the bibliography files in the current buffer.
 
@@ -45,17 +59,20 @@ keyword."
         info)
       (if last-bib-elem
           (let* ((bib-style (plist-get info :bibliographystyle))
+                 ;; `org-ref' doesn't know about derived modes, so use the parent.
+                 (backend-parent (or (org-export-backend-parent (org-export-get-backend backend))
+                                     backend))
                  (bib-value (org-ref-bibliography-format
                              (string-join (plist-get info :bibliography) ",")
                              ;; (org-element-property :value last-bib-elem)
-                             nil backend))
+                             nil backend-parent))
                  (parent (org-element-property :parent last-bib-elem))
                  (parent-end (org-element-property :end parent))
                  (new-bib-elem))
-            (if (and bib-style (or (eq backend 'beamer) (eq backend 'latex)))
+            (if (and bib-style (eq backend-parent 'latex))
                 (setq bib-value (concat (format "\\bibliographystyle{%s}\n" bib-style) bib-value)))
             (setq new-bib-elem (org-element-create 'export-block
-                                                   (list :type (string-inflection-upcase-function (symbol-name backend))
+                                                   (list :type (string-inflection-upcase-function (symbol-name backend-parent))
                                                          :value bib-value
                                                          :begin parent-end
                                                          :end (+ parent-end (seq-length bib-value)))))
@@ -138,14 +155,14 @@ for the output directory."
   "Remove headlines with :no_title: tag.
 
 From https://emacs.stackexchange.com/a/9494/19170"
-  (org-map-entries (lambda ()
-                     (let ((beg (point)))
-                       (outline-next-visible-heading 1)
-                       (backward-char)
-                       (delete-region beg
-                                      (point))))
-                   "no_export"
-                   tree)
+  ;; (org-map-entries (lambda ()
+  ;;                    (let ((beg (point)))
+  ;;                      (outline-next-visible-heading 1)
+  ;;                      (backward-char)
+  ;;                      (delete-region beg
+  ;;                                     (point))))
+  ;;                  "no_export"
+  ;;                  'tree)
   (org-map-entries (lambda ()
                      (delete-region (point-at-bol)
                                     (point-at-eol)))

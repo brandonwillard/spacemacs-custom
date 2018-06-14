@@ -88,3 +88,12 @@ figures and whatnot.")
   "output"
   "Name of the output directory for a projectile project used to store
 compiled results (e.g. PDFs).")
+
+(spacemacs|add-toggle org-ref-bib-as-option
+  :documentation
+  "Turn org-ref bibliography links into org-mode options."
+  :status (advice-member-p 'spacemacs//org-ref-find-bibliography 'org-ref-find-bibliography)
+  :on (when (symbol-function 'spacemacs//org-ref-enable-bib-as-option)
+        (spacemacs//org-ref-enable-bib-as-option))
+  :off (when (symbol-function 'spacemacs//org-ref-disable-bib-as-option)
+         (spacemacs//org-ref-disable-bib-as-option)))

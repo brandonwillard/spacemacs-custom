@@ -9,7 +9,7 @@
 ;;
 ;;; License: GPLv3
 
-(configuration-layer/declare-layer 'org)
+(configuration-layer/declare-layer '(org bibtex))
 
 ;; TODO: What about shadowing the original org layer?
 ;; configuration-layer/declare-shadow-relation

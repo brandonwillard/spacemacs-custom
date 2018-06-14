@@ -80,23 +80,12 @@
       (add-to-list 'org-babel-load-languages '(emacs-lisp . t)))))
 
 (defun org-extras/pre-init-org-ref ()
-  (spacemacs|use-package-add-hook org-ref
-    :post-config (progn
-                   (add-to-list 'org-export-options-alist
-                                '(:bibliography "BIBLIOGRAPHY" nil nil split))
-                   (add-to-list 'org-export-options-alist
-                                '(:bibliographystyle "BIBLIOGRAPHYSTYLE" nil
-                                                     nil t))
-                   (advice-add 'org-ref-find-bibliography :override 'spacemacs//org-ref-find-bibliography)
-                   (add-to-list 'org-export-filter-parse-tree-functions 'spacemacs//org-ref-parse-bib-latex-entries)
-
-                   ;; Undo changes
-                   ;; (setq org-export-options-alist (assq-delete-all :bibliography org-export-options-alist))
-                   ;; (setq org-export-options-alist (assq-delete-all :bibliographystyle org-export-options-alist))
-                   ;; (advice-remove 'org-ref-find-bibliography 'spacemacs//org-ref-find-bibliography)
-                   ;; (remove-hook 'org-export-filter-parse-tree-functions 'spacemacs//org-ref-parse-bib-latex-entries)
-
-                   (setq org-ref-prefer-bracket-links t))))
+  ;; XXX: The following doesn't seem to work (possibly related to https://github.com/syl20bnr/spacemacs/issues/7633)
+  ;; (spacemacs|use-package-add-hook org-ref
+  ;;   :post-config ...)
+  (with-eval-after-load 'org-ref
+    (spacemacs/toggle-org-ref-bib-as-option-on)
+    (setq org-ref-prefer-bracket-links t)))
 
 (defun org-extras/pre-init-ob-hy ()
   (spacemacs|use-package-add-hook org
@@ -131,7 +120,6 @@
                       :override #'spacemacs//ob-ipython--process-response)
           (advice-add 'ob-ipython--render :override #'spacemacs//ob-ipython--render)
           (advice-add 'ob-ipython--dump-error :override #'spacemacs//ob-ipython--dump-error)))))
-
 (defun org-extras/init-ob-ipython ())
 
 (defun org-extras/pre-init-org-agenda ()
