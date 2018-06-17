@@ -389,3 +389,45 @@ Defers to standard `conda--find-env-yml' otherwise."
 
 (add-hook 'tex-mode-hook 'btw/tex-mode-settings)
 #+END_SRC
+** Messages Buffer
+   #+BEGIN_SRC elisp :eval never
+   (defun btw/messages-auto-tail (&rest _)
+     "Make *Messages* buffer auto-scroll to the end after each message.
+
+    From https://stackoverflow.com/a/37356659/3006474"
+     (let* ((buf-name "*Messages*")
+            ;; Create *Messages* buffer if it does not exist
+            (buf (get-buffer-create buf-name)))
+       ;; Activate this advice only if the point is _not_ in the *Messages* buffer
+       ;; to begin with. This condition is required; otherwise you will not be
+       ;; able to use `isearch' and other stuff within the *Messages* buffer as
+       ;; the point will keep moving to the end of buffer :P
+       (when (not (string= buf-name (buffer-name)))
+         ;; Go to the end of buffer in all *Messages* buffer windows that are
+         ;; *live* (`get-buffer-window-list' returns a list of only live windows).
+         (dolist (win (get-buffer-window-list buf-name nil :all-frames))
+           (with-selected-window win
+             (goto-char (point-max))))
+         ;; Go to the end of the *Messages* buffer even if it is not in one of
+         ;; the live windows.
+         (with-current-buffer buf
+           (goto-char (point-max))))))
+   (advice-add 'message :after #'btw/messages-auto-tail)
+
+   (defun btw/ad-timestamp-message (format-string &rest args)
+     "Advice to run before `message' that prepends a timestamp to each message.
+     Activate this advice with:
+       (advice-add 'message :before 'btw/ad-timestamp-message)
+     Deactivate this advice with:
+       (advice-remove 'message 'btw/ad-timestamp-message)
+     From https://emacs.stackexchange.com/a/33523"
+     (if message-log-max
+         (let ((deactivate-mark nil)
+               (inhibit-read-only t))
+           (with-current-buffer "*Messages*"
+             (goto-char (point-max))
+             (if (not (bolp))
+                 (newline))
+             (insert (format-time-string "[%F %T.%3N] "))))))
+   (advice-add 'message :before 'btw/ad-timestamp-message)
+   #+END_SRC

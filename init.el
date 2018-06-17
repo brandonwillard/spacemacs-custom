@@ -1,11 +1,6 @@
 ;; -*- mode: emacs-lisp -*-
-;; This file is loaded by Spacemacs at startup.
-;; It must be stored in your home directory.
 
 (defun dotspacemacs/layers ()
-  "Configuration Layers declaration.
-You should not put any user code in this function besides modifying the variable
-values."
   (setq-default
    dotspacemacs-distribution 'spacemacs
    dotspacemacs-enable-lazy-installation 'unused
@@ -81,6 +76,8 @@ values."
                                       ;; ox-confluence
                                       plantuml-mode
 
+                                      org-gcal
+
                                       ;; Now in hy layer.
                                       ;; ob-hy
 
@@ -91,7 +88,7 @@ values."
                                       ;; Override with local versions.
                                       ;; XXX: Make sure package locations are on the `load-path'.
                                       (hy-mode :location local)
-                                      ;; (org-ref :location local)
+                                      (org-ref :location local)
 
                                       ;; Use a newer version of python.el.
                                       (python :location elpa :min-version "0.26.1"))
@@ -100,11 +97,6 @@ values."
    dotspacemacs-install-packages 'used-only))
 
 (defun dotspacemacs/init ()
-  "Initialization function.
-This function is called at the very startup of Spacemacs initialization
-before layers configuration.
-You should not put any user code in there besides modifying the variable
-values."
   (setq-default
    dotspacemacs-elpa-https t
    dotspacemacs-elpa-timeout 5
@@ -183,12 +175,6 @@ values."
    dotspacemacs-switch-to-buffer-prefers-purpose nil))
 
 (defun dotspacemacs/user-init ()
-  "Initialization function for user code.
-It is called immediately after `dotspacemacs/init', before layer configuration
-executes.
- This function is mostly useful for variables that need to be set
-before packages are loaded. If you are unsure, you should try setting them in
-`dotspacemacs/user-config' first."
 
   (toggle-debug-on-error)
 
@@ -197,7 +183,9 @@ before packages are loaded. If you are unsure, you should try setting them in
       (add-to-list target-list (expand-file-name file) append)))
 
   (btw/add-valid-paths-to-list 'load-path
-                               '("~/.spacemacs.d" "~/projects/code/emacs/hy-mode"
+                               ;; TODO: Use `dotspacemacs-directory'?
+                               '("~/.spacemacs.d"
+                                 "~/projects/code/emacs/hy-mode"
                                  "~/projects/code/emacs/org-ref"))
 
   (btw/add-valid-paths-to-list 'Info-default-directory-list
@@ -220,39 +208,11 @@ before packages are loaded. If you are unsure, you should try setting them in
   (setq debugger-stack-frame-as-list t)
   (setq edebug-print-circle t)
   (setq edebug-print-level 4)
-  (setq print-circle t)
-
-  (defun btw/ad-timestamp-message (format-string &rest args)
-    "Advice to run before `message' that prepends a timestamp to each message.
-    Activate this advice with:
-      (advice-add 'message :before 'btw/ad-timestamp-message)
-    Deactivate this advice with:
-      (advice-remove 'message 'btw/ad-timestamp-message)
-    From https://emacs.stackexchange.com/a/33523"
-    (if message-log-max
-        (let ((deactivate-mark nil)
-              (inhibit-read-only t))
-          (with-current-buffer "*Messages*"
-            (goto-char (point-max))
-            (if (not (bolp))
-                (newline))
-            (insert (format-time-string "[%F %T.%3N] "))))))
-
-  ;; (advice-add 'message :before 'btw/ad-timestamp-message)
-  )
+  (setq print-circle t))
 
 (defun dotspacemacs/user-config ()
-  "Configuration function for user code.
-This function is called at the very end of Spacemacs initialization after
-layers configuration.
-This is the place where most of your configurations should be done. Unless it is
-explicitly specified that a variable should be set before a package is loaded,
-you should place your code here."
 
-  ;; Hack for `exec-path' not being used by `shell-command-to-string'.
-  ;; We're basically setting `process-environment', which is used by those shell commands.
-  ;; (seq-filter (lambda (var) (s-contains-p "PATH=" var)) process-environment)
-  (setenv "PATH" (s-join ":" (delete-dups exec-path)))
+  (loop repeat 3 do (spacemacs/zoom-frm-out))
 
   (setq comment-empty-lines t)
   (setq evil-move-beyond-eol t)
@@ -294,7 +254,8 @@ you should place your code here."
   (unbind-key (kbd "nf") spacemacs-default-map)
 
   (with-eval-after-load 'magit
-    (setq magit-repository-directories '(("~/projects/code" . 3)
+    (setq magit-repository-directories '(("~/" . 1)
+                                         ("~/projects/code" . 3)
                                          ("~/projects/papers" . 3)
                                          ("~/projects/citybase" . 3))))
 
@@ -328,16 +289,18 @@ you should place your code here."
           org-ref-prefer-bracket-links t))
 
   (with-eval-after-load 'lsp
+    (lsp-define-stdio-client lsp-python "python"
+			                       (lsp-make-traverser #'(lambda (dir)
+                                                     (or (when (fboundp 'projectile-project-root)
+                                                           (projectile-project-root))
+						                                             (directory-files dir nil "setup.py"))))
+			                       '("pyls"))
     (setq lsp-enable-eldoc nil))
 
   (with-eval-after-load 'lsp-ui
     (setq lsp-ui-sideline-delay nil)
     (setq lsp-ui-sideline-show-hover nil)
     (setq lsp-ui-sideline-enable nil))
-
-  ;; (spacemacs|use-package-add-hook org
-  ;;   :post-config (add-to-list 'org-babel-load-languages
-  ;;                             '(plantuml . t)))
 
   (with-eval-after-load 'org
     ;; (use-package ob-hy
@@ -455,30 +418,6 @@ you should place your code here."
     ;; (spacemacs/set-leader-keys "k" evil-lisp-state-map)
     )
 
-  (defun btw/messages-auto-tail (&rest _)
-    "Make *Messages* buffer auto-scroll to the end after each message.
-
-From https://stackoverflow.com/a/37356659/3006474"
-    (let* ((buf-name "*Messages*")
-           ;; Create *Messages* buffer if it does not exist
-           (buf (get-buffer-create buf-name)))
-      ;; Activate this advice only if the point is _not_ in the *Messages* buffer
-      ;; to begin with. This condition is required; otherwise you will not be
-      ;; able to use `isearch' and other stuff within the *Messages* buffer as
-      ;; the point will keep moving to the end of buffer :P
-      (when (not (string= buf-name (buffer-name)))
-        ;; Go to the end of buffer in all *Messages* buffer windows that are
-        ;; *live* (`get-buffer-window-list' returns a list of only live windows).
-        (dolist (win (get-buffer-window-list buf-name nil :all-frames))
-          (with-selected-window win
-            (goto-char (point-max))))
-        ;; Go to the end of the *Messages* buffer even if it is not in one of
-        ;; the live windows.
-        (with-current-buffer buf
-          (goto-char (point-max))))))
-
-  ;; (advice-add 'message :after #'btw/messages-auto-tail)
-
   (with-eval-after-load 'persp-mode
     ;; Add all opened buffers (filter certain ones below).
     (setq persp-add-buffer-on-after-change-major-mode t)
@@ -507,6 +446,31 @@ From https://stackoverflow.com/a/37356659/3006474"
     (add-hook 'comint-output-filter-functions
               #'btw/comint-preoutput-turn-buffer-read-only
               'append))
+
+  (use-package org-gcal
+    :config (progn
+              (when-let* ((client-info (cdr (car (json-read-file
+                                                  (f-join dotspacemacs-directory
+                                                          "private"
+                                                          "org-gcal-brandonwillard-gmail.json")))))
+                          (client-id (alist-get 'client_id client-info))
+                          (client-secret (alist-get 'client_secret client-info)))
+                ;; TODO: Use `plstore'/authstore
+                ;; (add-to-list 'auth-sources "~/.authinfo.json.gpg")
+                (setq org-gcal-client-id client-id
+                      org-gcal-client-secret client-secret
+                      org-gcal-file-alist '(("brandonwillard@gmail.com" .
+                                             (f-join dotspacemacs-directory
+                                                     "private"
+                                                     "brandonwillard-gcal.org"))))
+                ;; (add-hook 'org-capture-after-finalize-hook (lambda () (org-gcal-sync) ))
+                (with-eval-after-load 'org-agenda
+                  ;; (add-hook 'org-agenda-mode-hook (lambda () (org-gcal-sync) ))
+                  ;; TODO: Map values and `add-to-list'.
+                  (add-to-list 'org-agenda-files
+                               (f-join dotspacemacs-directory
+                                       "private"
+                                       "brandonwillard-gcal.org"))))))
 
   (use-package plantuml-mode
     :init (setq plantuml-jar-path (expand-file-name "~/apps/plantuml.jar"))
@@ -590,57 +554,59 @@ From https://stackoverflow.com/a/37356659/3006474"
   (with-eval-after-load 'evil-jumps
     (setq evil-jumps-cross-buffers nil))
 
-  (defun btw/clang-format-bindings ()
-    (define-key c++-mode-map [tab] 'clang-format-buffer)
-    (global-set-key [C-M-tab] 'clang-format-region))
+  (with-eval-after-load 'c++-mode
+    (defun btw/clang-format-bindings ()
+      (define-key c++-mode-map [tab] 'clang-format-buffer)
+      (global-set-key [C-M-tab] 'clang-format-region))
 
-  (add-hook 'c++-mode-hook 'btw/clang-format-bindings)
+    (add-hook 'c++-mode-hook 'btw/clang-format-bindings))
 
-  (declare-function term-send-raw-string "term.el")
+  (with-eval-after-load 'term
+    (declare-function term-send-raw-string "term.el")
 
-  (defun btw/send-C-r ()
-    (interactive)
-    (term-send-raw-string "\C-r"))
+    (defun btw/send-C-r ()
+      (interactive)
+      (term-send-raw-string "\C-r"))
 
-  (defun btw/setup-term-mode ()
-    "From https://github.com/syl20bnr/spacemacs/issues/2345"
-    (evil-local-set-key 'insert (kbd "C-r") 'btw/send-C-r))
+    (defun btw/setup-term-mode ()
+      "From https://github.com/syl20bnr/spacemacs/issues/2345"
+      (evil-local-set-key 'insert (kbd "C-r") 'btw/send-C-r))
 
-  (add-hook 'term-mode-hook
-            (function
-             (lambda ()
-               ;; (setq-local fringe-mode nil)
-               ;; (setq-local fringes-outside-margins t)
-               ;; (setq term-prompt-regexp "^[^#$%>\n]*[#$%>] *")
-               ;; (setq-local mouse-yank-at-point t)
-               ;; (setq-local transient-mark-mode nil)
-               (auto-fill-mode -1)
-               ;; (setq tab-width 8 )
-               )))
+    (add-hook 'term-mode-hook
+              (function
+               (lambda ()
+                 ;; (setq-local fringe-mode nil)
+                 ;; (setq-local fringes-outside-margins t)
+                 ;; (setq term-prompt-regexp "^[^#$%>\n]*[#$%>] *")
+                 ;; (setq-local mouse-yank-at-point t)
+                 ;; (setq-local transient-mark-mode nil)
+                 (auto-fill-mode -1)
+                 ;; (setq tab-width 8 )
+                 )))
 
-  (add-hook 'term-mode-hook 'btw/setup-term-mode)
+    (add-hook 'term-mode-hook 'btw/setup-term-mode)
 
-  (defvar term-width)
-  ;; This was apparently renamed.
-  ;; (defvar term-terminal-parameter)
-  ;; (define-obsolete-variable-alias 'term-terminal-parameter 'term-terminal-undecoded-bytes)
-  (defvar term-terminal-undecoded-bytes)
-  (declare-function term-move-columns "term.el")
-  (declare-function term-current-column "term.el")
+    (defvar term-width)
+    ;; This was apparently renamed.
+    ;; (defvar term-terminal-parameter)
+    ;; (define-obsolete-variable-alias 'term-terminal-parameter 'term-terminal-undecoded-bytes)
+    (defvar term-terminal-undecoded-bytes)
+    (declare-function term-move-columns "term.el")
+    (declare-function term-current-column "term.el")
 
-  (defun btw/term-handle-more-ansi-escapes (proc params char)
-    "Handle additional ansi escapes.
+    (defun btw/term-handle-more-ansi-escapes (proc params char)
+      "Handle additional ansi escapes.
 From https://emacs.stackexchange.com/a/10698"
-    (cond
-     ;; \E[nG - Cursor Horizontal Absolute, e.g. move cursor to column n
-     ((eq char ?G)
-      (let ((col (min term-width
-                      (max 0 (or term-terminal-undecoded-bytes 0)))))
-        (term-move-columns (- col
-                              (term-current-column)))))
-     (t)))
+      (cond
+       ;; \E[nG - Cursor Horizontal Absolute, e.g. move cursor to column n
+       ((eq char ?G)
+        (let ((col (min term-width
+                        (max 0 (or term-terminal-undecoded-bytes 0)))))
+          (term-move-columns (- col
+                                (term-current-column)))))
+       (t)))
 
-  (advice-add 'term-handle-ansi-escape :before #'btw/term-handle-more-ansi-escapes)
+    (advice-add 'term-handle-ansi-escape :before #'btw/term-handle-more-ansi-escapes))
 
   (when (file-exists-p custom-file)
     (load-file custom-file)))
