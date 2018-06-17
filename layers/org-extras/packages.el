@@ -64,7 +64,8 @@
 
       (defun spacemacs//org-export-latex-add-tcolorbox (body backend info)
         "Add a custom tcolorbox listing environment to the latex-header-extra options."
-        (when (eq backend 'latex)
+        (when (or (eq backend 'latex)
+                  (eq 'latex (org-export-backend-parent (org-export-get-backend backend))))
           (concat org-latex-tcolorbox-listing-env "\n" body)
           ;; (plist-put options :latex-header-extra `(,org-latex-tcolorbox-listing-env))
           ))
@@ -122,14 +123,16 @@
           (advice-add 'ob-ipython--dump-error :override #'spacemacs//ob-ipython--dump-error)))))
 (defun org-extras/init-ob-ipython ())
 
-(defun org-extras/pre-init-org-agenda ()
-  (spacemacs|use-package-add-hook org-projectile
-    :post-config (let ((existing-todos (-filter 'f-exists-p
-                                                (org-projectile-todo-files))))
-                   ;; Add todo files from existing projects.
-                   (setq org-agenda-files (append org-agenda-files existing-todos)))))
+(defun org-extras/pre-init-org-agenda ())
 
-(defun org-extras/post-init-org-projectile ())
+(defun org-extras/post-init-org-projectile ()
+  (when (configuration-layer/package-used-p 'org-agenda)
+    (with-eval-after-load 'org-agenda
+      (require 'org-projectile)
+      (let ((existing-todos (seq-filter 'f-exists-p
+                                        (org-projectile-todo-files))))
+        ;; Add TODO files from existing projects.
+        (setq org-agenda-files (append org-agenda-files existing-todos))))))
 
 (defun org-extras/init-ob-async ()
   (use-package ob-async))
