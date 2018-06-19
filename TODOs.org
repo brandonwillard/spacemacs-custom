@@ -47,19 +47,52 @@
        (f-symlink (f-join dotspacemacs-directory "private")
                   (concat user-emacs-directory "private")))
    #+END_SRC
-** TODO ~org-mode~ to Google Tasks, Calendar, etc.          :orgmode:syncing:
-   There's a push/pull/sync tool [[https://bitbucket.org/edgimar/michel-orgmode][here]].
+** TODO Sync ~org-mode~ to Gmail, Google Tasks, Calendar, etc. :orgmode:syncing:
+   - Note taken on [2018-06-16 Sat 20:36] \\
+     Set up ~org-gcal~; appears to work, but auth info isn't very secure and
+     recurring events appear as individual entries instead of one.  Also, there's
+     no support for multiple accounts (there is a PR that supposedly works).
+
+     Here's my working setup:
+     #+BEGIN_SRC elisp
+     (use-package org-gcal
+         :config (progn
+                   (when-let* ((client-info (cdr (car (json-read-file
+                                                       (f-join dotspacemacs-directory
+                                                               "private"
+                                                               "org-gcal-brandonwillard-gmail.json")))))
+                               (client-id (alist-get 'client_id client-info))
+                               (client-secret (alist-get 'client_secret client-info)))
+                     ;; TODO: Use `plstore'/authstore
+                     ;; (add-to-list 'auth-sources "~/.authinfo.json.gpg")
+                     (setq org-gcal-client-id client-id
+                           org-gcal-client-secret client-secret
+                           org-gcal-file-alist '(("brandonwillard@gmail.com" .
+                                                  (f-join dotspacemacs-directory
+                                                          "private"
+                                                          "brandonwillard-gcal.org"))))
+                     ;; (add-hook 'org-capture-after-finalize-hook (lambda () (org-gcal-sync) ))
+                     (with-eval-after-load 'org-agenda
+                       ;; (add-hook 'org-agenda-mode-hook (lambda () (org-gcal-sync) ))
+                       ;; TODO: Map values and `add-to-list'.
+                       (add-to-list 'org-agenda-files
+                                    (f-join dotspacemacs-directory
+                                            "private"
+                                            "brandonwillard-gcal.org"))))))
+     #+END_SRC
+
+   There's a push/pull/sync tool for Google Tasks [[https://bitbucket.org/edgimar/michel-orgmode][here]].
 ** TODO Fix project-root finding in ~lsp-mode~                          :lsp:
    - Note taken on [2018-03-17 Sat 14:03] \\
      For example, =lsp-python= uses the following to find a project's root directory:
      #+BEGIN_SRC elisp
      (lsp-define-stdio-client lsp-python "python"
-                              (lsp-make-traverser #'(lambda (dir)
-                                                      (directory-files
-                                                       dir
-                                                       nil
-                                                       "\\(__init__\\|setup\\)\\.py")))
-                              '("pyls"))
+			                       (lsp-make-traverser #'(lambda (dir)
+                                                     (or (when (fboundp 'projectile-project-root)
+                                                           (projectile-project-root))
+                                                         (directory-files
+                                                          dir nil "\\(__init__\\|setup\\)\\.py"))))
+			                       '("pyls"))
      #+END_SRC
 
      This only applies to projects that are Python packages.  Even then, I'm not sure it does

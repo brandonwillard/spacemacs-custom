@@ -46,6 +46,7 @@
                       auto-completion-enable-help-tooltip 'manual)
      emacs-lisp
      git
+     (github :variables magit-gh-pulls-pull-detail-limit 200)
      scheme
      pdf
      (org :variables
@@ -60,6 +61,8 @@
      ;; FIXME: We get `semantic-idle-scheduler-function' errors in `polymode' modes.
      (semantic :enabled-for emacs-lisp common-lisp python)
      common-lisp)
+
+   ;; FYI: You can use MELPA recipes here (i.e. https://github.com/melpa/melpa#recipe-format).
    dotspacemacs-additional-packages '(
                                       ;; elisp file manipulation library
                                       f
@@ -84,6 +87,9 @@
                                       dockerfile-mode
 
                                       evil-extra-operator
+
+                                      (helpful :location (recipe :fetcher github
+                                                                 :repo "Wilfred/helpful"))
 
                                       ;; Override with local versions.
                                       ;; XXX: Make sure package locations are on the `load-path'.
@@ -172,11 +178,13 @@
    dotspacemacs-search-tools '("ag" "pt" "ack" "grep")
    dotspacemacs-default-package-repository nil
    dotspacemacs-whitespace-cleanup 'trailing
+   dotspacemacs-import-env-vars-shell-file-name shell-file-name
    dotspacemacs-switch-to-buffer-prefers-purpose nil))
 
 (defun dotspacemacs/user-init ()
 
-  (toggle-debug-on-error)
+  (setq init-file-debug nil)
+  (setq debug-on-error t)
 
   (cl-defun btw/add-valid-paths-to-list (target-list object-list &optional append)
     (dolist (file (seq-take-while #'file-exists-p object-list))
@@ -196,7 +204,25 @@
   (setq package-load-list '(all (viper nil)))
 
   ;; Fix for anaconda env interaction with pyvenv.
-  (setenv "WORKON_HOME" "~/apps/anaconda3/envs")
+  (setq conda-home (or (getenv "ANACONDA_HOME") "~/apps/anaconda3"))
+  (setenv "ANACONDA_HOME" conda-home)
+  (setenv "WORKON_HOME" (concat conda-home "/" "envs"))
+
+  ;; Just to be sure (and because we're seeing some new problems with PATH var
+  ;; output from `shell-command-to-string' under let-bound `shell-file-name'),
+  ;; let's make sure the conda binaries are available.
+  (add-to-list 'exec-path (expand-file-name (concat conda-home "/" "bin")))
+
+  ;; Hack for `exec-path' not being used by `shell-command-to-string'.
+  ;; We're basically setting `process-environment', which is used by those shell commands.
+  ;; (seq-filter (lambda (var) (s-starts-with-p "PATH=" var)) process-environment)
+  (setenv "PATH" (mapconcat #'identity (delete-dups exec-path) ":"))
+
+  ;; Looks like `spacemacs/loadenv' is cutting off DBUS_SESSION_BUS_ADDRESS at the "="!
+  ;; (when-let* (((string-equal (getenv "DBUS_SESSION_BUS_ADDRESS") "unix:path"))
+  ;;             (bus-path (format "/run/user/%s/bus" (user-uid)))
+  ;;             ((file-exists-p bus-path)))
+  ;;   (setenv "DBUS_SESSION_BUS_ADDRESS" (concat "unix:path=" bus-path)))
 
   (setq custom-file (concat user-emacs-directory "private/custom-settings.el"))
 
@@ -212,7 +238,15 @@
 
 (defun dotspacemacs/user-config ()
 
-  (loop repeat 3 do (spacemacs/zoom-frm-out))
+  (defun btw/spacemacs--set-zoom-factor (zoom-factor)
+    (when-let* ((cur-zoom-factor (or (frame-parameter (selected-frame) 'zoomed) 0))
+                (zoom-diff (- cur-zoom-factor zoom-factor))
+                (zoom-dir (if (< zoom-diff 0) 1 -1)))
+      (when (/= zoom-diff 0)
+        (loop repeat (abs zoom-diff) do (spacemacs//zoom-frm-do zoom-dir))
+        (spacemacs//zoom-frm-powerline-reset))))
+
+  (btw/spacemacs--set-zoom-factor -4)
 
   (setq comment-empty-lines t)
   (setq evil-move-beyond-eol t)
@@ -252,6 +286,69 @@
   ;; Change default spacemacs keybinding.
   (spacemacs/set-leader-keys "nd" 'narrow-to-defun)
   (unbind-key (kbd "nf") spacemacs-default-map)
+
+  (use-package helpful)
+
+  (use-package org-gcal
+    :config (progn
+              (when-let* ((client-info (cdr (car (json-read-file
+                                                  (f-join dotspacemacs-directory
+                                                          "private"
+                                                          "org-gcal-brandonwillard-gmail.json")))))
+                          (client-id (alist-get 'client_id client-info))
+                          (client-secret (alist-get 'client_secret client-info)))
+                ;; TODO: Use `plstore'/authstore
+                ;; (add-to-list 'auth-sources "~/.authinfo.json.gpg")
+                (setq org-gcal-client-id client-id
+                      org-gcal-client-secret client-secret
+                      org-gcal-file-alist '(("brandonwillard@gmail.com" .
+                                             (f-join dotspacemacs-directory
+                                                     "private"
+                                                     "brandonwillard-gcal.org"))))
+                ;; (add-hook 'org-capture-after-finalize-hook (lambda () (org-gcal-sync) ))
+                (with-eval-after-load 'org-agenda
+                  ;; (add-hook 'org-agenda-mode-hook (lambda () (org-gcal-sync) ))
+                  ;; TODO: Map values and `add-to-list'.
+                  (add-to-list 'org-agenda-files
+                               (f-join dotspacemacs-directory
+                                       "private"
+                                       "brandonwillard-gcal.org"))))))
+
+  (use-package plantuml-mode
+    :init (setq plantuml-jar-path (expand-file-name "~/apps/plantuml.jar"))
+    :config (progn
+              (defun btw/plantuml-custom-graphvizdot-location (cmd-list)
+                (append cmd-list (list "-graphvizdot" (executable-find "dot"))))
+              (advice-add #'plantuml-render-command :filter-return
+                          #'btw/plantuml-custom-graphvizdot-location)))
+
+  (use-package embrace
+    :init (progn
+            (add-hook 'LaTeX-mode-hook 'embrace-LaTeX-mode-hook)
+            (add-hook 'org-mode-hook 'embrace-org-mode-hook))
+    :functions embrace-add-pair-regexp
+    :config (progn
+              (defun btw/embrace-emacs-lisp-mode-hook ()
+                ;; (assq-delete-all ?f embrace--pairs-list)
+                (defun embrace-with-function-elisp ()
+                  (let ((fname (read-string "Function: ")))
+                    (cons (format "(%s "
+                                  (or fname "")) ")")))
+                (embrace-add-pair-regexp ?f
+                                         "(\\(\\sw\\|\\s_\\)+?\\s-+?"
+                                         ")"
+                                         'embrace-with-function-elisp
+                                         (embrace-build-help "(function " ")")
+                                         nil))
+              (advice-add 'embrace-emacs-lisp-mode-hook
+                          :after #'btw/embrace-emacs-lisp-mode-hook)
+              (add-hook 'emacs-lisp-mode-hook 'embrace-emacs-lisp-mode-hook)))
+
+  (use-package evil-embrace
+    :init (evil-embrace-enable-evil-surround-integration))
+
+  (use-package dockerfile-mode
+    :mode ("Dockerfile\\'" . dockerfile-mode))
 
   (with-eval-after-load 'magit
     (setq magit-repository-directories '(("~/" . 1)
@@ -293,7 +390,8 @@
 			                       (lsp-make-traverser #'(lambda (dir)
                                                      (or (when (fboundp 'projectile-project-root)
                                                            (projectile-project-root))
-						                                             (directory-files dir nil "setup.py"))))
+                                                         (directory-files
+                                                          dir nil "\\(__init__\\|setup\\)\\.py"))))
 			                       '("pyls"))
     (setq lsp-enable-eldoc nil))
 
@@ -447,67 +545,6 @@
               #'btw/comint-preoutput-turn-buffer-read-only
               'append))
 
-  (use-package org-gcal
-    :config (progn
-              (when-let* ((client-info (cdr (car (json-read-file
-                                                  (f-join dotspacemacs-directory
-                                                          "private"
-                                                          "org-gcal-brandonwillard-gmail.json")))))
-                          (client-id (alist-get 'client_id client-info))
-                          (client-secret (alist-get 'client_secret client-info)))
-                ;; TODO: Use `plstore'/authstore
-                ;; (add-to-list 'auth-sources "~/.authinfo.json.gpg")
-                (setq org-gcal-client-id client-id
-                      org-gcal-client-secret client-secret
-                      org-gcal-file-alist '(("brandonwillard@gmail.com" .
-                                             (f-join dotspacemacs-directory
-                                                     "private"
-                                                     "brandonwillard-gcal.org"))))
-                ;; (add-hook 'org-capture-after-finalize-hook (lambda () (org-gcal-sync) ))
-                (with-eval-after-load 'org-agenda
-                  ;; (add-hook 'org-agenda-mode-hook (lambda () (org-gcal-sync) ))
-                  ;; TODO: Map values and `add-to-list'.
-                  (add-to-list 'org-agenda-files
-                               (f-join dotspacemacs-directory
-                                       "private"
-                                       "brandonwillard-gcal.org"))))))
-
-  (use-package plantuml-mode
-    :init (setq plantuml-jar-path (expand-file-name "~/apps/plantuml.jar"))
-    :config (progn
-              (defun btw/plantuml-custom-graphvizdot-location (cmd-list)
-                (append cmd-list (list "-graphvizdot" (executable-find "dot"))))
-              (advice-add #'plantuml-render-command :filter-return
-                          #'btw/plantuml-custom-graphvizdot-location)))
-
-  (use-package embrace
-    :init (progn
-            (add-hook 'LaTeX-mode-hook 'embrace-LaTeX-mode-hook)
-            (add-hook 'org-mode-hook 'embrace-org-mode-hook))
-    :functions embrace-add-pair-regexp
-    :config (progn
-              (defun btw/embrace-emacs-lisp-mode-hook ()
-                ;; (assq-delete-all ?f embrace--pairs-list)
-                (defun embrace-with-function-elisp ()
-                  (let ((fname (read-string "Function: ")))
-                    (cons (format "(%s "
-                                  (or fname "")) ")")))
-                (embrace-add-pair-regexp ?f
-                                         "(\\(\\sw\\|\\s_\\)+?\\s-+?"
-                                         ")"
-                                         'embrace-with-function-elisp
-                                         (embrace-build-help "(function " ")")
-                                         nil))
-              (advice-add 'embrace-emacs-lisp-mode-hook
-                          :after #'btw/embrace-emacs-lisp-mode-hook)
-              (add-hook 'emacs-lisp-mode-hook 'embrace-emacs-lisp-mode-hook)))
-
-  (use-package evil-embrace
-    :init (evil-embrace-enable-evil-surround-integration))
-
-  (use-package dockerfile-mode
-    :mode ("Dockerfile\\'" . dockerfile-mode))
-
   (with-eval-after-load 'evil
     (setq-default evil-want-visual-char-semi-exclusive t)
     (setq-default evil-move-curser-back nil)
@@ -562,6 +599,9 @@
     (add-hook 'c++-mode-hook 'btw/clang-format-bindings))
 
   (with-eval-after-load 'term
+    ;; TODO: See https://github.com/emacs-evil/evil-collection and
+    ;; `evil-collection-term-sync-state-and-mode-p'.
+
     (declare-function term-send-raw-string "term.el")
 
     (defun btw/send-C-r ()
