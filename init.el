@@ -10,7 +10,7 @@
    '(
      csv
      (javascript :packages (not tern))
-     ;; (lsp :packages (not flycheck-lsp lsp-ui))
+     (lsp :packages (not flycheck-lsp lsp-ui))
      html
      markdown
      (latex :variables
@@ -22,8 +22,8 @@
      ;;      :packages (not ess-R-object-popup))
      (python :variables
              python-test-runner 'pytest
-             python-auto-set-local-pyvenv-virtualenv 'on-project-switch
-             python-backend nil
+             python-auto-set-local-pyvenv-virtualenv 'on-visit
+             python-backend 'lsp
              :packages (not live-py-mode))
      python-extras
      hy
@@ -385,13 +385,17 @@
           org-ref-bibliography-notes "~/projects/papers/references/notes.org"
           org-ref-prefer-bracket-links t))
 
-  (with-eval-after-load 'lsp
+  (with-eval-after-load 'lsp-mode
+    (defun btw/lsp-python-workspace-root ()
+      (or (when (fboundp 'projectile-project-root)
+            (projectile-project-root))
+          (lsp-make-traverser (directory-files dir nil "\\(__init__\\|setup\\)\\.py"))
+          (if lsp-message-project-root-warning
+              (message "Couldn't find project root, using the current directory as the root.")
+            (lsp-warn "Couldn't find project root, using the current directory as the root.")
+            default-directory)))
     (lsp-define-stdio-client lsp-python "python"
-			                       (lsp-make-traverser #'(lambda (dir)
-                                                     (or (when (fboundp 'projectile-project-root)
-                                                           (projectile-project-root))
-                                                         (directory-files
-                                                          dir nil "\\(__init__\\|setup\\)\\.py"))))
+			                       #'btw/lsp-python-workspace-root
 			                       '("pyls"))
     (setq lsp-enable-eldoc nil))
 
