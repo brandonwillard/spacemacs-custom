@@ -8,6 +8,7 @@
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
    '(
+     slack
      csv
      (javascript :packages (not tern))
      (lsp :packages (not flycheck-lsp lsp-ui))
@@ -26,7 +27,7 @@
              python-backend 'lsp
              :packages (not live-py-mode))
      python-extras
-     hy
+     (hy :variables hy-shell-spy-delim "\n--spy-output--\n")
      yaml
      sql
      ;; noweb
@@ -53,11 +54,25 @@
           org-enable-github-support t
           org-projectile-file "TODOs.org")
      org-extras
+
      (shell :variables
             shell-default-height 30
             shell-default-position 'bottom)
+
      spell-checking
      syntax-checking
+
+     ;; (rcirc :variables rcirc-enable-authinfo-support t)
+     (erc :variables
+          erc-server-list
+          '(("irc.freenode.net"
+             ;; :port "6697"
+             :ssl t
+             :nick "brandonwillard"
+             ))
+          erc-enable-notifications t
+          erc-enable-sasl-auth t)
+
      ;; FIXME: We get `semantic-idle-scheduler-function' errors in `polymode' modes.
      (semantic :enabled-for emacs-lisp common-lisp python)
      common-lisp)
@@ -81,9 +96,6 @@
 
                                       org-gcal
 
-                                      ;; Now in hy layer.
-                                      ;; ob-hy
-
                                       dockerfile-mode
 
                                       evil-extra-operator
@@ -95,6 +107,7 @@
                                       ;; XXX: Make sure package locations are on the `load-path'.
                                       (hy-mode :location local)
                                       (org-ref :location local)
+                                      (ob-hy :location local)
 
                                       ;; Use a newer version of python.el.
                                       (python :location elpa :min-version "0.26.1"))
@@ -193,6 +206,7 @@
   (btw/add-valid-paths-to-list 'load-path
                                ;; TODO: Use `dotspacemacs-directory'?
                                '("~/.spacemacs.d"
+                                 "~/projects/code/emacs/ob-hy"
                                  "~/projects/code/emacs/hy-mode"
                                  "~/projects/code/emacs/org-ref"))
 
@@ -226,7 +240,9 @@
 
   (setq custom-file (concat user-emacs-directory "private/custom-settings.el"))
 
-  (setq browse-url-browser-function 'eww-browse-url)
+  (setq browse-url-browser-function '((".*slack.*" . browse-url-chrome)
+                                      (".*youtube.*" . browse-url-chrome)
+                                      ("." . eww-browse-url)))
   ;; (setq browse-url-browser-function 'xwidget-webkit-browse-url)
 
   ;; Helps with delays while handling very long lines.
@@ -237,16 +253,6 @@
   (setq print-circle t))
 
 (defun dotspacemacs/user-config ()
-
-  (defun btw/spacemacs--set-zoom-factor (zoom-factor)
-    (when-let* ((cur-zoom-factor (or (frame-parameter (selected-frame) 'zoomed) 0))
-                (zoom-diff (- cur-zoom-factor zoom-factor))
-                (zoom-dir (if (< zoom-diff 0) 1 -1)))
-      (when (/= zoom-diff 0)
-        (loop repeat (abs zoom-diff) do (spacemacs//zoom-frm-do zoom-dir))
-        (spacemacs//zoom-frm-powerline-reset))))
-
-  (btw/spacemacs--set-zoom-factor -4)
 
   (setq comment-empty-lines t)
   (setq evil-move-beyond-eol t)
@@ -271,6 +277,9 @@
   (add-hook 'debugger-mode-hook #'btw//lightweight-debug-settings)
 
   (add-to-list 'debug-ignored-errors 'search-failed)
+  (add-to-list 'debug-ignored-errors "^Nothing to complete$")
+  (add-to-list 'debug-ignored-errors
+               "Company: backend (company-capf :with company-yasnippet) error \"Nothing to complete\" with args (annotation spacemacs//zoom-frm-do)")
 
   (setq-default sentence-end-double-space t)
 
@@ -350,6 +359,9 @@
   (use-package dockerfile-mode
     :mode ("Dockerfile\\'" . dockerfile-mode))
 
+  (with-eval-after-load 'erc
+    (setq erc-track-enable-keybindings nil))
+
   (with-eval-after-load 'magit
     (setq magit-repository-directories '(("~/" . 1)
                                          ("~/projects/code" . 3)
@@ -366,6 +378,11 @@
 
   (with-eval-after-load 'python
     (setq-default python-eldoc-get-doc nil))
+
+  (when (fboundp 'pyvenv-tracking-mode)
+    ;; Set buffer local `pyvenv-workon' values for automatic activation.
+    (setq pyvenv-tracking-ask-before-change t)
+    (pyvenv-tracking-mode +1))
 
   (with-eval-after-load 'vim-powerline-theme
     ;; Egh, doesn't really work.
@@ -405,12 +422,6 @@
     (setq lsp-ui-sideline-enable nil))
 
   (with-eval-after-load 'org
-    ;; (use-package ob-hy
-    ;;   :init
-    ;;   (progn
-    ;;     (add-to-list 'org-babel-load-languages
-    ;;                  '(hy . t))))
-
     ;; TODO: Consider this...
     ;; (org-babel-make-language-alias "python" "ipython")
 
@@ -613,7 +624,9 @@
       (term-send-raw-string "\C-r"))
 
     (defun btw/setup-term-mode ()
-      "From https://github.com/syl20bnr/spacemacs/issues/2345"
+      ;; This allow us to use the same global shortcut for `eval-expression'.
+      (unbind-key "M-:" term-raw-map)
+      ;; From https://github.com/syl20bnr/spacemacs/issues/2345
       (evil-local-set-key 'insert (kbd "C-r") 'btw/send-C-r))
 
     (add-hook 'term-mode-hook
@@ -652,5 +665,27 @@ From https://emacs.stackexchange.com/a/10698"
 
     (advice-add 'term-handle-ansi-escape :before #'btw/term-handle-more-ansi-escapes))
 
-  (when (file-exists-p custom-file)
-    (load-file custom-file)))
+  (defun btw/emacs-startup-layout ()
+    (spacemacs/find-dotfile)
+    (display-buffer-in-side-window (messages-buffer) '((side . right)))
+    (balance-windows-area))
+
+  (spacemacs|define-custom-layout "@Spacemacs"
+    :binding "e"
+    :body (btw/emacs-startup-layout))
+
+  ;;; Initialization steps
+
+  (defun btw/after-user-config-setup ()
+    ;; (require 'frame-cmds)
+    ;; (enlarge-font -3)
+    ;; (debug-on-entry #'enlarge-font)
+    (when (file-exists-p custom-file)
+      (load-file custom-file))
+    (btw/emacs-startup-layout))
+
+  ;; (spacemacs|do-after-display-system-init
+  ;;  (btw/after-user-config-setup))
+
+  (spacemacs/defer-until-after-user-config
+   #'btw/after-user-config-setup))

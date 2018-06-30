@@ -40,20 +40,23 @@
   (defun spacemacs//pyvenv-conda-env-shell-init (&rest process)
     "Activate the current env in a newly opened shell PROCESS.
 
-From https://github.com/necaris/conda.el/blob/master/conda.el#L339"
-    (when (bound-and-true-p pyvenv-virtual-env-name)
-      (let* ((activate-command (if (eq system-type 'windows-nt)
-                                   '("activate")
-                                 ;'("source" "activate")
-                                 '("conda" "activate")
-                                 ))
-             (full-command (append activate-command `(,pyvenv-virtual-env-name "\n")))
-             (command-string (combine-and-quote-strings full-command))
-             (buffer-or-process (if (not process)
-                                    (current-buffer)
-                                  process)))
-        (progn (message "sending %s to %S" command-string buffer-or-process)
-               (term-send-string buffer-or-process command-string)))))
+Inspired by https://github.com/necaris/conda.el/blob/master/conda.el#L339"
+    (when-let* ((pyvenv-env-name (or (bound-and-true-p pyvenv-virtual-env-name)
+                                     (bound-and-true-p pyvenv-workon)))
+                (activate-command (if (eq system-type 'windows-nt)
+                                      '("activate")
+                                        ;'("source" "activate")
+                                    '("conda" "activate")))
+                (full-command (append activate-command
+                                      `(,pyvenv-env-name "\n")))
+                (command-string (combine-and-quote-strings full-command))
+                (buffer-or-process (if (not process)
+                                       (current-buffer)
+                                     process)))
+      (progn
+        (message "sending %s to %S" command-string
+                 buffer-or-process)
+        (term-send-string buffer-or-process command-string))))
 
   (defun* spacemacs//pyvenv-mode-set-local-virtualenv (&optional (caller-name ""))
     "If the buffer-local and global values differ, [re]activate the env."
