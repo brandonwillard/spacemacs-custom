@@ -279,7 +279,7 @@
   (add-to-list 'debug-ignored-errors 'search-failed)
   (add-to-list 'debug-ignored-errors "^Nothing to complete$")
   (add-to-list 'debug-ignored-errors
-               "Company: backend (company-capf :with company-yasnippet) error \"Nothing to complete\" with args (annotation spacemacs//zoom-frm-do)")
+               "^Company: backend \(:?.*?\) error \"Nothing to complete\"")
 
   (setq-default sentence-end-double-space t)
 
@@ -492,6 +492,7 @@
     (setq TeX-command-default "Make"))
 
   (with-eval-after-load 'projectile
+    (setq projectile-tags-file-name ".TAGS")
     (setq projectile-use-git-grep t))
 
   (with-eval-after-load 'org-projectile
@@ -665,14 +666,12 @@ From https://emacs.stackexchange.com/a/10698"
 
     (advice-add 'term-handle-ansi-escape :before #'btw/term-handle-more-ansi-escapes))
 
-  (defun btw/emacs-startup-layout ()
-    (spacemacs/find-dotfile)
-    (display-buffer-in-side-window (messages-buffer) '((side . right)))
-    (balance-windows-area))
-
   (spacemacs|define-custom-layout "@Spacemacs"
     :binding "e"
-    :body (btw/emacs-startup-layout))
+    :body (progn (spacemacs/find-dotfile)
+                 (set-window-dedicated-p (get-buffer-window) t)
+                 (display-buffer-in-side-window (messages-buffer) '((side . right)))
+                 (balance-windows-area)))
 
   ;;; Initialization steps
 
@@ -680,12 +679,12 @@ From https://emacs.stackexchange.com/a/10698"
     ;; (require 'frame-cmds)
     ;; (enlarge-font -3)
     ;; (debug-on-entry #'enlarge-font)
+    ;; (persp-mode +1)
+    (add-hook 'persp-mode-hook
+              (lambda ()
+                (spacemacs/custom-perspective-@Spacemacs)))
     (when (file-exists-p custom-file)
-      (load-file custom-file))
-    (btw/emacs-startup-layout))
-
-  ;; (spacemacs|do-after-display-system-init
-  ;;  (btw/after-user-config-setup))
+      (load-file custom-file)))
 
   (spacemacs/defer-until-after-user-config
    #'btw/after-user-config-setup))
