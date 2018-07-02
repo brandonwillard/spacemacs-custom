@@ -23,5 +23,10 @@ except Exception:
 "
       "Code used to extract help information from a comint REPL.")
 
-(defvar spacemacs--pyvenv-virtual-env-name-prev nil
+(defvar spacemacs--pyvenv-virtual-env-name-prev
+  nil
   "Name of the previously active virtual env; nil otherwise")
+
+(defvar spacemacs--pyvenv-last-buffer
+  nil
+  "The last buffer considered by `pyvenv-track-virtualenv'.")

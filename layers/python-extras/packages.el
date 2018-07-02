@@ -45,6 +45,16 @@
     :init (add-hook 'python-mode-hook #'evil-text-object-python-add-bindings)))
 
 (defun python-extras/post-init-editorconfig ()
+
+  ;; (spacemacs|add-toggle editorconfig-sets-pyvenv
+  ;;   :documentation
+  ;;   "Let editorconfig check for a `pyvenv-workon' value and set it, if found."
+  ;;   :status (advice-member-p 'spacemacs//editorconfig-set-pyvenv 'editorconfig-set-pyvenv)
+  ;;   :on (advice-add 'editorconfig-set-pyvenv :around 'spacemacs//editorconfig-set-pyvenv)
+  ;;   :off (advice-remove 'editorconfig-set-pyvenv 'spacemacs//editorconfig-set-pyvenv))
+  ;;
+  ;; (spacemacs/toggle-editorconfig-sets-pyvenv-on)
+
   (add-hook 'editorconfig-custom-hooks #'spacemacs//editorconfig-set-pyvenv))
 
 (defun python-extras/post-init-projectile ())
@@ -121,6 +131,16 @@ See `company-transformers'."
   (advice-add #'pyvenv-virtualenvwrapper-supported
               :filter-return #'python-extras//filter-venvwrapper-supported-anaconda-hooks)
 
+  ;; (spacemacs|add-toggle pyvenv-track-buffer-changes
+  ;;   :documentation
+  ;;   "Activate pyvenv tracking only on buffer changes."
+  ;;   :status (advice-member-p 'spacemacs//pyvenv-track-virtualenv 'pyvenv-track-virtualenv)
+  ;;   :on (advice-add 'pyvenv-track-virtualenv :around 'spacemacs//pyvenv-track-virtualenv)
+  ;;   :off (advice-remove 'pyvenv-track-virtualenv 'spacemacs//pyvenv-track-virtualenv))
+  ;; (spacemacs/toggle-pyvenv-track-buffer-changes-on)
+
+  (advice-add #'pyvenv-track-virtualenv :around #'spacemacs//pyvenv-track-virtualenv)
+
   ;; If `pyvenv-workon' buffer-local variables is set, activate the corresponding
   ;; venv when entering the buffer.
   ;; (pyvenv-tracking-mode +1)
@@ -129,7 +149,6 @@ See `company-transformers'."
   ;;   ...)
   ;; (advice-add #'pyvenv-activate :before #'python-extras//track-previous-pyvenv)
 
-  ;; These
   (add-hook 'pyvenv-post-activate-hooks #'spacemacs//pyvenv-conda-activate-additions)
   (add-hook 'pyvenv-post-deactivate-hooks #'spacemacs//pyvenv-conda-deactivate-additions)
   (add-hook 'term-exec-hook #'spacemacs//pyvenv-conda-env-shell-init))

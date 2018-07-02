@@ -58,26 +58,28 @@ Inspired by https://github.com/necaris/conda.el/blob/master/conda.el#L339"
                  buffer-or-process)
         (term-send-string buffer-or-process command-string))))
 
+  (defun spacemacs//pyvenv-track-virtualenv (oldfun &rest args)
+    "Functions like `pyvenv-track-virtualenv', but only checks when buffers are
+ changed.
+
+Based on https://github.com/10sr/switch-buffer-functions-el."
+    (unless (eq (current-buffer)
+                spacemacs--pyvenv-last-buffer)
+      (let ((current (current-buffer))
+            (previous spacemacs--pyvenv-last-buffer))
+        (setq spacemacs--pyvenv-last-buffer current)
+        (apply oldfun args))))
+
   (defun* spacemacs//pyvenv-mode-set-local-virtualenv (&optional (caller-name ""))
-    "If the buffer-local and global values differ, [re]activate the env."
-    ;; TODO: When `pyvenv-virtual-env-name' is initially set here, and not with a
-    ;; `setq' or `setq-default', all subsequent `setq' calls are applied to
-    ;; buffer-local values (if any).  This is a problem for the comparison below,
-    ;; since there will never be a non-nil `default-toplevel-value' and we'll
-    ;; needlessly [re]activate the venv.
-    ;; To work around this, we create a separate global variable that tracks
-    ;; the--potentially--local one.
-    ;; We could also use `(getenv "CONDA_DEFAULT_ENV")' (or another env var),
-    ;; but that's too conda/implementation-specific.
-    (when (and (boundp 'pyvenv-virtual-env-name)
-               (local-variable-p 'pyvenv-virtual-env-name)
-               (not (string-equal pyvenv-virtual-env-name
+    "If the buffer-local `pyvenv-workon' and global `pyvenv-virtual-env-name'
+ values differ, [re]activate the buffer's `pyvenv-workon' env."
+    (when (and (boundp 'pyvenv-workon)
+               (local-variable-p 'pyvenv-workon)
+               (not (string-equal pyvenv-workon
                         (or (ignore-errors (default-toplevel-value 'pyvenv-virtual-env-name))
                             spacemacs--pyvenv-virtual-env-name-prev))))
-      (message "(%s) setting local venv %s" caller-name pyvenv-virtual-env-name)
-      (pyvenv-workon pyvenv-virtual-env-name)
-      ;; TODO: Remove; it's just debugging.
-      (message "(%s) done setting local venv %s" caller-name pyvenv-virtual-env-name)))
+      (message "(%s) setting local venv %s" caller-name pyvenv-workon)
+      (pyvenv-workon pyvenv-workon)))
 
   (when (configuration-layer/package-used-p 'persp-mode)
     (defun spacemacs//persp-after-switch-set-venv (frame-or-window)
@@ -98,12 +100,12 @@ Inspired by https://github.com/necaris/conda.el/blob/master/conda.el#L339"
       (let ((env-name (gethash 'conda_env_name props)))
         (when (and env-name
                    (and (not (local-variable-p 'python-shell-virtualenv-root))
-                        (not (local-variable-p 'pyvenv-virtual-env-name))))
+                        (not (local-variable-p 'pyvenv-workon))))
           ;; We're setting this locally, but the variable is used globally, so we can
           ;; compare the two for a hackish means of determining buffer-specific envs.
           ;; See `spacemacs//pyvenv-mode-set-local-virtualenv'.
-          (message "(editorconfig) setting pyvenv-virtual-env-name to %s" env-name)
-          (setq-local pyvenv-virtual-env-name env-name)
+          (message "(editorconfig) setting pyvenv-workon to %s" env-name)
+          (setq-local pyvenv-workon env-name)
           ;; Activate the venv, if not already or currently in a different one.
           (spacemacs//pyvenv-mode-set-local-virtualenv "editorconfig")
           (when-let* ((workon-env (getenv "WORKON_HOME"))
