@@ -7,7 +7,7 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(
+   '(go
      slack
      csv
      (javascript :packages (not tern))
@@ -47,7 +47,7 @@
                       auto-completion-enable-help-tooltip 'manual)
      emacs-lisp
      git
-     (github :variables magit-gh-pulls-pull-detail-limit 200)
+     (github :variables magit-gh-pulls-pull-detail-limit 50)
      scheme
      pdf
      (org :variables
@@ -280,6 +280,7 @@
   (add-to-list 'debug-ignored-errors "^Nothing to complete$")
   (add-to-list 'debug-ignored-errors
                "^Company: backend \(:?.*?\) error \"Nothing to complete\"")
+  (add-to-list 'debug-ignored-errors 'lsp-timed-out-error)
 
   (setq-default sentence-end-double-space t)
 
@@ -367,6 +368,9 @@
                                          ("~/projects/code" . 3)
                                          ("~/projects/papers" . 3)
                                          ("~/projects/citybase" . 3))))
+
+  (with-eval-after-load 'magithub-dash
+    (setq magithub-dashboard-show-read-notifications nil))
 
   (with-eval-after-load 'editorconfig
     (add-to-list 'editorconfig-exclude-modes 'help-mode)
@@ -553,6 +557,16 @@
     (setq-default comint-prompt-read-only t)
     (setq-default comint-use-prompt-regexp nil)
     (setq-default inhibit-field-text-motion nil)
+    (setq-default comint-move-point-for-output t)
+
+    (defun btw/comint-maybe-goto-prompt ()
+      (when (derived-mode-p 'comint-mode)
+        (comint-goto-process-mark)))
+
+    (add-hook 'evil-insert-state-entry-hook
+              #'btw/comint-maybe-goto-prompt)
+    (add-hook 'evil-hybrid-state-entry-hook
+              #'btw/comint-maybe-goto-prompt)
 
     (defun btw/comint-preoutput-turn-buffer-read-only (text)
       (propertize text 'read-only t))
@@ -617,18 +631,42 @@
   (with-eval-after-load 'term
     ;; TODO: See https://github.com/emacs-evil/evil-collection and
     ;; `evil-collection-term-sync-state-and-mode-p'.
+    ;; For now, try some of the additions from this PR:
+    ;; https://github.com/syl20bnr/spacemacs/pull/10844
+    ;; TODO: Remove when merged.
+
+    (defun btw/term-enable-line-mode ()
+      "Enable `term-line-mode' when in `term-mode' buffer."
+      (when (eq major-mode 'term-mode)
+        (term-line-mode)))
+
+    (defun btw/term-enable-char-mode-maybe-goto-prompt ()
+      (when (eq major-mode 'term-mode)
+        ;; (unless (term-after-pmark-p)
+        ;;   (term-goto-process-mark-maybe))
+        (term-char-mode)))
+
+    (add-hook 'evil-insert-state-entry-hook
+              #'btw/term-enable-char-mode-maybe-goto-prompt)
+    (add-hook 'evil-hybrid-state-entry-hook
+              #'btw/term-enable-char-mode-maybe-goto-prompt)
+    (add-hook 'evil-normal-state-entry-hook
+              #'btw/term-enable-line-mode)
 
     (declare-function term-send-raw-string "term.el")
+    (declare-function term-send-del "term.el")
 
     (defun btw/send-C-r ()
       (interactive)
       (term-send-raw-string "\C-r"))
 
+    ;; This allow us to use the same global shortcut for `eval-expression'.
+    (unbind-key "M-:" term-raw-map)
+
     (defun btw/setup-term-mode ()
-      ;; This allow us to use the same global shortcut for `eval-expression'.
-      (unbind-key "M-:" term-raw-map)
+      (evil-local-set-key 'insert (kbd "<delete>") #'term-send-del)
       ;; From https://github.com/syl20bnr/spacemacs/issues/2345
-      (evil-local-set-key 'insert (kbd "C-r") 'btw/send-C-r))
+      (evil-local-set-key 'insert (kbd "C-r") #'btw/send-C-r))
 
     (add-hook 'term-mode-hook
               (function
@@ -642,7 +680,7 @@
                  ;; (setq tab-width 8 )
                  )))
 
-    (add-hook 'term-mode-hook 'btw/setup-term-mode)
+    (add-hook 'term-mode-hook #'btw/setup-term-mode)
 
     (defvar term-width)
     ;; This was apparently renamed.
