@@ -254,6 +254,9 @@
 
 (defun dotspacemacs/user-config ()
 
+  ;; TODO: Hack fix; consider fixing, and then removing, this.
+  (defun spacemacs/symbol-highlight-transient-state/body ())
+
   (setq comment-empty-lines t)
   (setq evil-move-beyond-eol t)
   (setq evil-search-wrap nil)
@@ -561,7 +564,8 @@
 
     (defun btw/comint-maybe-goto-prompt ()
       (when (derived-mode-p 'comint-mode)
-        (comint-goto-process-mark)))
+        (comint-goto-process-mark)
+        (move-end-of-line nil)))
 
     (add-hook 'evil-insert-state-entry-hook
               #'btw/comint-maybe-goto-prompt)

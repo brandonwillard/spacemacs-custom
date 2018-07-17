@@ -2,6 +2,10 @@
 #+AUTHOR: Brandon T. Willard
 
 * Tasks
+** TODO [#A] Fix ~spacemacs/symbol-highlight-transient-state/body~
+   The function src_elisp{spacemacs/symbol-highlight-transient-state/body} isn't
+   created before calls to it via @@html:<kbd>@@ * @@html:</kbd>@@.
+   See the calls to it in [[/home/bwillard/.emacs.d/layers/+spacemacs/spacemacs-navigation/funcs.el]].
 ** TODO [#A] Create Org LOB file for common export helpers and adjustments
    Put code from [[file:../projects/papers/tex-project-templates/src/org/org-export-init.el][=org-export-init.el=]] into an independent, versioned Org file to
    be loaded with ~org-babel-lob-ingest~.
