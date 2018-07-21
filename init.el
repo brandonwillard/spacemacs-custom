@@ -8,7 +8,6 @@
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
    '(go
-     slack
      csv
      (javascript :packages (not tern))
      (lsp :packages (not flycheck-lsp lsp-ui))
@@ -62,11 +61,12 @@
      spell-checking
      syntax-checking
 
+     slack
      ;; (rcirc :variables rcirc-enable-authinfo-support t)
      (erc :variables
           erc-server-list
-          '(("irc.freenode.net"
-             ;; :port "6697"
+          '(("chat.freenode.net"
+             :port "6697"
              :ssl t
              :nick "brandonwillard"
              ))
@@ -99,6 +99,9 @@
                                       dockerfile-mode
 
                                       evil-extra-operator
+
+                                      kubernetes
+                                      kubernetes-evil
 
                                       (helpful :location (recipe :fetcher github
                                                                  :repo "Wilfred/helpful"))
@@ -299,6 +302,18 @@
   ;; Change default spacemacs keybinding.
   (spacemacs/set-leader-keys "nd" 'narrow-to-defun)
   (unbind-key (kbd "nf") spacemacs-default-map)
+
+  (use-package kubernetes
+    ;; :ensure t
+    :commands (kubernetes-overview))
+
+  (use-package kubernetes-evil
+    ;; :ensure t
+    :after kubernetes)
+
+  (spacemacs|define-custom-layout "@Kubernetes"
+    :binding "K"
+    :body (progn (kubernetes-overview)))
 
   (use-package helpful)
 
