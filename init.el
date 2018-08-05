@@ -7,7 +7,8 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(go
+   '(clojure
+     go
      csv
      (javascript :packages (not tern))
      (lsp :packages (not flycheck-lsp lsp-ui))
@@ -287,6 +288,8 @@
   (add-to-list 'debug-ignored-errors
                "^Company: backend \(:?.*?\) error \"Nothing to complete\"")
   (add-to-list 'debug-ignored-errors 'lsp-timed-out-error)
+  (add-to-list 'debug-ignored-errors
+               "Candidates function ‘helm-ag--do-ag-candidate-process’ should run a process")
 
   (setq-default sentence-end-double-space t)
 
@@ -578,7 +581,10 @@
     (setq-default comint-move-point-for-output t)
 
     (defun btw/comint-maybe-goto-prompt ()
-      (when (derived-mode-p 'comint-mode)
+      (when (and (derived-mode-p 'comint-mode)
+                 ;; `term-mode' has a different idea of pmark.
+                 (not (derived-mode-p 'term-mode))
+                 (not (comint-after-pmark-p)))
         (comint-goto-process-mark)
         (move-end-of-line nil)))
 
@@ -624,7 +630,7 @@
     (setq purpose-display-at-bottom-height 0.4))
 
   (with-eval-after-load 'helm
-    (setq-default helm-follow-mode-persistent t)
+    (setq-default helm-follow-mode-persistent nil)
     (setq helm-always-two-windows nil)
     (setq helm-autoresize-mode nil)
     (setq helm-split-window-inside-p nil)
@@ -659,11 +665,22 @@
       (when (eq major-mode 'term-mode)
         (term-line-mode)))
 
+    (defun term-after-prompt-p ()
+      "Is point after the prompt?"
+      (let ((cur-point (point)))
+        (save-mark-and-excursion
+          (goto-char (term-process-mark))
+          (term-bol nil)
+          (<= (point) cur-point))))
+
+    (setq-default term-char-mode-point-at-process-mark nil)
+
     (defun btw/term-enable-char-mode-maybe-goto-prompt ()
       (when (eq major-mode 'term-mode)
-        ;; (unless (term-after-pmark-p)
-        ;;   (term-goto-process-mark-maybe))
-        (term-char-mode)))
+        (let ((term-char-mode-point-at-process-mark nil))
+          (unless (term-after-prompt-p)
+            (goto-char (term-process-mark)))
+          (term-char-mode))))
 
     (add-hook 'evil-insert-state-entry-hook
               #'btw/term-enable-char-mode-maybe-goto-prompt)
@@ -683,21 +700,17 @@
     (unbind-key "M-:" term-raw-map)
 
     (defun btw/setup-term-mode ()
+      ;; (setq-local fringe-mode nil)
+      ;; (setq-local fringes-outside-margins t)
+      ;; (setq-local mouse-yank-at-point t)
+      ;; (setq-local transient-mark-mode nil)
+      ;; (setq tab-width 8 )
+      ;; (setq term-prompt-regexp "^[^#$%>\n]*[#$%>] ")
+      (setq term-prompt-regexp "^.* [#$%>»] ")
+      (auto-fill-mode -1)
       (evil-local-set-key 'insert (kbd "<delete>") #'term-send-del)
       ;; From https://github.com/syl20bnr/spacemacs/issues/2345
       (evil-local-set-key 'insert (kbd "C-r") #'btw/send-C-r))
-
-    (add-hook 'term-mode-hook
-              (function
-               (lambda ()
-                 ;; (setq-local fringe-mode nil)
-                 ;; (setq-local fringes-outside-margins t)
-                 ;; (setq term-prompt-regexp "^[^#$%>\n]*[#$%>] *")
-                 ;; (setq-local mouse-yank-at-point t)
-                 ;; (setq-local transient-mark-mode nil)
-                 (auto-fill-mode -1)
-                 ;; (setq tab-width 8 )
-                 )))
 
     (add-hook 'term-mode-hook #'btw/setup-term-mode)
 
