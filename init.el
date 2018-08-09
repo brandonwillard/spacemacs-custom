@@ -104,8 +104,8 @@
                                       kubernetes
                                       kubernetes-evil
 
-                                      (helpful :location (recipe :fetcher github
-                                                                 :repo "Wilfred/helpful"))
+                                      ;; (helpful :location (recipe :fetcher github
+                                      ;;                            :repo "Wilfred/helpful"))
 
                                       ;; Override with local versions.
                                       ;; XXX: Make sure package locations are on the `load-path'.
@@ -116,7 +116,7 @@
                                       ;; Use a newer version of python.el.
                                       (python :location elpa :min-version "0.26.1"))
    dotspacemacs-frozen-packages '()
-   dotspacemacs-excluded-packages '()
+   dotspacemacs-excluded-packages '(company-emoji emoji-cheat-sheet-plus emojify)
    dotspacemacs-install-packages 'used-only))
 
 (defun dotspacemacs/init ()
@@ -318,7 +318,7 @@
     :binding "K"
     :body (progn (kubernetes-overview)))
 
-  (use-package helpful)
+  ;; (use-package helpful)
 
   (use-package org-gcal
     :config (progn
@@ -570,7 +570,24 @@
     ;; for more examples (e.g. Python inferior shells).
     (persp-def-buffer-save/load
      :mode 'eshell-mode :tag-symbol 'def-eshell-buffer
-     :save-vars '(major-mode default-directory)))
+     :save-vars '(major-mode default-directory))
+
+    (defun btw/projectile-shell-pop ()
+      "Open a term buffer at projectile project root for the current perspective."
+      (let* ((current-persp-name (spacemacs//current-layout-name))
+             (persp-idx (seq-find #'identity
+                                  (seq-map-indexed (lambda (name i)
+                                                     (if (eq name current-persp-name)
+                                                         i
+                                                       nil))
+                                                   (persp-names-current-frame-fast-ordered))))
+             (shell (if (eq 'multi-term shell-default-shell)
+                        'multiterm
+                      shell-default-shell))
+             (shell-pop-func (intern (format "spacemacs/shell-pop-%S" shell))))
+        (funcall shell-pop-func persp-idx)))
+
+    (advice-add #'spacemacs/projectile-shell-pop :override #'btw/projectile-shell-pop))
 
   (with-eval-after-load 'comint
     ;; Make terminals and REPLs read-only.
@@ -743,6 +760,7 @@ From https://emacs.stackexchange.com/a/10698"
                  (display-buffer-in-side-window (messages-buffer) '((side . right)))
                  (balance-windows-area)))
 
+  ;;; Window stuff
   ;;; Initialization steps
 
   (defun btw/after-user-config-setup ()

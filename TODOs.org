@@ -42,6 +42,77 @@
                #'persp-projectile-assign-project-name)
      #+END_SRC
 
+** TODO Better window creation and re-use
+   Set better =purpose= values, so that new frames are never created, terminals
+   are created for each projectile project, etc.
+
+   FYI: src_elisp{pop-up-frames} is src_elisp{nil}, but we're still occassionally seeing new frames.
+
+   Look into these settings:
+   #+BEGIN_SRC elisp
+   ;; `purpose-action-sequences'
+   (setcdr (assq 'prefer-other-window purpose-action-sequences)
+           '(
+             purpose-display-reuse-window-buffer
+             purpose-display-reuse-window-purpose
+             ;; purpose-display-maybe-other-frame
+             ;; purpose-display-maybe-pop-up-frame
+             purpose-display-maybe-other-window
+             purpose-display-maybe-pop-up-window
+             purpose-display-maybe-same-window))
+
+
+   #+END_SRC
+
+*** Let's re-configure pop-shell functionality to track project/purpose-specific terminals.
+
+   These are the terminal pop-up functions:
+   #+BEGIN_SRC elisp
+   (defun spacemacs/projectile-shell-pop ()
+     "Open a term buffer at projectile project root."
+     (interactive)
+     (let ((default-directory (projectile-project-root)))
+       (call-interactively 'spacemacs/default-pop-shell)))
+
+   (defun spacemacs/default-pop-shell ()
+     "Open the default shell in a popup."
+     (interactive)
+     (let ((shell (if (eq 'multi-term shell-default-shell)
+                      'multiterm
+                    shell-default-shell)))
+       (call-interactively (intern (format "spacemacs/shell-pop-%S" shell)))))
+   #+END_SRC
+
+   The actual pop-shell functions are created by src_elisp{make-shell-pop-command} and
+   take a single src_elisp{index} argument.
+
+   Using something like src_elisp{get-current-persp}, we can find the index/number for
+   the current perspective and pass that to the pop-command.
+
+   Looks like the indexes/numbers is based on the list produced
+   by src_elisp{persp-names-current-frame-fast-ordered}.
+
+   Here's a attempt at the idea:
+   #+BEGIN_SRC elisp
+   (defun btw/projectile-shell-pop ()
+     "Open a term buffer at projectile project root for the current perspective."
+     (let* ((current-persp-name (spacemacs//current-layout-name))
+            (persp-idx (seq-find #'identity
+                                 (seq-map-indexed (lambda (name i)
+                                                    (if (eq name current-persp-name)
+                                                        i
+                                                      nil))
+                                                  (persp-names-current-frame-fast-ordered))))
+            (shell (if (eq 'multi-term shell-default-shell)
+                        'multiterm
+                      shell-default-shell))
+            (shell-pop-func (intern (format "spacemacs/shell-pop-%S" shell))))
+       (funcall shell-pop-func persp-idx)))
+
+   (advice-add #'spacemacs/projectile-shell-pop :override #'btw/projectile-shell-pop)
+   #+END_SRC
+
+
 ** TODO What to do about Spacemacs private directory?
    [2018-05-26 Sat]
    [[file:~/.spacemacs.d/init.el::(setq%20custom-file%20(concat%20user-emacs-directory%20"private/custom-settings.el"))][custom-settings.el]]
@@ -86,7 +157,24 @@
      #+END_SRC
 
    There's a push/pull/sync tool for Google Tasks [[https://bitbucket.org/edgimar/michel-orgmode][here]].
-** TODO Fix project-root finding in ~lsp-mode~                          :lsp:
+** DONE Fix project-root finding in ~lsp-mode~                          :lsp:
+   CLOSED: [2018-08-09 Thu 10:41]
+   - Note taken on [2018-08-09 Thu 10:40] \\
+     This seems to be working:
+
+     #+BEGIN_SRC elisp
+     (defun btw/lsp-python-workspace-root ()
+           (or (when (fboundp 'projectile-project-root)
+                 (projectile-project-root))
+               (lsp-make-traverser (directory-files dir nil "\\(__init__\\|setup\\)\\.py"))
+               (if lsp-message-project-root-warning
+                   (message "Couldn't find project root, using the current directory as the root.")
+                 (lsp-warn "Couldn't find project root, using the current directory as the root.")
+                 default-directory)))
+         (lsp-define-stdio-client lsp-python "python"
+     			                       #'btw/lsp-python-workspace-root
+     			                       '("pyls"))
+     #+END_SRC
    - Note taken on [2018-03-17 Sat 14:03] \\
      For example, =lsp-python= uses the following to find a project's root directory:
      #+BEGIN_SRC elisp
