@@ -381,6 +381,24 @@
   (use-package dockerfile-mode
     :mode ("Dockerfile\\'" . dockerfile-mode))
 
+  (with-eval-after-load 'evil-surround
+    (setq evil-surround-pairs-alist
+         '((?\( . ("(" . ")"))
+           (?\[ . ("[" . "]"))
+           (?\{ . ("{" . "}"))
+
+           (?\) . ("( " . " )"))
+           (?\] . ("[ " . " ]"))
+           (?\} . ("{ " . " }"))
+
+           (?# . ("#{" . "}"))
+           (?b . ("(" . ")"))
+           (?B . ("{" . "}"))
+           (?> . ("<" . ">"))
+           (?t . evil-surround-read-tag)
+           (?< . evil-surround-read-tag)
+           (?f . evil-surround-function))))
+
   (with-eval-after-load 'erc
     (setq erc-track-enable-keybindings nil))
 
