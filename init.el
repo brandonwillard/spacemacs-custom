@@ -8,9 +8,9 @@
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
    '(clojure
-     go
+     ;; go
      csv
-     (javascript :packages (not tern))
+     ;; (javascript :packages (not tern))
      (lsp :packages (not flycheck-lsp lsp-ui))
      html
      markdown
@@ -62,57 +62,46 @@
      spell-checking
      syntax-checking
 
-     slack
-     ;; (rcirc :variables rcirc-enable-authinfo-support t)
-     (erc :variables
-          erc-server-list
-          '(("chat.freenode.net"
-             :port "6697"
-             :ssl t
-             :nick "brandonwillard"
-             ))
-          erc-enable-notifications t
-          erc-enable-sasl-auth t)
+     ;; slack
+     ;; (erc :variables
+     ;;      erc-server-list
+     ;;      '(("chat.freenode.net"
+     ;;         :port "6697"
+     ;;         :ssl t
+     ;;         :nick "brandonwillard"
+     ;;         ))
+     ;;      erc-enable-notifications t
+     ;;      erc-enable-sasl-auth t)
 
      ;; FIXME: We get `semantic-idle-scheduler-function' errors in `polymode' modes.
      (semantic :enabled-for emacs-lisp common-lisp python)
      common-lisp)
 
    ;; FYI: You can use MELPA recipes here (i.e. https://github.com/melpa/melpa#recipe-format).
-   dotspacemacs-additional-packages '(
-                                      ;; elisp file manipulation library
+   dotspacemacs-additional-packages '(;; elisp file manipulation library
                                       f
                                       ;; elisp string manipulation library
                                       s
                                       ;; elisp list manipulation library
                                       dash
                                       dash-functional
-
                                       ;; embrace
                                       evil-embrace
-
                                       ox-jira
                                       ;; ox-confluence
                                       plantuml-mode
-
                                       org-gcal
-
                                       dockerfile-mode
-
                                       evil-extra-operator
-
                                       kubernetes
                                       kubernetes-evil
-
                                       ;; (helpful :location (recipe :fetcher github
                                       ;;                            :repo "Wilfred/helpful"))
-
                                       ;; Override with local versions.
                                       ;; XXX: Make sure package locations are on the `load-path'.
                                       (hy-mode :location local)
                                       (org-ref :location local)
                                       (ob-hy :location local)
-
                                       ;; Use a newer version of python.el.
                                       (python :location elpa :min-version "0.26.1"))
    dotspacemacs-frozen-packages '()
@@ -457,6 +446,7 @@
     (lsp-define-stdio-client lsp-python "python"
 			                       #'btw/lsp-python-workspace-root
 			                       '("pyls"))
+    (setq lsp-message-project-root-warning t)
     (setq lsp-enable-eldoc nil))
 
   (with-eval-after-load 'lsp-ui
@@ -655,7 +645,12 @@
 
   (with-eval-after-load 'company
     (setq company-idle-delay nil)
-
+    ;; (setq company-backends-emacs-lisp-mode
+    ;;       (cons '(company-elisp :with company-yasnippet)
+    ;;             (seq-remove (lambda (x) (eq (car x) 'company-capf))
+    ;;                         company-backends-emacs-lisp-mode)))
+    (spacemacs|add-company-backends :backends (company-elisp)
+                                    :modes emacs-lisp-mode)
     (define-key company-active-map (kbd "C-w") 'evil-delete-backward-word)
     (define-key company-active-map (kbd "C-y") 'company-complete-selection)
     (define-key evil-insert-state-map (kbd "C-n") #'company-select-next)
@@ -778,7 +773,6 @@ From https://emacs.stackexchange.com/a/10698"
                  (display-buffer-in-side-window (messages-buffer) '((side . right)))
                  (balance-windows-area)))
 
-  ;;; Window stuff
   ;;; Initialization steps
 
   (defun btw/after-user-config-setup ()
