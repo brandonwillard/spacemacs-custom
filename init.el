@@ -7,11 +7,14 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(clojure
+   '(javascript
+     clojure
      ;; go
      csv
      ;; (javascript :packages (not tern))
-     (lsp :packages (not flycheck-lsp lsp-ui))
+     (lsp :packages (not
+                     ;; lsp-ui
+                     flycheck-lsp))
      html
      markdown
      (latex :variables
@@ -22,9 +25,11 @@
      ;;      ess-disable-underscore-assign t
      ;;      :packages (not ess-R-object-popup))
      (python :variables
-             python-test-runner 'pytest
              python-auto-set-local-pyvenv-virtualenv 'on-visit
+             ;; NOTE: These can also be .dir-local/project specific.
+             python-test-runner '(pytest nose)
              python-backend 'lsp
+             ;; python-enable-yapf-format-on-save t
              :packages (not live-py-mode))
      python-extras
      (hy :variables hy-shell-spy-delim "\n--spy-output--\n")
@@ -63,15 +68,15 @@
      syntax-checking
 
      ;; slack
-     ;; (erc :variables
-     ;;      erc-server-list
-     ;;      '(("chat.freenode.net"
-     ;;         :port "6697"
-     ;;         :ssl t
-     ;;         :nick "brandonwillard"
-     ;;         ))
-     ;;      erc-enable-notifications t
-     ;;      erc-enable-sasl-auth t)
+     (erc :variables
+          erc-server-list
+          '(("chat.freenode.net"
+             :port "6697"
+             :ssl t
+             :nick "brandonwillard"
+             ))
+          erc-enable-notifications t
+          erc-enable-sasl-auth t)
 
      ;; FIXME: We get `semantic-idle-scheduler-function' errors in `polymode' modes.
      (semantic :enabled-for emacs-lisp common-lisp python)
@@ -372,23 +377,42 @@
 
   (with-eval-after-load 'evil-surround
     (setq evil-surround-pairs-alist
-         '((?\( . ("(" . ")"))
-           (?\[ . ("[" . "]"))
-           (?\{ . ("{" . "}"))
+          '((?\( . ("(" . ")"))
+            (?\[ . ("[" . "]"))
+            (?\{ . ("{" . "}"))
 
-           (?\) . ("( " . " )"))
-           (?\] . ("[ " . " ]"))
-           (?\} . ("{ " . " }"))
+            (?\) . ("( " . " )"))
+            (?\] . ("[ " . " ]"))
+            (?\} . ("{ " . " }"))
 
-           (?# . ("#{" . "}"))
-           (?b . ("(" . ")"))
-           (?B . ("{" . "}"))
-           (?> . ("<" . ">"))
-           (?t . evil-surround-read-tag)
-           (?< . evil-surround-read-tag)
-           (?f . evil-surround-function))))
+            (?# . ("#{" . "}"))
+            (?b . ("(" . ")"))
+            (?B . ("{" . "}"))
+            (?> . ("<" . ">"))
+            (?t . evil-surround-read-tag)
+            (?< . evil-surround-read-tag)
+            (?f . evil-surround-function))))
 
   (with-eval-after-load 'erc
+    (add-to-list 'erc-modules 'notifications)
+    (setq erc-track-when-inactive t)
+    (setq erc-track-remove-disconnected-buffers t)
+    (setq erc-format-query-as-channel-p t
+          erc-track-priority-faces-only 'all
+          erc-track-faces-priority-list '(erc-error-face
+                                          erc-current-nick-face
+                                          erc-keyword-face
+                                          erc-nick-msg-face
+                                          erc-direct-msg-face
+                                          erc-dangerous-host-face
+                                          erc-notice-face
+                                          erc-prompt-face))
+    (setq erc-track-exclude-types ("JOIN" "NICK" "PART" "QUIT" "MODE"
+                                   "324" "329" "332" "333" "353" "477"))
+    (setq erc-track-exclude-server-buffer t)
+    (setq erc-track-visibility 'selected-visible)
+    (setq erc-autojoin-channels-alist '((".*" "#hy")))
+    (setq erc-auto-query 'window)
     (setq erc-track-enable-keybindings nil))
 
   (with-eval-after-load 'magit
@@ -437,12 +461,20 @@
   (with-eval-after-load 'lsp-mode
     (defun btw/lsp-python-workspace-root ()
       (or (when (fboundp 'projectile-project-root)
-            (projectile-project-root))
-          (lsp-make-traverser (directory-files dir nil "\\(__init__\\|setup\\)\\.py"))
-          (if lsp-message-project-root-warning
-              (message "Couldn't find project root, using the current directory as the root.")
-            (lsp-warn "Couldn't find project root, using the current directory as the root.")
-            default-directory)))
+            (let ((projectile-require-project-root t))
+              (condition-case nil
+                  (projectile-project-root)
+                (error nil))))
+          ;; Based on `lsp-make-traverser'.
+          (lambda ()
+            (let ((dir
+                   ;; TODO: ".git" and lib paths?
+                   (directory-files "." nil "\\(__init__\\|setup\\)\\.py")))
+              (if dir (file-truename dir)))
+            (if lsp-message-project-root-warning
+                (message "Couldn't find project root, using the current directory as the root.")
+              (lsp-warn "Couldn't find project root, using the current directory as the root.")
+              default-directory))))
     (lsp-define-stdio-client lsp-python "python"
 			                       #'btw/lsp-python-workspace-root
 			                       '("pyls"))
@@ -525,6 +557,10 @@
     (setq TeX-command-default "Make"))
 
   (with-eval-after-load 'projectile
+    (setq projectile-globally-ignored-directories
+          (append projectile-globally-ignored-directories
+                  '(".ropeproject" ".cache" "__pycache__"
+                    ".pytest_cache" ".mypy_cache")))
     (setq projectile-tags-file-name ".TAGS")
     (setq projectile-use-git-grep t))
 
