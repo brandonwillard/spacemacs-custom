@@ -605,6 +605,52 @@
     ;; Add all opened buffers (filter certain ones below).
     (setq persp-add-buffer-on-after-change-major-mode t)
 
+    (defun btw/persp-assign-projectile-root (persp persp-hash)
+      "Add a variable to the perspective tracking the projectile project name
+ (if any).
+
+ This is run before the buffer is created, so we need to get the project name
+ from this perspective's path.  We assume the perspective's name is the project
+ path (which it is per Spacemacs)"
+      (let* ((persp-name (safe-persp-name persp))
+             (persp-projectile-dir (when (and (f-dir? persp-name)
+                                              (funcall projectile-project-name-function
+                                                       persp-name))
+                                     persp-name)))
+        (set-persp-parameter 'projectile-project-root
+                             persp-projectile-dir
+                             persp)))
+
+    (add-hook 'persp-created-functions #'btw/persp-assign-projectile-root)
+
+    (defun btw/persp-projectile-project-root (oldfun &rest r)
+      "Use the perp project name and regular `projectile-project-root' as a
+ fallback."
+      (let* ((persp-name (spacemacs//current-layout-name))
+             (persp-projectile-dir (when (and (f-dir? persp-name)
+                                              (funcall projectile-project-name-function
+                                                       persp-name))
+                                     persp-name)))
+        ;; If the persp name is a directory and is mapped to a projectile project,
+        ;; return the directory; otherwise, use the fallback.
+        (or persp-projectile-dir
+            (persp-parameter 'projectile-project-root)
+            (apply oldfun r))))
+
+    (advice-add #'projectile-project-root :around #'btw/persp-projectile-project-root)
+
+    (defun btw/persp-projectile-project-name (oldfun &rest r)
+      "Query the persp layout for the projectile project name and use projectile
+ for the fallback."
+      (let* ((persp-name (spacemacs//current-layout-name))
+             (persp-projectile-name (if (f-dir? persp-name)
+                                        (funcall projectile-project-name-function
+                                                 persp-name)
+                                      (persp-parameter 'projectile-project-root))))
+        (or persp-projectile-name (apply oldfun r))))
+
+    (advice-add #'projectile-project-name :around #'btw/persp-projectile-project-name)
+
     ;; (add-hook 'persp-common-buffer-filter-functions
     ;;           ;; there is also `persp-add-buffer-on-after-change-major-mode-filter-functions'
     ;;           #'(lambda (b) (string-prefix-p "*" (buffer-name b))))
@@ -805,6 +851,8 @@ From https://emacs.stackexchange.com/a/10698"
   (spacemacs|define-custom-layout "@Spacemacs"
     :binding "e"
     :body (progn (spacemacs/find-dotfile)
+                 (set-persp-parameter 'projectile-project-root
+                                      (ignore-errors (projectile-project-root)))
                  (set-window-dedicated-p (get-buffer-window) t)
                  (display-buffer-in-side-window (messages-buffer) '((side . right)))
                  (balance-windows-area)))

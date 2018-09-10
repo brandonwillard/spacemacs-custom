@@ -11,36 +11,63 @@
    be loaded with ~org-babel-lob-ingest~.
 ** TODO [#A] Slowness with Python file/venv loading                  :python:
    Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
-** TODO [#A] Allow ~persp-mode~ to set ~projectile-mode~ project.
+** DONE [#A] Allow ~persp-mode~ to set ~projectile-mode~ project.
+   CLOSED: [2018-09-09 Sun 23:47]
    Viewing a buffer for a file in a different ~projectile-mode~ project from
    within a ~persp-mode~ opened for a different project doesn't prioritize the
    ~pesp-mode~-specific project when calling ~projectile-mode~ functions.
 
    If we can get the ~projectile-mode~ project name/location from ~persp-mode~,
-   we might only need to set/wrap/override ~projectile-cached-project-root~,
-   ~projectile-cached-project-name~, ~projectile-project-name~, and/or ~projectile-project-root~.
+   we might only need to set/wrap/override ~projectile-project-root~.
 
-   - [X] Where do we store the project name value (relative to ~persp-mode~)?
-     #+BEGIN_SRC elisp
-     (get-current-persp)
+   This appears to work:
+   #+BEGIN_SRC elisp :eval never
+   (defun btw/persp-assign-projectile-root (persp persp-hash)
+     "Add a variable to the perspective tracking the projectile project name
+   (if any).
 
-     ;; Set projectile name
-     (set-persp-parameter 'projectile-name (ignore-errors (projectile-project-name)))
+   This is run before the buffer is created, so we need to get the project name
+   from this perspective's path.  We assume the perspective's name is the project
+   path (which it is per Spacemacs)"
+     (let* ((persp-name (safe-persp-name persp))
+            (persp-projectile-dir (when (and (f-dir? persp-name)
+                                             (funcall projectile-project-name-function
+                                                      persp-name))
+                                    persp-name)))
+       (set-persp-parameter 'projectile-project-root
+                            persp-projectile-dir
+                            persp)))
 
-     ;; Get the name
-     (persp-parameter 'projectile-name)
-     #+END_SRC
-   - [ ] Where do we associate a project [name] with a perspective?
-     The main mechanism of project activation (for me) is the ~:source~ ~:action~
-     lambda in ~spacemacs/helm-persp-switch-project~?  This is an extremely fickle
-     tie-in, though.
-     Perhaps ~projectile-before-switch-project-hook~ is better.
-     #+BEGIN_SRC elisp
-     (defun persp-projectile-assign-project-name ()
-       )
-     (add-hook 'projectile-before-switch-project-hook
-               #'persp-projectile-assign-project-name)
-     #+END_SRC
+   (add-hook 'persp-created-functions #'btw/persp-assign-projectile-root)
+
+   (defun btw/persp-projectile-project-root (oldfun &rest r)
+     "Use the perp project name and regular `projectile-project-root' as a
+   fallback."
+     (let* ((persp-name (spacemacs//current-layout-name))
+            (persp-projectile-dir (when (and (f-dir? persp-name)
+                                             (funcall projectile-project-name-function
+                                                      persp-name))
+                                    persp-name)))
+       ;; If the persp name is a directory and is mapped to a projectile project,
+       ;; return the directory; otherwise, use the fallback.
+       (or persp-projectile-dir
+           (persp-parameter 'projectile-project-root)
+           (apply oldfun r))))
+
+   (advice-add #'projectile-project-root :around #'btw/persp-projectile-project-root)
+
+   (defun btw/persp-projectile-project-name (oldfun &rest r)
+     "Query the persp layout for the projectile project name and use projectile
+   for the fallback."
+     (let* ((persp-name (spacemacs//current-layout-name))
+            (persp-projectile-name (if (f-dir? persp-name)
+                                       (funcall projectile-project-name-function
+                                                persp-name)
+                                     (persp-parameter 'projectile-project-root))))
+       (or persp-projectile-name (apply oldfun r))))
+
+   (advice-add #'projectile-project-name :around #'btw/persp-projectile-project-name)
+   #+END_SRC
 
 ** TODO Better window creation and re-use
    Set better =purpose= values, so that new frames are never created, terminals
