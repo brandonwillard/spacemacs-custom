@@ -16,8 +16,8 @@
   (defun spacemacs//project-process-name (proc-name)
     (let ((proj-name (with-demoted-errors "Error: %S" (projectile-project-name))))
       (if (and proj-name
-               (not (s-suffix? (format "(%s)" proj-name) proc-name)))
-          (format "%s(%s)" proc-name proj-name)
+               (not (s-suffix? (format "<%s>" proj-name) proc-name)))
+          (format "%s<%s>" proc-name proj-name)
         proc-name)))
   (defun spacemacs//hy--shell-format-process-name (orig-func proc-name)
     (funcall orig-func (spacemacs//project-process-name proc-name)))

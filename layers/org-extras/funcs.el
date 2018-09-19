@@ -386,16 +386,28 @@ This is mostly the standard `ox-latex' with only the following differences:
        (t (funcall oldfun src-block _contents info))))))
 (defun spacemacs//org-babel-hy-session-buffer (orig-func session)
   "Make org-babel's default Hy session buffer naming follow `hy-mode'."
-  (if (eq session :default)
-      ;; From `hy-shell-get-process'
-      (hy--shell-format-process-name hy-shell-buffer-name)
-    (funcall orig-func session)))
+  (let ((buffer-name (cdr (assoc session org-babel-hy-buffers))))
+    (cond
+     (buffer-name)
+     ((eq session :default)
+      (hy--shell-format-process-name hy-shell-buffer-name))
+     (t (hy--shell-format-process-name
+         (format "[%s]%s"
+                 (symbol-name session)
+                 hy-shell-buffer-name))))))
 (defun spacemacs//org-babel-python-session-buffer (orig-func session)
   "Make org-babel's default Python session buffer naming follow `python-mode'."
-  (if (eq session :default)
-      (format "*%s*"
-              (python-shell-get-process-name nil))
-    (funcall orig-func session)))
+  (let ((buffer-name (cdr (assoc session org-babel-python-buffers))))
+    (cond
+     (buffer-name)
+     ((eq session :default)
+      (format "*%s*" (python-shell-get-process-name nil)))
+     ;; `spacemacs//project-process-name' is a part of python-extras and it sets
+     ;; a suffix, so we need to set a prefix; otherwise, `python-shell-get-process-name'
+     ;; will re-append the projectile suffix.
+     (t (format "*[%s]%s*"
+                (symbol-name session)
+                (python-shell-get-process-name nil))))))
 (defun spacemacs//org-babel-execute-from-here (&optional arg)
   "Execute source code blocks from the subtree at the current point upward.
 Call `org-babel-execute-src-block' on every source block in
