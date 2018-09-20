@@ -142,6 +142,10 @@ See `company-transformers'."
   ;;   ...)
   ;; (advice-add #'pyvenv-activate :before #'python-extras//track-previous-pyvenv)
 
+  ;; Enable automatic projectile-based venv activation before the following activities.
+  (advice-add 'spacemacs/python-start-or-switch-repl :before #'spacemacs//check-and-activate-projectile-venv)
+  (advice-add 'spacemacs/projectile-shell-pop :before #'spacemacs//check-and-activate-projectile-venv)
+
   (add-hook 'pyvenv-post-activate-hooks #'spacemacs//pyvenv-conda-activate-additions)
   (add-hook 'pyvenv-post-deactivate-hooks #'spacemacs//pyvenv-conda-deactivate-additions)
   (add-hook 'term-exec-hook #'spacemacs//pyvenv-conda-env-shell-init))
