@@ -11,9 +11,6 @@
 
 ;;; Variables:
 
-;; TODO: Consider adding a toggle for auto-pyvenv functionality
-;; Use `spacemacs|add-toggle'.
-
 (defvar spacemacs--python-help-setup-code
       "
 try:
@@ -27,6 +24,26 @@ except Exception:
   nil
   "Name of the previously active virtual env; nil otherwise")
 
-(defvar spacemacs--pyvenv-last-buffer
+(defvar spacemacs--pyvenv-last-scope
   nil
-  "The last buffer considered by `pyvenv-track-virtualenv'.")
+  "The last scope (e.g. buffer, project) considered by `pyvenv-track-virtualenv'.")
+
+(spacemacs|add-toggle pyvenv-track-buffer-changes
+  :documentation
+  "Activate pyvenv tracking only on buffer changes."
+  :status (advice-member-p 'spacemacs//pyvenv-track-buffer-virtualenv
+                           #'pyvenv-track-virtualenv)
+  :on (advice-add 'pyvenv-track-virtualenv :around
+                  #'spacemacs//pyvenv-track-buffer-virtualenv)
+  :off (advice-remove 'pyvenv-track-virtualenv
+                      #'spacemacs//pyvenv-track-buffer-virtualenv))
+
+(spacemacs|add-toggle pyvenv-track-projectile-changes
+  :documentation
+  "Activate pyvenv tracking only on projectile project changes."
+  :status (advice-member-p 'spacemacs//pyvenv-track-projectile-virtualenv
+                           #'pyvenv-track-virtualenv)
+  :on (advice-add 'pyvenv-track-virtualenv :around
+                  #'spacemacs//pyvenv-track-projectile-virtualenv)
+  :off (advice-remove 'pyvenv-track-virtualenv
+                      #'spacemacs//pyvenv-track-projectile-virtualenv))

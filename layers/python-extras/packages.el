@@ -131,15 +131,8 @@ See `company-transformers'."
   (advice-add #'pyvenv-virtualenvwrapper-supported
               :filter-return #'python-extras//filter-venvwrapper-supported-anaconda-hooks)
 
-  ;; (spacemacs|add-toggle pyvenv-track-buffer-changes
-  ;;   :documentation
-  ;;   "Activate pyvenv tracking only on buffer changes."
-  ;;   :status (advice-member-p 'spacemacs//pyvenv-track-virtualenv 'pyvenv-track-virtualenv)
-  ;;   :on (advice-add 'pyvenv-track-virtualenv :around 'spacemacs//pyvenv-track-virtualenv)
-  ;;   :off (advice-remove 'pyvenv-track-virtualenv 'spacemacs//pyvenv-track-virtualenv))
-  ;; (spacemacs/toggle-pyvenv-track-buffer-changes-on)
-
-  (advice-add #'pyvenv-track-virtualenv :around #'spacemacs//pyvenv-track-virtualenv)
+  (spacemacs/toggle-pyvenv-track-buffer-changes-off)
+  (spacemacs/toggle-pyvenv-track-projectile-changes-on)
 
   ;; If `pyvenv-workon' buffer-local variables is set, activate the corresponding
   ;; venv when entering the buffer.
