@@ -602,6 +602,7 @@
     )
 
   (with-eval-after-load 'persp-mode
+    (setq persp-autokill-buffer-on-remove t)
     ;; Add all opened buffers (filter certain ones below).
     (setq persp-add-buffer-on-after-change-major-mode t)
 
