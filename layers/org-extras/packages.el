@@ -34,6 +34,12 @@
 
       (add-hook 'org-export-before-processing-hook #'spacemacs//org-remove-headlines)
 
+      ;; Create a function that can wrap the process-name function and
+      ;; prepend a session (if present).
+      (spacemacs//session-and-process-name org-babel-python-buffers nil nil)
+      (advice-add 'python-shell-get-process-name :around
+                  #'spacemacs//org-babel-python-buffers-process-name)
+
       (advice-add 'org-babel-python-session-buffer :around
                   #'spacemacs//org-babel-python-session-buffer)
 
@@ -94,7 +100,12 @@
     (use-package ob-hy
       :init (progn
               (add-to-list 'org-babel-load-languages '(hy . t))
-              (advice-add #'org-babel-hy-session-buffer :around
+              ;; Create a function that can wrap the process-name function and
+              ;; prepend a session (if present).
+              (spacemacs//session-and-process-name org-babel-hy-buffers t t)
+              (advice-add 'hy-shell-get-process :around
+                          #'spacemacs//org-babel-hy-buffers-process-name)
+              (advice-add 'org-babel-hy-session-buffer :around
                           #'spacemacs//org-babel-hy-session-buffer)))))
 (defun org-extras/init-ob-hy ())
 
