@@ -36,7 +36,7 @@
 
       ;; Create a function that can wrap the process-name function and
       ;; prepend a session (if present).
-      (spacemacs//session-and-process-name org-babel-python-buffers nil nil)
+      (spacemacs//session-and-process-name org-babel-python-buffers nil)
       (advice-add 'python-shell-get-process-name :around
                   #'spacemacs//org-babel-python-buffers-process-name)
 
@@ -102,8 +102,8 @@
               (add-to-list 'org-babel-load-languages '(hy . t))
               ;; Create a function that can wrap the process-name function and
               ;; prepend a session (if present).
-              (spacemacs//session-and-process-name org-babel-hy-buffers t t)
-              (advice-add 'hy-shell-get-process :around
+              (spacemacs//session-and-process-name org-babel-hy-buffers t)
+              (advice-add 'hy-shell-get-process-name :around
                           #'spacemacs//org-babel-hy-buffers-process-name)
               (advice-add 'org-babel-hy-session-buffer :around
                           #'spacemacs//org-babel-hy-session-buffer)))))

@@ -151,6 +151,31 @@ for the output directory."
                        err-msg)))
       output)))
 
+(defmacro spacemacs//session-and-process-name (org-babel-buffer-alist
+                                               &optional use-internal)
+  (declare (debug (listp "org-babel-buffer-alist" &rest booleanp)))
+  (let ((func-name (intern (concat "spacemacs//"
+                                   (symbol-name org-babel-buffer-alist)
+                                   "-process-name"))))
+    `(defun ,func-name (orig-func &optional internal)
+       "Prepend the org-babel session name to `*-shell-get-process-name'."
+       (if (and ,use-internal internal)
+           (funcall orig-func internal)
+         (let* ((session (cdr (assq :session
+                                    (nth 2 (or org-src--babel-info
+                                               (org-babel-get-src-block-info))))))
+                (cached-process-name (when session
+                                       (cdr (assoc (intern session) ,org-babel-buffer-alist)))))
+           (if cached-process-name
+               (string-trim cached-process-name "*" "*")
+             (let* ((process-name-orig (funcall orig-func (and ,use-internal internal)))
+                    (process-name
+                     (if (and session (not (eq session :default)))
+                         (format "[%s]%s" session process-name-orig)
+                       process-name-orig)))
+               ;; Re-attach earmuffs, if they were present
+               process-name)))))))
+
 (defun spacemacs//org-remove-headlines (backend)
   "Remove headlines with :no_title: tag.
 
@@ -384,50 +409,17 @@ This is mostly the standard `ox-latex' with only the following differences:
 
        ;; Case 4.  Use listings package.
        (t (funcall oldfun src-block _contents info))))))
-(defmacro spacemacs//session-and-process-name (org-babel-buffer-alist
-                                               &optional returns-buffer use-internal use-earmuffs)
-  (let ((func-name (intern (concat "spacemacs//"
-                                   (symbol-name org-babel-buffer-alist)
-                                   "-process-name"))))
-    `(defun ,func-name (orig-func &optional internal)
-       "Prepend the org-babel session name to `*-shell-get-process-name'."
-       (if (and ,use-internal internal)
-           (funcall orig-func internal)
-         (let* ((session (cdr (assq :session (nth 2 org-src--babel-info))))
-                (cached-process-name (when session
-                                       (cdr (assoc (intern session) ,org-babel-buffer-alist)))))
-           (if cached-process-name
-               ,(if returns-buffer
-                    '(get-buffer-process cached-process-name)
-                  '(string-trim cached-process-name "*" "*"))
-             (let* ((process-name-orig (funcall orig-func (and ,use-internal internal)))
-                    (process-name-orig ,(if returns-buffer
-                                            '(buffer-name process-name-orig)
-                                          'process-name-orig))
-                    (process-name-bare (string-trim process-name-orig "*" "*"))
-                    (process-name
-                     (if (and session
-                              (not (eq session :default)))
-                         (--> (format "[%s]%s" session process-name-bare)
-                              (if (not (string-equal process-name-orig process-name-bare))
-                                  (format "*%s*" it)
-                                it))
-                       process-name-orig)))
-               ,(if returns-buffer
-                    '(get-buffer-process process-name-orig)
-                  'process-name-orig))))))))
 (defun spacemacs//org-babel-hy-session-buffer (orig-func session)
-  "Make org-babel's default Hy session buffer naming follow `hy-mode'."
+  "Make org-babel's default Hy session buffer naming follow `hy-mode' by forcing
+ `org-babel-hy-session-buffer' to return a name for non-initialized sessions."
   (let ((hy-buffer-name (cdr (assoc session org-babel-hy-buffers))))
-    (cond
-     (hy-buffer-name)
-     (t (buffer-name (hy-shell-get-process nil))))))
+    (or hy-buffer-name (hy--shell-format-process-name (hy-shell-get-process-name nil)))))
 (defun spacemacs//org-babel-python-session-buffer (orig-func session)
-  "Make org-babel's default Python session buffer naming follow `python-mode'."
+  "Make org-babel's default Python session buffer naming follow `python-mode' by
+ forcing `org-babel-python-session-buffer' to return a name for non-initialized
+ sessions."
   (let ((py-buffer-name (cdr (assoc session org-babel-python-buffers))))
-    (cond
-     (py-buffer-name)
-     (t (format "*%s*" (python-shell-get-process-name nil))))))
+    (or py-buffer-name (format "*%s*" (python-shell-get-process-name nil)))))
 (defun spacemacs//org-babel-execute-from-here (&optional arg)
   "Execute source code blocks from the subtree at the current point upward.
 Call `org-babel-execute-src-block' on every source block in
