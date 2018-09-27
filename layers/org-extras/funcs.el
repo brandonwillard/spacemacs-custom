@@ -142,12 +142,12 @@ for the output directory."
                                   (when log-buf
                                     (with-current-buffer log-buf
                                       (compilation-mode)))))
-                               (_ (error "No valid command to process %S%s"
+                               (_ (error "No valid command to process %S: %s"
                                          source err-msg))))
       ;; Check for process failure.  Output file is expected to be
       ;; located in the same directory as SOURCE.
       (unless (org-file-newer-than-p output time)
-        (error (format "File %S wasn't produced%s" output
+        (error (format "File %S wasn't produced: %s" output
                        err-msg)))
       output)))
 
@@ -170,7 +170,8 @@ for the output directory."
                (string-trim cached-process-name "*" "*")
              (let* ((process-name-orig (funcall orig-func (and ,use-internal internal)))
                     (process-name
-                     (if (and session (not (eq session :default)))
+                     (if (and session (not (eq session :default))
+                              (not (s-prefix? (format "[%s]" session) process-name-orig)))
                          (format "[%s]%s" session process-name-orig)
                        process-name-orig)))
                ;; Re-attach earmuffs, if they were present

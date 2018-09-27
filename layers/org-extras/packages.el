@@ -117,10 +117,10 @@
         :config
         (progn
           ;; Only initialize `ob-ipython-mode' when we edit a src block.
-          (add-hook 'org-src-mode-hook
-                    #'(lambda ()
-                        (when (derived-mode-p 'python-mode)
-                          (ob-ipython-mode))))
+          ;; (add-hook 'org-src-mode-hook
+          ;;           #'(lambda ()
+          ;;               (when (derived-mode-p 'python-mode)
+          ;;                 (ob-ipython-mode))))
           (spacemacs|add-company-backends :backends company-ob-ipython
                                           :modes ob-ipython-mode)
 

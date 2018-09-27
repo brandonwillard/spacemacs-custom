@@ -82,8 +82,8 @@ Inspired by https://github.com/necaris/conda.el/blob/master/conda.el#L339"
     (defmacro spacemacs//pyvenv-projectile-virtualenv (form)
       "Provides a projectile-specific `pyvenv-workon' environment via
  `dir-locals-class-alist'."
-      `(let* ((project-locals (alist-get (intern (expand-file-name (projectile-project-root)))
-                                         dir-locals-class-alist))
+      `(let* ((project-locals (ignore-errors (alist-get (intern (expand-file-name (projectile-project-root)))
+                                                        dir-locals-class-alist)))
               (project-locals-nil (alist-get nil project-locals))
               (pyvenv-workon (or (cdr (assoc 'pyvenv-workon project-locals-nil))
                                  pyvenv-workon)))
@@ -107,7 +107,7 @@ When projectile is altered to have `persp-mode'-scoped projects, this
            (progn
              (setq spacemacs--pyvenv-last-scope proj-name)
              (apply oldfun args))))))
-    (defun spacemacs//check-and-activate-projectile-venv (&rest args)
+    (defun spacemacs//check-and-activate-projectile-pyvenv (&rest args)
       (spacemacs//pyvenv-projectile-virtualenv
        (when (or (and (not pyvenv-virtual-env-name) pyvenv-workon)
                  (not (string-equal pyvenv-virtual-env-name pyvenv-workon)))
