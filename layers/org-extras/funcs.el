@@ -163,7 +163,7 @@ for the output directory."
            (funcall orig-func internal)
          (let* ((session (cdr (assq :session
                                     (nth 2 (or org-src--babel-info
-                                               (org-babel-get-src-block-info))))))
+                                               (ignore-errors (org-babel-get-src-block-info)))))))
                 (cached-process-name (when session
                                        (cdr (assoc (intern session) ,org-babel-buffer-alist)))))
            (if cached-process-name

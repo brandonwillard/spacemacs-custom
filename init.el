@@ -482,6 +482,8 @@
     (setq lsp-enable-eldoc nil))
 
   (with-eval-after-load 'lsp-ui
+    (setq lsp-ui-doc-enable nil)
+    (setq lsp-enable-eldoc nil)
     (setq lsp-ui-sideline-delay nil)
     (setq lsp-ui-sideline-show-hover nil)
     (setq lsp-ui-sideline-enable nil))
