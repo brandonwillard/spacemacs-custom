@@ -54,6 +54,7 @@
      git
      (github :variables magit-gh-pulls-pull-detail-limit 50)
      scheme
+     racket
      pdf
      (org :variables
           org-enable-github-support t
@@ -107,6 +108,7 @@
                                       (hy-mode :location local)
                                       (org-ref :location local)
                                       (ob-hy :location local)
+                                      sphinx-doc
                                       ;; Use a newer version of python.el.
                                       (python :location elpa :min-version "0.26.1"))
    dotspacemacs-frozen-packages '()
@@ -129,7 +131,7 @@
    dotspacemacs-themes '(spacemacs-dark
                          spacemacs-light)
    dotspacemacs-colorize-cursor-according-to-state t
-   dotspacemacs-mode-line-theme 'vim-powerline
+   dotspacemacs-mode-line-theme 'spacemacs
    dotspacemacs-default-font '("Noto Mono"
                                :size 13.0
                                :weight normal
@@ -252,6 +254,10 @@
 
 (defun dotspacemacs/user-config ()
 
+  ;; Just a helper function for whatever.
+  (defun hash-table-to-alist (hash-table)
+    (json-read-from-string (json-encode hash-table)))
+
   ;; TODO: Hack fix; consider fixing, and then removing, this.
   (defun spacemacs/symbol-highlight-transient-state/body ())
 
@@ -279,6 +285,7 @@
 
   (add-to-list 'debug-ignored-errors 'search-failed)
   (add-to-list 'debug-ignored-errors "^Nothing to complete$")
+  (add-to-list 'debug-ignored-errors "^No such page: ")
   (add-to-list 'debug-ignored-errors
                "^Company: backend \(:?.*?\) error \"Nothing to complete\"")
   (add-to-list 'debug-ignored-errors 'lsp-timed-out-error)
@@ -375,6 +382,16 @@
   (use-package dockerfile-mode
     :mode ("Dockerfile\\'" . dockerfile-mode))
 
+  (use-package sphinx-doc
+    :defer t
+    :commands (sphinx-doc sphinx-doc-mode)
+    :init (progn
+            (spacemacs/set-leader-keys-for-major-mode 'python-mode
+              "rd" #'sphinx-doc)
+            (defun btw/setup-sphinx-doc ()
+              (sphinx-doc-mode t))
+            (add-hook 'python-mode-hook #'btw/setup-sphinx-doc)))
+
   (with-eval-after-load 'evil-surround
     (setq evil-surround-pairs-alist
           '((?\( . ("(" . ")"))
@@ -407,8 +424,8 @@
                                           erc-dangerous-host-face
                                           erc-notice-face
                                           erc-prompt-face))
-    (setq erc-track-exclude-types ("JOIN" "NICK" "PART" "QUIT" "MODE"
-                                   "324" "329" "332" "333" "353" "477"))
+    (setq erc-track-exclude-types '("JOIN" "NICK" "PART" "QUIT" "MODE"
+                                    "324" "329" "332" "333" "353" "477"))
     (setq erc-track-exclude-server-buffer t)
     (setq erc-track-visibility 'selected-visible)
     (setq erc-autojoin-channels-alist '((".*" "#hy")))
@@ -430,10 +447,33 @@
     (add-to-list 'editorconfig-exclude-modes 'debugger-mode))
 
   (with-eval-after-load 'flycheck
+    (setq flycheck-indication-mode 'right-fringe)
     (add-to-list 'flycheck-disabled-checkers 'python-flake8))
 
   (with-eval-after-load 'python
+    (when (fboundp 'purpose-set-extension-configuration)
+      ;; NOTE: To delete this configuration...
+      ;; (purpose-del-extension-configuration :python)
+      (purpose-set-extension-configuration
+       :python (purpose-conf :mode-purposes
+                             '((python-mode . python)
+                               (inferior-python-mode . repl))
+                             ;; :regexp-purposes
+                             ;; '(("^test-.*\\.py$" . test))
+                             )))
     (setq-default python-eldoc-get-doc nil))
+
+  (with-eval-after-load 'hy-mode
+    (when (fboundp 'purpose-set-extension-configuration)
+      ;; NOTE: To delete this configuration...
+      ;; (purpose-del-extension-configuration :hy)
+      (purpose-set-extension-configuration
+       :hy (purpose-conf :mode-purposes
+                         '((hy-mode . hy)
+                           (inferior-hy-mode . repl))
+                         ;; :regexp-purposes
+                         ;; '(("^test-.*\\.hy$" . test))
+                         ))))
 
   (when (fboundp 'pyvenv-tracking-mode)
     ;; Set buffer local `pyvenv-workon' values for automatic activation.
@@ -482,6 +522,7 @@
     (setq lsp-enable-eldoc nil))
 
   (with-eval-after-load 'lsp-ui
+    (setq lsp-eldoc-render-all nil)
     (setq lsp-ui-doc-enable nil)
     (setq lsp-enable-eldoc nil)
     (setq lsp-ui-sideline-delay nil)
@@ -729,6 +770,7 @@
     (defalias #'forward-evil-word #'forward-evil-symbol))
 
   (with-eval-after-load 'company
+    (setq company-search-filtering t)
     (setq company-idle-delay nil)
     ;; (setq company-backends-emacs-lisp-mode
     ;;       (cons '(company-elisp :with company-yasnippet)

@@ -75,8 +75,15 @@
     (progn
       (setq python-shell-completion-native-output-timeout 3.0)
       (setq python-pdbtrack-activate nil)
+
       (add-to-list 'python-shell-completion-native-disabled-interpreters "jupyter")
       (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython")
+
+      ;; `python-mode-local-vars-hook' is supposed to do this, but I think
+      ;; `hack-local-variables-hook' isn't being called (or is locally
+      ;; overwritten, causing the global spacemacs
+      ;; `spacemacs//run-local-vars-mode-hook' to be skipped).
+      (spacemacs//python-setup-company)
 
       (advice-add #'python-shell-send-string :override
                   #'spacemacs//python-shell-send-string)
@@ -84,6 +91,11 @@
       (when (configuration-layer/package-used-p 'projectile)
         (advice-add #'python-shell-get-process-name :around
                     #'spacemacs//python-shell-get-process-name))
+
+      (when (configuration-layer/package-used-p 'lsp-python)
+        (defun spacemacs//python-help-for-region-or-symbol (&rest r)
+          (interactive)
+          (lsp-ui-doc--make-request)))
 
       (spacemacs/set-leader-keys-for-major-mode 'python-mode
         "hh" #'spacemacs//python-help-for-region-or-symbol
