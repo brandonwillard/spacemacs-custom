@@ -271,6 +271,11 @@
   (setq-mode-local prog-mode scroll-margin 10)
   (setq-mode-local makefile-mode indent-tabs-mode t)
 
+  ;; Stop terminals from re-centering!
+  (setq scroll-step 1)
+  (setq auto-window-vscroll nil)
+  (setq scroll-conservatively 10000)
+
   (defun btw//lightweight-debug-settings ()
     (setq-local truncate-lines t)
     (setq-local print-level 4)
@@ -392,6 +397,10 @@
               (sphinx-doc-mode t))
             (add-hook 'python-mode-hook #'btw/setup-sphinx-doc)))
 
+  (with-eval-after-load 'semantic
+    (setq semanticdb-search-system-databases nil)
+    (add-to-list 'semanticdb-project-root-functions #'projectile-project-root))
+
   (with-eval-after-load 'evil-surround
     (setq evil-surround-pairs-alist
           '((?\( . ("(" . ")"))
@@ -464,6 +473,9 @@
     (setq-default python-eldoc-get-doc nil))
 
   (with-eval-after-load 'hy-mode
+    (spacemacs|use-package-add-hook evil-cleverparens
+      :pre-init
+      (add-to-list 'evil-lisp-safe-structural-editing-modes 'hy-mode))
     (when (fboundp 'purpose-set-extension-configuration)
       ;; NOTE: To delete this configuration...
       ;; (purpose-del-extension-configuration :hy)
@@ -540,6 +552,8 @@
                  '(plantuml . t))
     (add-to-list 'org-babel-load-languages
                  '(dot . t))
+    (add-to-list 'org-babel-load-languages
+                 '(scheme . t))
 
     (defun spacemacs//org-latex-pdf-process (file-name)
       "XXX: This will err-out because of org-export's assumption that the output
