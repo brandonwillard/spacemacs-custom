@@ -264,6 +264,9 @@
   (setq comment-empty-lines t)
   (setq evil-move-beyond-eol t)
   (setq evil-search-wrap nil)
+  (add-hook 'display-line-numbers-mode-hook
+            (lambda ()
+              (setq display-line-numbers-width 4)))
 
   (require 'mode-local)
 
@@ -296,6 +299,8 @@
   (add-to-list 'debug-ignored-errors 'lsp-timed-out-error)
   (add-to-list 'debug-ignored-errors
                "Candidates function ‘helm-ag--do-ag-candidate-process’ should run a process")
+  (add-to-list 'debug-ignored-errors
+               "Current buffer has no process")
 
   (setq-default sentence-end-double-space t)
 
@@ -847,7 +852,8 @@
     (setq-default term-char-mode-point-at-process-mark nil)
 
     (defun btw/term-enable-char-mode-maybe-goto-prompt ()
-      (when (eq major-mode 'term-mode)
+      (when (and (eq major-mode 'term-mode)
+                 (get-buffer-process (current-buffer)))
         (let ((term-char-mode-point-at-process-mark nil))
           (unless (term-after-prompt-p)
             (goto-char (term-process-mark)))
