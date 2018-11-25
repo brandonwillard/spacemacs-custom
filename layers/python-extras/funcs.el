@@ -19,8 +19,8 @@
                (not (s-suffix? (format "<%s>" proj-name) proc-name)))
           (format "%s<%s>" proc-name proj-name)
         proc-name)))
-  (defun spacemacs//hy--shell-format-process-name (orig-func proc-name)
-    (funcall orig-func (spacemacs//project-process-name proc-name)))
+  (defun spacemacs//hy-shell-get-process-name (orig-func &optional internal)
+    (spacemacs//project-process-name (funcall orig-func internal)))
   (defun spacemacs//python-shell-get-process-name (orig-func dedicated)
     (spacemacs//project-process-name (funcall orig-func dedicated))))
 
@@ -89,8 +89,8 @@ Inspired by https://github.com/necaris/conda.el/blob/master/conda.el#L339"
                                  pyvenv-workon)))
          ,form))
     (defun spacemacs//pyvenv-track-projectile-virtualenv (oldfun &rest args)
-      "Functions like `pyvenv-track-virtualenv', but only allows for projectile
- venvs changes.
+      "Functions like `pyvenv-track-virtualenv', but only considers changing the
+ venv when projectile-associated venvs change.
 
 When projectile is altered to have `persp-mode'-scoped projects, this
  effectively enables `persp-mode' virtualenv scopes."

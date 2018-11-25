@@ -36,11 +36,11 @@
      yaml
      sql
      ;; noweb
-     (c-c++ :variables
-            ;; company-c-headers-path-user '("../include" "./include" "." "../../include"
-            ;;                               "../inc" "../../inc")
-            c-c++-enable-clang-support t
-            c-c++-default-mode-for-headers 'c++-mode)
+     ;; (c-c++ :variables
+     ;;        ;; company-c-headers-path-user '("../include" "./include" "." "../../include"
+     ;;        ;;                               "../inc" "../../inc")
+     ;;        c-c++-enable-clang-support t
+     ;;        c-c++-default-mode-for-headers 'c++-mode)
      helm
      (auto-completion :variables
                       ;; auto-completion-enable-sort-by-usage t
@@ -226,6 +226,8 @@
   ;; output from `shell-command-to-string' under let-bound `shell-file-name'),
   ;; let's make sure the conda binaries are available.
   (add-to-list 'exec-path (expand-file-name (concat conda-home "/" "bin")))
+  (add-to-list 'exec-path (expand-file-name (concat user-home-directory
+                                                    ".cask" "/" "bin")))
 
   ;; Hack for `exec-path' not being used by `shell-command-to-string'.
   ;; We're basically setting `process-environment', which is used by those shell commands.
@@ -315,6 +317,7 @@
 
   ;; Change default spacemacs keybinding.
   (spacemacs/set-leader-keys "nd" 'narrow-to-defun)
+  (spacemacs/set-leader-keys "kx" 'sp-split-sexp)
   (unbind-key (kbd "nf") spacemacs-default-map)
 
   (use-package kubernetes
@@ -401,6 +404,13 @@
             (defun btw/setup-sphinx-doc ()
               (sphinx-doc-mode t))
             (add-hook 'python-mode-hook #'btw/setup-sphinx-doc)))
+
+  (with-eval-after-load 'overseer
+    (defun btw-overseer--current-buffer-test-file-p ()
+      (string-match (rx (seq "-test" (optional "s") "\.el" eol))
+                    (or (buffer-file-name) "")))
+    (advice-add #'overseer--current-buffer-test-file-p :override
+                #'btw-overseer--current-buffer-test-file-p))
 
   (with-eval-after-load 'semantic
     (setq semanticdb-search-system-databases nil)

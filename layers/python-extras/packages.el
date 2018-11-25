@@ -64,10 +64,11 @@
     (add-to-list 'persp-activated-functions #'spacemacs//persp-after-switch-set-venv)))
 
 (defun python-extras/post-init-hy-mode ()
+  ;; Use projectile-specific Hy REPLs.
   (when (configuration-layer/package-used-p 'projectile)
-    (declare-function hy--shell-format-process-name "hy-mode.el")
-    (advice-add #'hy--shell-format-process-name :around
-                #'spacemacs//hy--shell-format-process-name)))
+    (declare-function hy-shell-get-process-name "hy-mode.el")
+    (advice-add #'hy-shell-get-process-name :around
+                #'spacemacs//hy-shell-get-process-name)))
 
 (defun python-extras/pre-init-python ()
   (spacemacs|use-package-add-hook python
