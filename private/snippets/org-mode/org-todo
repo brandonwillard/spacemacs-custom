@@ -1,0 +1,33 @@
+# -*- mode: snippet -*-
+# name: org-todo
+# key: org_todo_
+# expand-env: ((yas-indent-line 'nil) (yas-wrap-around-region 'nil) (org-adapt-indentation 'nil))
+# --
+
+#+TITLE: ${1:title} TODOs
+#+DATE: `(format-time-string "%Y-%m-%d")`
+#+AUTHOR: Brandon T. Willard
+#+EMAIL: brandonwillard@gmail.com
+#+LANGUAGE: en
+#+SELECT_TAGS: export
+#+EXCLUDE_TAGS: noexport
+
+#+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t
+#+OPTIONS: broken-links:nil c:nil creator:nil d:results date:t e:t
+#+OPTIONS: email:nil f:t inline:t num:t p:nil pri:nil prop:nil stat:t tags:t
+#+OPTIONS: tasks:t tex:t timestamp:t title:t toc:t todo:t |:t
+
+#+PROPERTY: header-args :session :eval never-export :results output drawer replace
+
+* TODO ${2:todo-item}
+ :PROPERTIES:
+ :header-args: :session ${3:todo-session} :eval never-export :results output drawer replace :dir ${4:todo-dir}
+ :END:
+
+ #+NAME: demo-src-block
+ #+BEGIN_SRC python :tangle demo_src_file.py :eval never
+ # This source is written to disk when tangled with \`(org-babel-tangle)\`
+ print('Example file')
+ #+END_SRC
+
+ $0

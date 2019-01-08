@@ -95,6 +95,8 @@
                                       evil-embrace
                                       ox-jira
                                       ;; ox-confluence
+                                      (ox-gfm :location (recipe :fetcher github
+                                                                :repo "larstvei/ox-gfm"))
                                       plantuml-mode
                                       org-gcal
                                       dockerfile-mode
@@ -251,7 +253,7 @@
   (setq-default bidi-display-reordering nil)
   (setq debugger-stack-frame-as-list t)
   (setq edebug-print-circle t)
-  (setq edebug-print-level 4)
+  (setq edebug-print-level 20)
   (setq print-circle t))
 
 (defun dotspacemacs/user-config ()
@@ -284,9 +286,9 @@
   (defun btw//lightweight-debug-settings ()
     (setq-local truncate-lines t)
     (setq-local print-level 4)
-    (setq-local print-length 4)
+    (setq-local print-length 12)
     (setq-local eval-expression-print-level 4)
-    (setq-local eval-expression-print-length 4)
+    (setq-local eval-expression-print-length 12)
     ;; `global-hl-line-mode' can slow down tracebacks considerably.
     (spacemacs/disable-hl-line-mode))
 
@@ -521,32 +523,54 @@
           file-name))))
 
   (with-eval-after-load 'org-ref
+    (setq org-ref-bibliography-entry-format
+          (add-to-list 'org-ref-bibliography-entry-format
+                       '("misc" . "%a, %t, <i>%j</i>, %p (%y). <a href=\"%U\">link</a>.")))
     (setq org-ref-pdf-directory "~/projects/papers/references"
           org-ref-bibliography-notes "~/projects/papers/references/notes.org"
           org-ref-prefer-bracket-links t))
 
   (with-eval-after-load 'lsp-mode
-    (defun btw/lsp-python-workspace-root ()
-      (or (when (fboundp 'projectile-project-root)
-            (let ((projectile-require-project-root t))
-              (condition-case nil
-                  (projectile-project-root)
-                (error nil))))
-          ;; Based on `lsp-make-traverser'.
-          (lambda ()
-            (let ((dir
-                   ;; TODO: ".git" and lib paths?
-                   (directory-files "." nil "\\(__init__\\|setup\\)\\.py")))
-              (if dir (file-truename dir)))
-            (if lsp-message-project-root-warning
-                (message "Couldn't find project root, using the current directory as the root.")
-              (lsp-warn "Couldn't find project root, using the current directory as the root.")
-              default-directory))))
-    (lsp-define-stdio-client lsp-python "python"
-			                       #'btw/lsp-python-workspace-root
-			                       '("pyls"))
+    (cond
+     ((fboundp 'lsp-register-client)
+      (lsp-register-client
+       (make-lsp-client :new-connection (lsp-stdio-connection "pyls")
+                        :major-modes '(python-mode)
+                        :server-id 'pyls
+                        ;; Function which returns the folders that are considered
+                        ;; to be not projects but library files.
+                        :library-folders-fn (lambda (_workspace)
+                                              lsp-clients-python-library-directories))))
+     ((fboundp 'lsp-define-stdio-client)
+      (progn
+        (defun btw/lsp-python-workspace-root ()
+          (or (when (fboundp 'projectile-project-root)
+                (let ((projectile-require-project-root t))
+                  (condition-case nil
+                      (projectile-project-root)
+                    (error nil))))
+              ;; Based on `lsp-make-traverser'.
+              (lambda ()
+                (let ((dir
+                       ;; TODO: ".git" and lib paths? (directory-files "." nil "\\(__init__\\|setup\\)\\.py")))
+                       (if dir
+                           (file-truename dir)))
+                      (if lsp-message-project-root-warning
+                          (message "Couldn't find project root, using the current directory as the root.")
+                        (lsp-warn "Couldn't find project root, using the current directory as the root.")
+                        default-directory))))))
+        (lsp-define-stdio-client lsp-python
+                                 "python"
+                                 #'btw/lsp-python-workspace-root
+                                 '("pyls")))))
+    (setq lsp-auto-guess-root t)
+    (setq lsp-document-sync-method 'incremental)
     (setq lsp-message-project-root-warning t)
-    (setq lsp-enable-eldoc nil))
+    (setq lsp-enable-on-type-formatting nil)
+    (setq lsp-before-save-edits nil)
+    (setq lsp-enable-eldoc nil)
+    (setq lsp-eldoc-hook '(lsp-document-highlight))
+    (setq lsp-eldoc-render-all nil))
 
   (with-eval-after-load 'lsp-ui
     (setq lsp-eldoc-render-all nil)
@@ -559,6 +583,15 @@
   (with-eval-after-load 'org
     ;; TODO: Consider this...
     ;; (org-babel-make-language-alias "python" "ipython")
+
+    (defun btw--org-pcompletions-hook ()
+      "Enable `org-mode' completions in `company'."
+      (add-hook 'completion-at-point-functions 'pcomplete-completions-at-point nil t))
+
+    (add-hook 'org-mode-hook #'btw--org-pcompletions-hook)
+
+    (spacemacs|add-company-backends :backends company-yasnippet
+                                    :modes org-mode)
 
     (defvaralias 'org-plantuml-jar-path 'plantuml-jar-path)
     ;; (setq org-plantuml-jar-path plantuml-jar-path)
@@ -630,9 +663,10 @@
 
   (with-eval-after-load 'projectile
     (setq projectile-globally-ignored-directories
-          (append projectile-globally-ignored-directories
-                  '(".ropeproject" ".cache" "__pycache__"
-                    ".pytest_cache" ".mypy_cache")))
+          (delete-dups (append projectile-globally-ignored-directories
+                                     (list ".ropeproject" ".cache" "__pycache__"
+                                           ".pytest_cache" ".mypy_cache"
+                                           (rx (+ (or alnum digit "." "/" "-" "_")) "/_minted")))))
     (setq projectile-tags-file-name ".TAGS")
     (setq projectile-use-git-grep t))
 
@@ -798,7 +832,13 @@
     ;; https://emacs.stackexchange.com/questions/9583/how-to-treat-underscore-as-part-of-the-word
     (defalias #'forward-evil-word #'forward-evil-symbol))
 
+  (with-eval-after-load 'yasnippet
+    (spacemacs|add-company-backends :backends company-yasnippet
+                                    :modes yas-minor-mode)
+    (setq yasnippet-snippets-dir (f-join default-directory "private" "snippets")))
+
   (with-eval-after-load 'company
+    (setq company-dabbrev-other-buffers nil)
     (setq company-search-filtering t)
     (setq company-idle-delay nil)
     ;; (setq company-backends-emacs-lisp-mode
