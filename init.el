@@ -107,6 +107,7 @@
                                       ;;                            :repo "Wilfred/helpful"))
                                       ;; Override with local versions.
                                       ;; XXX: Make sure package locations are on the `load-path'.
+                                      (org-btw :location local)
                                       (hy-mode :location local)
                                       (org-ref :location local)
                                       (ob-hy :location local)
@@ -201,13 +202,14 @@
   (setq init-file-debug nil)
   (setq debug-on-error t)
 
-  (cl-defun btw/add-valid-paths-to-list (target-list object-list &optional append)
+  (defun btw/add-valid-paths-to-list (target-list object-list &optional append)
     (dolist (file (seq-take-while #'file-exists-p object-list))
       (add-to-list target-list (expand-file-name file) append)))
 
   (btw/add-valid-paths-to-list 'load-path
                                ;; TODO: Use `dotspacemacs-directory'?
                                '("~/.spacemacs.d"
+                                 "~/projects/code/emacs/org-btw"
                                  "~/projects/code/emacs/ob-hy"
                                  "~/projects/code/emacs/hy-mode"
                                  "~/projects/code/emacs/org-ref"))
@@ -237,7 +239,7 @@
   (setenv "PATH" (mapconcat #'identity (delete-dups exec-path) ":"))
 
   ;; Looks like `spacemacs/loadenv' is cutting off DBUS_SESSION_BUS_ADDRESS at the "="!
-  ;; (when-let* (((string-equal (getenv "DBUS_SESSION_BUS_ADDRESS") "unix:path"))
+  ;; (-when-let* (((string-equal (getenv "DBUS_SESSION_BUS_ADDRESS") "unix:path"))
   ;;             (bus-path (format "/run/user/%s/bus" (user-uid)))
   ;;             ((file-exists-p bus-path)))
   ;;   (setenv "DBUS_SESSION_BUS_ADDRESS" (concat "unix:path=" bus-path)))
@@ -264,6 +266,16 @@
 
   ;; TODO: Hack fix; consider fixing, and then removing, this.
   (defun spacemacs/symbol-highlight-transient-state/body ())
+
+  ;; TODO: Hack fix for `purpose-mode''s incorrect use of
+  ;; `window--display-buffer'.
+  ;;   (defun btw--window--display-buffer
+  ;;       (old-func BUFFER WINDOW TYPE &optional ALIST DEDICATED)
+  ;;     "This wrapper is a fix for `window--display-buffer' calls that use the
+  ;; now-removed DEDICATED parameter."
+  ;;     (funcall old-func BUFFER WINDOW TYPE ALIST))
+  ;;
+  ;;   (advice-add #'window--display-buffer :around #'btw--window--display-buffer)
 
   (setq comment-empty-lines t)
   (setq evil-move-beyond-eol t)
@@ -336,9 +348,12 @@
 
   ;; (use-package helpful)
 
+  (use-package ox-pelican
+    :commands (org-pelican-publish-to-pelican))
+
   (use-package org-gcal
     :config (progn
-              (when-let* ((client-info (cdr (car (json-read-file
+              (-when-let* ((client-info (cdr (car (json-read-file
                                                   (f-join dotspacemacs-directory
                                                           "private"
                                                           "org-gcal-brandonwillard-gmail.json")))))
@@ -526,6 +541,12 @@
     (setq org-ref-bibliography-entry-format
           (add-to-list 'org-ref-bibliography-entry-format
                        '("misc" . "%a, %t, <i>%j</i>, %p (%y). <a href=\"%U\">link</a>.")))
+
+    ;; Stop this library from making bad default choices
+    (advice-add #'org-ref-show-link-messages :override (lambda ()))
+    (advice-add #'org-ref-mouse-messages-on :override (lambda ()))
+    (advice-add #'org-ref-mouse-message :override (lambda ()))
+
     (setq org-ref-pdf-directory "~/projects/papers/references"
           org-ref-bibliography-notes "~/projects/papers/references/notes.org"
           org-ref-prefer-bracket-links t))
@@ -583,6 +604,34 @@
   (with-eval-after-load 'org
     ;; TODO: Consider this...
     ;; (org-babel-make-language-alias "python" "ipython")
+
+    ;; This fixes the broken behavior when used within drawers.
+    (defun btw--org-babel-result-end ()
+      "Return the point at the end of the current set of results."
+      (cond
+       ((looking-at-p "^[ \t]*$")
+        (point)) ;no result
+
+       ((looking-at-p (format "^[ \t]*%s[ \t]*$" org-bracket-link-regexp))
+        (line-beginning-position 2))
+       (t (let* ((element (org-element-at-point))
+                 (elements (cons element (if (eq (org-element-type element) 'paragraph)
+                                             (list (org-element-property :parent element))))))
+            (if-let ((element (seq-find (lambda (x)
+                                          (memq (org-element-type x)
+                                                ;; Possible results types.
+
+                                                '(drawer example-block export-block fixed-width
+                                                         item plain-list src-block table)))
+                                        elements)))
+                (save-excursion
+                  (goto-char (min (point-max) ;for narrowed buffers
+                                  (org-element-property :end element)))
+                  (skip-chars-backward " \r\t\n")
+                  (line-beginning-position 2))
+              (point))))))
+
+    (advice-add #'org-babel-result-end :override #'btw--org-babel-result-end)
 
     (defun btw--org-pcompletions-hook ()
       "Enable `org-mode' completions in `company'."
@@ -662,11 +711,18 @@
     (setq TeX-command-default "Make"))
 
   (with-eval-after-load 'projectile
+    ;; (setq projectile-known-projects-file
+    ;;       (f-join dotspacemacs-directory "projectile-bookmarks.eld"))
     (setq projectile-globally-ignored-directories
           (delete-dups (append projectile-globally-ignored-directories
                                      (list ".ropeproject" ".cache" "__pycache__"
                                            ".pytest_cache" ".mypy_cache"
-                                           (rx (+ (or alnum digit "." "/" "-" "_")) "/_minted")))))
+                                           "src/tex/.build" "src/tex/_minted" "src/tex/_minted-.build"
+                                           ;; Directory pattern.
+                                           ;; (rx "_minted" (* any))
+                                           ;; (rx (+ (or alnum digit blank "." "/" "-" "_"))
+                                           ;;     "/_minted" (* any))
+                                           ))))
     (setq projectile-tags-file-name ".TAGS")
     (setq projectile-use-git-grep t))
 

@@ -41,7 +41,7 @@
     "Activate the current env in a newly opened shell PROCESS.
 
 Inspired by https://github.com/necaris/conda.el/blob/master/conda.el#L339"
-    (when-let* ((pyvenv-env-name (or (bound-and-true-p pyvenv-virtual-env-name)
+    (-when-let* ((pyvenv-env-name (or (bound-and-true-p pyvenv-virtual-env-name)
                                      (bound-and-true-p pyvenv-workon)))
                 (activate-command (if (eq system-type 'windows-nt)
                                       '("activate")
@@ -67,7 +67,7 @@ Inspired by https://github.com/necaris/conda.el/blob/master/conda.el#L339"
       ;; (message "(%s) setting local venv %s" "track-buffer" pyvenv-workon)
       (apply oldfun args)))
 
-  (defun* spacemacs//pyvenv-mode-set-local-virtualenv (&optional (caller-name ""))
+  (cl-defun spacemacs//pyvenv-mode-set-local-virtualenv (&optional (caller-name ""))
     "If the buffer-local `pyvenv-workon' and global `pyvenv-virtual-env-name'
  values differ, [re]activate the buffer's `pyvenv-workon' env."
     (when (and (boundp 'pyvenv-workon)
@@ -140,7 +140,7 @@ When projectile is altered to have `persp-mode'-scoped projects, this
           (setq-local pyvenv-workon env-name)
           ;; Activate the venv, if not already or currently in a different one.
           (spacemacs//pyvenv-mode-set-local-virtualenv "editorconfig")
-          (when-let* ((workon-env (getenv "WORKON_HOME"))
+          (-when-let* ((workon-env (getenv "WORKON_HOME"))
                       (venv-root (f-join (getenv "WORKON_HOME") env-name)))
             ;; This is generally useful when using inferior shells.
             (message "(editorconfig) setting python-shell-virtualenv-root to %s" venv-root)

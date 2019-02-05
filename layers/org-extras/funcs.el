@@ -62,8 +62,11 @@ keyword."
                  ;; `org-ref' doesn't know about derived modes, so use the parent.
                  (backend-parent (or (org-export-backend-parent (org-export-get-backend backend))
                                      backend))
+                 ;; Truncate paths (i.e. rely on LaTeX build to figure out bib file locations).
+                 ;; Could use `file-relative-name' against `(plist-get info :publishing-directory)'.
+                 (bib-locs (mapconcat #'file-name-nondirectory (plist-get info :bibliography) ","))
                  (bib-value (org-ref-bibliography-format
-                             (string-join (plist-get info :bibliography) ",")
+                             bib-locs
                              ;; (org-element-property :value last-bib-elem)
                              nil backend-parent))
                  (parent (org-element-property :parent last-bib-elem))
@@ -167,7 +170,7 @@ for the output directory."
                 (cached-process-name (when session
                                        (cdr (assoc (intern session) ,org-babel-buffer-alist)))))
            (if cached-process-name
-               (string-trim cached-process-name "*" "*")
+               (string-remove-suffix "*" (string-remove-prefix "*" cached-process-name))
              (let* ((process-name-orig (funcall orig-func (and ,use-internal internal)))
                     (process-name
                      (if (and session (not (eq session :default))
@@ -229,12 +232,12 @@ From https://emacs.stackexchange.com/a/9494/19170"
                     org-angle-link-re "\\)\\|\\("
                     org-plain-link-re "\\)"))))
 (defun spacemacs//org-element-inline-src-block-parser (limit)
-  (when-let* (((let ((case-fold-search nil))
+  (-when-let* (((let ((case-fold-search nil))
                   (re-search-forward (rx (seq bow
                                               (submatch "src_"
                                                         (one-or-more (not (any blank ?\[ ?\\ ?\{))))))
-                                    limit
-                                    t)))
+                                     limit
+                                     t)))
               ;; Start with the matched 'src_<lang>'
               (match-data-res (list (copy-marker (match-beginning 1))
                                     (point-marker)))

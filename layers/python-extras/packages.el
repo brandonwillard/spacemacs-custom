@@ -117,8 +117,11 @@
     "De-prioritize internal/private Python variables (e.g. '_blah') in completion list ordering.
 
 See `company-transformers'."
-    (seq-sort-by #'company-strip-prefix #'python--private-lessp
-                 candidates))
+    candidates
+    ;; TODO: Find a replacement for `seq-sort-by'.
+    ;; (seq-sort-by #'company-strip-prefix #'python--private-lessp
+    ;;              candidates)
+    )
 
   (defun python-extras/python-company-conf ()
     (add-to-list 'company-transformers #'python-extras/company-transform-python
