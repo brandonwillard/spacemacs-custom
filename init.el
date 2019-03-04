@@ -7,7 +7,8 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(javascript
+   '(elixir
+     javascript
      clojure
      ;; go
      csv
@@ -103,6 +104,9 @@
                                       evil-extra-operator
                                       kubernetes
                                       kubernetes-evil
+
+                                      ;; emacs-jupyter
+
                                       ;; (helpful :location (recipe :fetcher github
                                       ;;                            :repo "Wilfred/helpful"))
                                       ;; Override with local versions.
@@ -330,6 +334,8 @@
   (setq compilation-scroll-output #'first-error)
 
   ;; Change default spacemacs keybinding.
+  (define-key minibuffer-local-map (kbd "C-n") #'next-history-element)
+  (define-key minibuffer-local-map (kbd "C-p") #'previous-history-element)
   (spacemacs/set-leader-keys "nd" 'narrow-to-defun)
   (spacemacs/set-leader-keys "kx" 'sp-split-sexp)
   (unbind-key (kbd "nf") spacemacs-default-map)
@@ -474,6 +480,9 @@
     (setq erc-track-enable-keybindings nil))
 
   (with-eval-after-load 'magit
+    ;; Prevent `magit' from restoring unrelated window configurations (very
+    ;; annoying when doing work with `magit' windows open).
+    (setq magit-inhibit-save-previous-winconf t)
     (setq magit-repository-directories '(("~/" . 1)
                                          ("~/projects/code" . 3)
                                          ("~/projects/papers" . 3)
