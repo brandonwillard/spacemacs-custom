@@ -203,6 +203,7 @@
 
 (defun dotspacemacs/user-init ()
 
+  (setq auto-save-timeout nil)
   (setq init-file-debug nil)
   (setq debug-on-error t)
 
@@ -497,8 +498,10 @@
     (add-to-list 'editorconfig-exclude-modes 'debugger-mode))
 
   (with-eval-after-load 'flycheck
-    (setq flycheck-indication-mode 'right-fringe)
-    (add-to-list 'flycheck-disabled-checkers 'python-flake8))
+    ;; TODO: Consider adding logic to `flycheck-python-find-module' that only
+    ;; matches checker modules in the virtualenv (if any).
+    ;; (add-to-list 'flycheck-disabled-checkers 'python-flake8)
+    (setq flycheck-indication-mode 'right-fringe))
 
   (with-eval-after-load 'python
     (when (fboundp 'purpose-set-extension-configuration)
@@ -528,10 +531,16 @@
                          ;; '(("^test-.*\\.hy$" . test))
                          ))))
 
-  (when (fboundp 'pyvenv-tracking-mode)
+  (with-eval-after-load 'pyvenv
+    (make-variable-buffer-local 'pyvenv-workon)
+    (make-variable-buffer-local 'pyvenv-virtual-env)
+    (make-variable-buffer-local 'pyvenv-virtual-env-name)
     ;; Set buffer local `pyvenv-workon' values for automatic activation.
-    (setq pyvenv-tracking-ask-before-change t)
-    (pyvenv-tracking-mode +1))
+    (when (fboundp 'pyvenv-tracking-mode)
+      (setq pyvenv-tracking-ask-before-change t)
+      ;; Make these buffer local so that virtualenvs don't creep into other
+      ;; project buffers.
+      (pyvenv-tracking-mode +1)))
 
   (with-eval-after-load 'vim-powerline-theme
     ;; Egh, doesn't really work.
@@ -593,6 +602,9 @@
                                  "python"
                                  #'btw/lsp-python-workspace-root
                                  '("pyls")))))
+    ;; Temporary fix (until a PR takes care of this)
+    (spacemacs/set-leader-keys-for-minor-mode 'lsp-mode
+      "bd" #'lsp-describe-session)
     (setq lsp-auto-guess-root t)
     (setq lsp-document-sync-method 'incremental)
     (setq lsp-message-project-root-warning t)
@@ -720,8 +732,32 @@
     (setq TeX-command-default "Make"))
 
   (with-eval-after-load 'projectile
+    (defun btw/projectile-switch-project-by-name (project-to-switch &optional arg)
+      "This version *doesn't* pre-load the dir-locals."
+      (unless (projectile-project-p project-to-switch)
+        (projectile-remove-known-project project-to-switch)
+        (error "Directory %s is not a project" project-to-switch))
+      (let ((switch-project-action (if arg
+                                       'projectile-commander
+                                     projectile-switch-project-action)))
+        (run-hooks 'projectile-before-switch-project-hook)
+        (let ((default-directory project-to-switch))
+          ;; (with-temp-buffer
+          ;;   (hack-dir-local-variables-non-file-buffer))
+          (let ((projectile-project-name (funcall projectile-project-name-function
+                                                  project-to-switch)))
+            (funcall switch-project-action)))
+        (run-hooks 'projectile-after-switch-project-hook)))
+
+    (advice-add #'projectile-switch-project-by-name
+                :override #'btw/projectile-switch-project-by-name)
+
     ;; (setq projectile-known-projects-file
     ;;       (f-join dotspacemacs-directory "projectile-bookmarks.eld"))
+
+    ;; (add-to-list 'projectile-globally-ignored-modes ...)
+    ;; (setq projectile-globally-ignored-modes ...)
+
     (setq projectile-globally-ignored-directories
           (delete-dups (append projectile-globally-ignored-directories
                                      (list ".ropeproject" ".cache" "__pycache__"
@@ -732,6 +768,7 @@
                                            ;; (rx (+ (or alnum digit blank "." "/" "-" "_"))
                                            ;;     "/_minted" (* any))
                                            ))))
+    (setq projectile-tags-command "/usr/bin/ctags -Re -f \"%s\" %s \"%s\"")
     (setq projectile-tags-file-name ".TAGS")
     (setq projectile-use-git-grep t))
 
