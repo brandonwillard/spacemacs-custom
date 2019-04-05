@@ -25,69 +25,26 @@
     (spacemacs//project-process-name (funcall orig-func dedicated))))
 
 (when (configuration-layer/package-used-p 'pyvenv)
-  (defun spacemacs//pyvenv-conda-activate-additions ()
-    (setq spacemacs--pyvenv-virtual-env-name-prev pyvenv-virtual-env-name)
-    (when (and (bound-and-true-p pyvenv-virtual-env)
-               (bound-and-true-p pyvenv-virtual-env-name))
-      (setenv "CONDA_PREFIX"
-              (string-remove-suffix "/" pyvenv-virtual-env))
-      (setenv "CONDA_DEFAULT_ENV" pyvenv-virtual-env-name)))
-
-  (defun spacemacs//pyvenv-conda-deactivate-additions ()
-    (setenv "CONDA_PREFIX" nil)
-    (setenv "CONDA_DEFAULT_ENV" nil))
-
-  (defun spacemacs//pyvenv-conda-env-shell-init (&rest process)
-    "Activate the current env in a newly opened shell PROCESS.
-
-Inspired by https://github.com/necaris/conda.el/blob/master/conda.el#L339"
-    (-when-let* ((pyvenv-env-name (or (bound-and-true-p pyvenv-virtual-env-name)
-                                     (bound-and-true-p pyvenv-workon)))
-                (activate-command (if (eq system-type 'windows-nt)
-                                      '("activate")
-                                        ;'("source" "activate")
-                                    '("conda" "activate")))
-                (full-command (append activate-command
-                                      `(,pyvenv-env-name "\n")))
-                (command-string (combine-and-quote-strings full-command))
-                (buffer-or-process (if (not process)
-                                       (current-buffer)
-                                     process)))
-      (progn
-        (message "sending %s to %S" command-string
-                 buffer-or-process)
-        (term-send-string buffer-or-process command-string))))
-
-  (defun spacemacs//pyvenv-track-buffer-virtualenv (oldfun &rest args)
-    "Functions like `pyvenv-track-virtualenv', but only checks when buffers are
- changed."
-    (unless (eq (current-buffer)
-                spacemacs--pyvenv-last-scope)
-      (setq spacemacs--pyvenv-last-scope (current-buffer))
-      ;; (message "(%s) setting local venv %s" "track-buffer" pyvenv-workon)
-      (apply oldfun args)))
-
-  (cl-defun spacemacs//pyvenv-mode-set-local-virtualenv (&optional (caller-name ""))
-    "If the buffer-local `pyvenv-workon' and global `pyvenv-virtual-env-name'
- values differ, [re]activate the buffer's `pyvenv-workon' env."
-    (when (and (boundp 'pyvenv-workon)
-               (local-variable-p 'pyvenv-workon)
-               (not (string-equal pyvenv-workon
-                                  (or (ignore-errors (default-toplevel-value 'pyvenv-virtual-env-name))
-                                      spacemacs--pyvenv-virtual-env-name-prev))))
-      (message "(%s) setting local venv %s" caller-name pyvenv-workon)
-      (pyvenv-workon pyvenv-workon)))
-
+  (defvar-local pyvenv-workon nil)
+  (defvar-local pyvenv-virtual-env nil)
+  (defvar-local pyvenv-virtual-env-name nil)
+  (defmacro spacemacs//run-in-pyvenv (&rest forms)
+    "A macro that prepares a pyvenv in which to evaluate the given FORM."
+    forms)
   (when (configuration-layer/package-used-p 'projectile)
-    (defmacro spacemacs//pyvenv-projectile-virtualenv (form)
+    ;; Re-define macro.
+    (defmacro spacemacs//run-in-pyvenv (&rest forms)
       "Provides a projectile-specific `pyvenv-workon' environment via
  `dir-locals-class-alist'."
       `(let* ((project-locals (ignore-errors (alist-get (intern (expand-file-name (projectile-project-root)))
                                                         dir-locals-class-alist)))
               (project-locals-nil (alist-get nil project-locals))
               (pyvenv-workon (or (cdr (assoc 'pyvenv-workon project-locals-nil))
-                                 pyvenv-workon)))
-         ,form))
+                                 (bound-and-true-p pyvenv-workon)))
+              (python-shell-virtualenv-root (or (format "%s/%s" (getenv "WORKON_HOME")
+                                                        (bound-and-true-p pyvenv-workon))
+                                                (bound-and-true-p python-shell-virtualenv-root))))
+         ,@forms))
     (defun spacemacs//pyvenv-track-projectile-virtualenv (oldfun &rest args)
       "Functions like `pyvenv-track-virtualenv', but only considers changing the
  venv when projectile-associated venvs change.
@@ -103,16 +60,67 @@ When projectile is altered to have `persp-mode'-scoped projects, this
           ;; in the current project.
           ;; XXX: This consideration is limited to only projects that set
           ;; `pyvenv-workon' via dirlocal values.
-          (spacemacs//pyvenv-projectile-virtualenv
+          (spacemacs//run-in-pyvenv
            (progn
              (setq spacemacs--pyvenv-last-scope proj-name)
              (apply oldfun args))))))
     (defun spacemacs//check-and-activate-projectile-pyvenv (&rest args)
-      (spacemacs//pyvenv-projectile-virtualenv
+      (spacemacs//run-in-pyvenv
        (when (or (and (not pyvenv-virtual-env-name) pyvenv-workon)
                  (not (string-equal pyvenv-virtual-env-name pyvenv-workon)))
          (pyvenv-workon pyvenv-workon)))))
+  (defun spacemacs//pyvenv-conda-activate-additions ()
+    (spacemacs//run-in-pyvenv
+     (setq spacemacs--pyvenv-virtual-env-name-prev pyvenv-virtual-env-name)
+     (when (and (bound-and-true-p pyvenv-virtual-env)
+                (bound-and-true-p pyvenv-virtual-env-name))
+       (setenv "CONDA_PREFIX"
+               (string-remove-suffix "/" pyvenv-virtual-env))
+       (setenv "CONDA_DEFAULT_ENV" pyvenv-virtual-env-name))))
+  (defun spacemacs//pyvenv-conda-deactivate-additions ()
+    (setenv "CONDA_PREFIX" nil)
+    (setenv "CONDA_DEFAULT_ENV" nil))
+  (defun spacemacs//pyvenv-conda-env-shell-init (&rest process)
+    "Activate the current env in a newly opened shell PROCESS.
 
+Inspired by https://github.com/necaris/conda.el/blob/master/conda.el#L339"
+    (spacemacs//run-in-pyvenv
+     (-when-let* ((pyvenv-env-name (or (bound-and-true-p pyvenv-workon)
+                                       (bound-and-true-p pyvenv-virtual-env-name)))
+                  (activate-command (if (eq system-type 'windows-nt)
+                                        '("activate")
+                                        ;'("source" "activate")
+                                      '("conda" "activate")))
+                  (full-command (append activate-command
+                                        `(,pyvenv-env-name "\n")))
+                  (command-string (combine-and-quote-strings full-command))
+                  (buffer-or-process (if (not process)
+                                         (current-buffer)
+                                       process)))
+       (progn
+         (message "sending %s to %S" command-string
+                  buffer-or-process)
+         (term-send-string buffer-or-process command-string)))))
+  (defun spacemacs//pyvenv-track-buffer-virtualenv (oldfun &rest args)
+    "Functions like `pyvenv-track-virtualenv', but only checks when buffers are
+ changed."
+    (spacemacs//run-in-pyvenv
+     (unless (eq (current-buffer)
+                 spacemacs--pyvenv-last-scope)
+       (setq spacemacs--pyvenv-last-scope (current-buffer))
+       ;; (message "(%s) setting local venv %s" "track-buffer" pyvenv-workon)
+       (apply oldfun args))))
+  (cl-defun spacemacs//pyvenv-mode-set-local-virtualenv (&optional (caller-name ""))
+    "If the buffer-local `pyvenv-workon' and global `pyvenv-virtual-env-name'
+ values differ, [re]activate the buffer's `pyvenv-workon' env."
+    (spacemacs//run-in-pyvenv
+     (when (and (boundp 'pyvenv-workon)
+                (local-variable-p 'pyvenv-workon)
+                (not (string-equal pyvenv-workon
+                                   (or (ignore-errors (default-toplevel-value 'pyvenv-virtual-env-name))
+                                       spacemacs--pyvenv-virtual-env-name-prev))))
+       (message "(%s) setting local venv %s" caller-name pyvenv-workon)
+       (pyvenv-workon pyvenv-workon))))
   (when (configuration-layer/package-used-p 'persp-mode)
     (defun spacemacs//persp-after-switch-set-venv (frame-or-window)
       ;; `persp-activate' calls `persp-restore-window-conf', which
@@ -122,29 +130,29 @@ When projectile is altered to have `persp-mode'-scoped projects, this
       (when (eq python-auto-set-local-pyvenv-virtualenv 'on-project-switch)
         (with-current-buffer (window-buffer)
           (spacemacs//pyvenv-mode-set-local-virtualenv "persp-switch")))))
-
   (when (configuration-layer/package-used-p 'editorconfig)
     (defun spacemacs//editorconfig-set-pyvenv (props)
       "Set Anaconda virtual env variables `pyvenv-workon' and
       `python-shell-virtualenv-root' from entry in editorconfig file.
 
       The config file entry should be the env name, and `pyenv-workon-home' should be set."
-      (let ((env-name (gethash 'conda_env_name props)))
-        (when (and env-name
-                   (and (not (local-variable-p 'python-shell-virtualenv-root))
-                        (not (local-variable-p 'pyvenv-workon))))
-          ;; We're setting this locally, but the variable is used globally, so we can
-          ;; compare the two for a hackish means of determining buffer-specific envs.
-          ;; See `spacemacs//pyvenv-mode-set-local-virtualenv'.
-          (message "(editorconfig) setting pyvenv-workon to %s" env-name)
-          (setq-local pyvenv-workon env-name)
-          ;; Activate the venv, if not already or currently in a different one.
-          (spacemacs//pyvenv-mode-set-local-virtualenv "editorconfig")
-          (-when-let* ((workon-env (getenv "WORKON_HOME"))
-                      (venv-root (f-join (getenv "WORKON_HOME") env-name)))
-            ;; This is generally useful when using inferior shells.
-            (message "(editorconfig) setting python-shell-virtualenv-root to %s" venv-root)
-            (setq-local python-shell-virtualenv-root venv-root)))))))
+      (spacemacs//run-in-pyvenv
+       (let ((env-name (gethash 'conda_env_name props)))
+         (when (and env-name
+                    (and (not (local-variable-p 'python-shell-virtualenv-root))
+                         (not (local-variable-p 'pyvenv-workon))))
+           ;; We're setting this locally, but the variable is used globally, so we can
+           ;; compare the two for a hackish means of determining buffer-specific envs.
+           ;; See `spacemacs//pyvenv-mode-set-local-virtualenv'.
+           (message "(editorconfig) setting pyvenv-workon to %s" env-name)
+           (setq-local pyvenv-workon env-name)
+           ;; Activate the venv, if not already or currently in a different one.
+           (spacemacs//pyvenv-mode-set-local-virtualenv "editorconfig")
+           (-when-let* ((workon-env (getenv "WORKON_HOME"))
+                        (venv-root (f-join (getenv "WORKON_HOME") env-name)))
+             ;; This is generally useful when using inferior shells.
+             (message "(editorconfig) setting python-shell-virtualenv-root to %s" venv-root)
+             (setq-local python-shell-virtualenv-root venv-root))))))))
 
 (defun spacemacs//python-shell-send-string (string &optional process msg)
   "Send STRING to inferior IPython PROCESS.  Uses %cpaste for multiline input.
