@@ -7,7 +7,8 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(elixir
+   '(ocaml
+     elixir
      javascript
      clojure
      ;; go
@@ -81,7 +82,7 @@
           erc-enable-sasl-auth t)
 
      ;; FIXME: We get `semantic-idle-scheduler-function' errors in `polymode' modes.
-     (semantic :enabled-for emacs-lisp common-lisp python)
+     ;; (semantic :enabled-for emacs-lisp common-lisp python)
      common-lisp)
 
    ;; FYI: You can use MELPA recipes here (i.e. https://github.com/melpa/melpa#recipe-format).
@@ -244,6 +245,7 @@
   (setenv "PATH" (mapconcat #'identity (delete-dups exec-path) ":"))
 
   ;; Looks like `spacemacs/loadenv' is cutting off DBUS_SESSION_BUS_ADDRESS at the "="!
+  ;; FYI: This now happens in `spacemacs/load-spacemacs-env'.
   ;; (-when-let* (((string-equal (getenv "DBUS_SESSION_BUS_ADDRESS") "unix:path"))
   ;;             (bus-path (format "/run/user/%s/bus" (user-uid)))
   ;;             ((file-exists-p bus-path)))
@@ -429,6 +431,12 @@
               (sphinx-doc-mode t))
             (add-hook 'python-mode-hook #'btw/setup-sphinx-doc)))
 
+  (with-eval-after-load 'utop
+    (setq utop-command "opam config exec -- utop -emacs"))
+
+  (with-eval-after-load 'geiser
+    (setq-default geiser-default-implementation 'racket))
+
   (with-eval-after-load 'overseer
     (defun btw-overseer--current-buffer-test-file-p ()
       (string-match (rx (seq "-test" (optional "s") "\.el" eol))
@@ -438,7 +446,8 @@
 
   (with-eval-after-load 'semantic
     (setq semanticdb-search-system-databases nil)
-    (add-to-list 'semanticdb-project-root-functions #'projectile-project-root))
+    ;; (add-to-list 'semanticdb-project-root-functions #'projectile-project-root)
+    )
 
   (with-eval-after-load 'evil-surround
     (setq evil-surround-pairs-alist
@@ -532,9 +541,6 @@
                          ))))
 
   (with-eval-after-load 'pyvenv
-    (make-variable-buffer-local 'pyvenv-workon)
-    (make-variable-buffer-local 'pyvenv-virtual-env)
-    (make-variable-buffer-local 'pyvenv-virtual-env-name)
     ;; Set buffer local `pyvenv-workon' values for automatic activation.
     (when (fboundp 'pyvenv-tracking-mode)
       (setq pyvenv-tracking-ask-before-change t)
@@ -579,7 +585,12 @@
                         ;; Function which returns the folders that are considered
                         ;; to be not projects but library files.
                         :library-folders-fn (lambda (_workspace)
-                                              lsp-clients-python-library-directories))))
+                                              (if (fboundp 'spacemacs//run-in-pyvenv)
+                                                  (spacemacs//run-in-pyvenv
+                                                   (if python-shell-virtualenv-root
+                                                       (list python-shell-virtualenv-root)
+                                                     lsp-clients-python-library-directories))
+                                                lsp-clients-python-library-directories)))))
      ((fboundp 'lsp-define-stdio-client)
       (progn
         (defun btw/lsp-python-workspace-root ()
@@ -752,11 +763,7 @@
     (advice-add #'projectile-switch-project-by-name
                 :override #'btw/projectile-switch-project-by-name)
 
-    ;; (setq projectile-known-projects-file
-    ;;       (f-join dotspacemacs-directory "projectile-bookmarks.eld"))
-
-    ;; (add-to-list 'projectile-globally-ignored-modes ...)
-    ;; (setq projectile-globally-ignored-modes ...)
+    (setq projectile-project-search-path '("~/projects"))
 
     (setq projectile-globally-ignored-directories
           (delete-dups (append projectile-globally-ignored-directories
@@ -859,6 +866,13 @@
         (or persp-projectile-name (apply oldfun r))))
 
     (advice-add #'projectile-project-name :around #'btw/persp-projectile-project-name)
+
+    (defun btw/persp-restrict-ido-buffers (&rest r)
+         "Remove `nil' buffer names from the returned results.
+This fixes some `helm' issues."
+         (setq ido-temp-list (remove nil r)))
+
+    (advice-add #'persp-restrict-ido-buffers :after #'btw/persp-restrict-ido-buffers)
 
     ;; (add-hook 'persp-common-buffer-filter-functions
     ;;           ;; there is also `persp-add-buffer-on-after-change-major-mode-filter-functions'
