@@ -1,4 +1,4 @@
-;; -*- mode: emacs-lisp -*-
+;; -*- mode: emacs-lisp; lexical-binding: t -*-
 
 (defun dotspacemacs/layers ()
   (setq-default
@@ -120,7 +120,7 @@
                                       ;; Use a newer version of python.el.
                                       (python :location elpa :min-version "0.26.1"))
    dotspacemacs-frozen-packages '()
-   dotspacemacs-excluded-packages '(company-emoji emoji-cheat-sheet-plus emojify)
+   dotspacemacs-excluded-packages '(hl-todo company-emoji emoji-cheat-sheet-plus emojify)
    dotspacemacs-install-packages 'used-only))
 
 (defun dotspacemacs/init ()
@@ -207,6 +207,7 @@
   (setq auto-save-timeout nil)
   (setq init-file-debug nil)
   (setq debug-on-error t)
+  (setq debug-on-quit nil)
 
   (defun btw/add-valid-paths-to-list (target-list object-list &optional append)
     (dolist (file (seq-take-while #'file-exists-p object-list))
@@ -432,7 +433,12 @@
             (add-hook 'python-mode-hook #'btw/setup-sphinx-doc)))
 
   (with-eval-after-load 'utop
-    (setq utop-command "opam config exec -- utop -emacs"))
+    (setq utop-command "opam config exec -- utop -emacs")
+    ;; (let ((camlp5-loc (string-trim (shell-command-to-string "camlp5 -where"))))
+    ;;   (if camlp5-loc
+    ;;       (setq utop-command (format "opam config exec -- utop -emacs -I %s camlp5o.pam" camlp5-loc))
+    ;;     (setq utop-command "opam config exec -- utop -emacs")))
+    )
 
   (with-eval-after-load 'geiser
     (setq-default geiser-default-implementation 'racket))
@@ -867,10 +873,12 @@
 
     (advice-add #'projectile-project-name :around #'btw/persp-projectile-project-name)
 
+    ;; (setq persp-set-ido-hooks nil)
+
     (defun btw/persp-restrict-ido-buffers (&rest r)
          "Remove `nil' buffer names from the returned results.
 This fixes some `helm' issues."
-         (setq ido-temp-list (remove nil r)))
+         (setq ido-temp-list (remove nil ido-temp-list)))
 
     (advice-add #'persp-restrict-ido-buffers :after #'btw/persp-restrict-ido-buffers)
 
