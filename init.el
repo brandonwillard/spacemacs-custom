@@ -48,9 +48,12 @@
      (auto-completion :variables
                       ;; auto-completion-enable-sort-by-usage t
                       ;; :packages (not auto-complete ac-ispell)
+                      spacemacs-default-company-backends '(company-files company-capf)
                       auto-completion-return-key-behavior nil
+                      auto-completion-idle-delay nil
                       auto-completion-tab-key-behavior nil
                       auto-completion-complete-with-key-sequence "C-y"
+                      auto-completion-private-snippets-directory nil
                       auto-completion-enable-snippets-in-popup t
                       auto-completion-enable-help-tooltip 'manual)
      emacs-lisp
@@ -1008,8 +1011,6 @@ This fixes some `helm' issues."
     (defalias #'forward-evil-word #'forward-evil-symbol))
 
   (with-eval-after-load 'yasnippet
-    (spacemacs|add-company-backends :backends company-yasnippet
-                                    :modes yas-minor-mode)
     (setq yasnippet-snippets-dir (f-join default-directory "private" "snippets")))
 
   (with-eval-after-load 'company
