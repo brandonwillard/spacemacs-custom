@@ -669,8 +669,7 @@
       "Return the point at the end of the current set of results."
       (cond
        ((looking-at-p "^[ \t]*$")
-        (point)) ;no result
-
+        (point))                        ;no result
        ((looking-at-p (format "^[ \t]*%s[ \t]*$" org-bracket-link-regexp))
         (line-beginning-position 2))
        (t (let* ((element (org-element-at-point))
@@ -897,9 +896,9 @@
     ;; (setq persp-set-ido-hooks nil)
 
     (defun btw/persp-restrict-ido-buffers (&rest r)
-         "Remove `nil' buffer names from the returned results.
+      "Remove `nil' buffer names from the returned results.
 This fixes some `helm' issues."
-         (setq ido-temp-list (remove nil ido-temp-list)))
+      (setq ido-temp-list (remove nil ido-temp-list)))
 
     (advice-add #'persp-restrict-ido-buffers :after #'btw/persp-restrict-ido-buffers)
 
@@ -1117,7 +1116,7 @@ From https://emacs.stackexchange.com/a/10698"
                  (display-buffer-in-side-window (messages-buffer) '((side . right)))
                  (balance-windows-area)))
 
-  ;;; Initialization steps
+;;; Initialization steps
 
   (defun btw/after-user-config-setup ()
     ;; (require 'frame-cmds)
