@@ -30,7 +30,7 @@
      (python :variables
              python-auto-set-local-pyvenv-virtualenv 'on-visit
              ;; NOTE: These can also be .dir-local/project specific.
-             python-test-runner '(pytest nose)
+             python-test-runner 'pytest
              python-backend 'lsp
              ;; python-enable-yapf-format-on-save t
              :packages (not live-py-mode))
@@ -540,6 +540,28 @@
     (setq flycheck-indication-mode 'right-fringe))
 
   (with-eval-after-load 'python
+    ;; Stop-gap fix until https://github.com/ipython/ipython/pull/11803 goes through.
+    (setq python-shell-completion-setup-code
+          (concat
+           (eval (car (get 'python-shell-completion-setup-code 'standard-value)))
+                  "\n
+
+from IPython.core.completer import provisionalcompleter
+
+def all_completions(self, text):
+    prefix = text.rpartition('.')[0]
+    with provisionalcompleter():
+        return ['.'.join([prefix, c.text]) if prefix and self.use_jedi else c.text
+                for c in self.completions(text, len(text))]
+
+    return self.complete(text)[1]
+
+try:
+    import types
+    get_ipython().Completer.all_completions = types.MethodType(all_completions, get_ipython().Completer)
+except Exception:
+    pass
+"))
     (when (fboundp 'purpose-set-extension-configuration)
       ;; NOTE: To delete this configuration...
       ;; (purpose-del-extension-configuration :python)
