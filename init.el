@@ -819,20 +819,22 @@ except Exception:
                 :override #'btw/projectile-switch-project-by-name)
 
     (setq projectile-project-search-path '("~/projects"))
+    (setq projectile-indexing-method 'hybrid)
 
+    (setq projectile-globally-unignored-files '("TODO.org" "TODOs.org"))
     (setq projectile-globally-ignored-directories
           (delete-dups (append projectile-globally-ignored-directories
-                                     (list ".ropeproject" ".cache" "__pycache__"
-                                           ".pytest_cache" ".mypy_cache"
-                                           "src/tex/.build" "src/tex/_minted" "src/tex/_minted-.build"
-                                           ;; Directory pattern.
-                                           ;; (rx "_minted" (* any))
-                                           ;; (rx (+ (or alnum digit blank "." "/" "-" "_"))
-                                           ;;     "/_minted" (* any))
-                                           ))))
+                               (list ".ropeproject" ".cache" "__pycache__"
+                                     ".pytest_cache" ".mypy_cache"
+                                     "src/tex/.build" "src/tex/_minted" "src/tex/_minted-.build"
+                                     ;; Directory pattern.
+                                     ;; (rx "_minted" (* any))
+                                     ;; (rx (+ (or alnum digit blank "." "/" "-" "_"))
+                                     ;;     "/_minted" (* any))
+                                     ))))
     (setq projectile-tags-command "/usr/bin/ctags -Re -f \"%s\" %s \"%s\"")
     (setq projectile-tags-file-name ".TAGS")
-    (setq projectile-use-git-grep t))
+    (setq projectile-use-git-grep nil))
 
   (with-eval-after-load 'org-projectile
     (setq org-projectile-capture-template "* TODO %?
