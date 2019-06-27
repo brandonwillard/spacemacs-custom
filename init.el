@@ -278,7 +278,10 @@
   (setq debugger-stack-frame-as-list t)
   (setq edebug-print-circle t)
   (setq edebug-print-level 20)
-  (setq print-circle t))
+  (setq print-circle t)
+
+  ;; Be more permissive about the accepted forms of version strings
+  (add-to-list 'version-regexp-alist '("^[-._+ ]?dev$" . -4)))
 
 (defun dotspacemacs/user-config ()
 
