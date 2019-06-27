@@ -379,13 +379,14 @@
     :commands (org-pelican-publish-to-pelican))
 
   (use-package org-gcal
+    :disabled t
     :config (progn
               (-when-let* ((client-info (cdr (car (json-read-file
-                                                  (f-join dotspacemacs-directory
-                                                          "private"
-                                                          "org-gcal-brandonwillard-gmail.json")))))
-                          (client-id (alist-get 'client_id client-info))
-                          (client-secret (alist-get 'client_secret client-info)))
+                                                   (f-join dotspacemacs-directory
+                                                           "private"
+                                                           "org-gcal-brandonwillard-gmail.json")))))
+                           (client-id (alist-get 'client_id client-info))
+                           (client-secret (alist-get 'client_secret client-info)))
                 ;; TODO: Use `plstore'/authstore
                 ;; (add-to-list 'auth-sources "~/.authinfo.json.gpg")
                 (setq org-gcal-client-id client-id
