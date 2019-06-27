@@ -233,14 +233,24 @@
   (setq package-load-list '(all (viper nil)))
 
   ;; Fix for anaconda env interaction with pyvenv.
-  (setq conda-home (or (getenv "ANACONDA_HOME") "~/apps/anaconda3"))
-  (setenv "ANACONDA_HOME" conda-home)
-  (setenv "WORKON_HOME" (concat conda-home "/" "envs"))
+  (if (and
+       (not (getenv "ANACONDA_HOME"))
+       (setq conda-home
+             (seq-find #'file-exists-p
+                       (list (getenv "ANACONDA_HOME")
+                             "~/apps/anaconda3"
+                             "~/anaconda3"))))
+      (progn
+        (setenv "ANACONDA_HOME" conda-home)
+        (setenv "WORKON_HOME" (concat conda-home "/" "envs"))
 
-  ;; Just to be sure (and because we're seeing some new problems with PATH var
-  ;; output from `shell-command-to-string' under let-bound `shell-file-name'),
-  ;; let's make sure the conda binaries are available.
-  (add-to-list 'exec-path (expand-file-name (concat conda-home "/" "bin")))
+        ;; Just to be sure (and because we're seeing some new problems with PATH var
+        ;; output from `shell-command-to-string' under let-bound `shell-file-name'),
+        ;; let's make sure the conda binaries are available.
+        (add-to-list 'exec-path (expand-file-name (concat conda-home "/" "bin"))))
+    (and (not (getenv "ANACONDA_HOME"))
+         (display-warning 'conda-home "Couldn't find anaconda home directory!")))
+
   (add-to-list 'exec-path (expand-file-name (concat user-home-directory
                                                     ".cask" "/" "bin")))
 
