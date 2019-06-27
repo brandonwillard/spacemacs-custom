@@ -180,6 +180,31 @@ for the output directory."
                ;; Re-attach earmuffs, if they were present
                process-name)))))))
 
+(defun org-babel-scheme-initiate-session (&optional session params)
+  "Create a session named SESSION according to PARAMS."
+  (unless (string= session "none")
+    (let ((scheme-impl (when (cdr (assq :scheme params))
+			                   (intern (cdr (assq :scheme params))))))
+     (org-babel-scheme-initiate-session-by-key session scheme-impl))))
+(defun org-babel-scheme-initiate-session-by-key (&optional session scheme-impl)
+  (if (and (featurep 'geiser-mode) (fboundp 'run-geiser))
+      (require 'geiser-mode)
+    (error "No function available for running an inferior Scheme REPL"))
+  (save-window-excursion
+    (let* ((source-buffer (current-buffer))
+           (source-buffer-name (replace-regexp-in-string ;; zap surrounding *
+                                "^ ?\\*\\([^*]+\\)\\*" "\\1"
+                                (buffer-name source-buffer)))
+           (scheme-impl (or scheme-impl
+		                        geiser-default-implementation
+		                        (car geiser-active-implementations)))
+           (session (org-babel-scheme-make-session-name
+		                 source-buffer-name session scheme-impl))
+           (repl-buffer (org-babel-scheme-get-repl
+                         scheme-impl
+                         (and (not (string= session "none")) session))))
+      session)))
+
 (defun spacemacs//org-remove-headlines (backend)
   "Remove headlines with :no_title: tag.
 
@@ -424,6 +449,8 @@ This is mostly the standard `ox-latex' with only the following differences:
  sessions."
   (let ((py-buffer-name (cdr (assoc session org-babel-python-buffers))))
     (or py-buffer-name (format "*%s*" (python-shell-get-process-name nil)))))
+(defun spacemacs//org-babel-scheme-make-session-name (orig-func buffer name impl)
+  (funcall orig-func ))
 (defun spacemacs//org-babel-execute-from-here (&optional arg)
   "Execute source code blocks from the subtree at the current point upward.
 Call `org-babel-execute-src-block' on every source block in

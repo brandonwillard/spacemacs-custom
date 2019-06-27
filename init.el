@@ -7,11 +7,12 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(ocaml
+   '(nginx
+     ocaml
      elixir
      javascript
      clojure
-     ;; go
+     go
      csv
      ;; (javascript :packages (not tern))
      (lsp :packages (not
@@ -107,6 +108,9 @@
                                       kubernetes-evil
 
                                       ;; emacs-jupyter
+
+                                      (ob-racket :location (recipe :fetcher github
+                                                                   :repo "wallyqs/ob-racket"))
 
                                       ;; (helpful :location (recipe :fetcher github
                                       ;;                            :repo "Wilfred/helpful"))
@@ -432,15 +436,32 @@
               (sphinx-doc-mode t))
             (add-hook 'python-mode-hook #'btw/setup-sphinx-doc)))
 
+  ;; (with-eval-after-load 'go-mode
+  ;;   (setq godoc-command "godoc")
+  ;;   (setq godoc-and-godef-command "godoc"))
+
   (with-eval-after-load 'utop
     (setq utop-command "opam config exec -- utop -emacs")
     ;; (let ((camlp5-loc (string-trim (shell-command-to-string "camlp5 -where"))))
     ;;   (if camlp5-loc
     ;;       (setq utop-command (format "opam config exec -- utop -emacs -I %s camlp5o.pam" camlp5-loc))
     ;;     (setq utop-command "opam config exec -- utop -emacs")))
-    )
+    (define-key utop-mode-map (kbd "C-j") 'comint-next-input)
+    (define-key utop-mode-map (kbd "C-k") 'comint-previous-input)
+    (define-key utop-mode-map (kbd "C-r") 'comint-history-isearch-backward)
+    (define-key utop-mode-map (kbd "C-l") 'spacemacs/comint-clear-buffer))
+
+  (with-eval-after-load 'racket-mode
+    (when (fboundp 'purpose-set-extension-configuration)
+      (purpose-set-extension-configuration
+       :racket (purpose-conf :mode-purposes
+                             '((racket-repl-mode . repl))))))
 
   (with-eval-after-load 'geiser
+    (when (fboundp 'purpose-set-extension-configuration)
+      (purpose-set-extension-configuration
+       :scheme (purpose-conf :mode-purposes
+                             '((geiser-repl-mode . repl)))))
     (setq-default geiser-default-implementation 'racket))
 
   (with-eval-after-load 'overseer
