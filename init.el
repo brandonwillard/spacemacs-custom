@@ -639,43 +639,7 @@ except Exception:
           org-ref-prefer-bracket-links t))
 
   (with-eval-after-load 'lsp-mode
-    (cond
-     ((fboundp 'lsp-register-client)
-      (lsp-register-client
-       (make-lsp-client :new-connection (lsp-stdio-connection "pyls")
-                        :major-modes '(python-mode)
-                        :server-id 'pyls
-                        ;; Function which returns the folders that are considered
-                        ;; to be not projects but library files.
-                        :library-folders-fn (lambda (_workspace)
-                                              (if (fboundp 'spacemacs//run-in-pyvenv)
-                                                  (spacemacs//run-in-pyvenv
-                                                   (if python-shell-virtualenv-root
-                                                       (list python-shell-virtualenv-root)
-                                                     lsp-clients-python-library-directories))
-                                                lsp-clients-python-library-directories)))))
-     ((fboundp 'lsp-define-stdio-client)
-      (progn
-        (defun btw/lsp-python-workspace-root ()
-          (or (when (fboundp 'projectile-project-root)
-                (let ((projectile-require-project-root t))
-                  (condition-case nil
-                      (projectile-project-root)
-                    (error nil))))
-              ;; Based on `lsp-make-traverser'.
-              (lambda ()
-                (let ((dir
-                       ;; TODO: ".git" and lib paths? (directory-files "." nil "\\(__init__\\|setup\\)\\.py")))
-                       (if dir
-                           (file-truename dir)))
-                      (if lsp-message-project-root-warning
-                          (message "Couldn't find project root, using the current directory as the root.")
-                        (lsp-warn "Couldn't find project root, using the current directory as the root.")
-                        default-directory))))))
-        (lsp-define-stdio-client lsp-python
-                                 "python"
-                                 #'btw/lsp-python-workspace-root
-                                 '("pyls")))))
+
     ;; Temporary fix (until a PR takes care of this)
     (spacemacs/set-leader-keys-for-minor-mode 'lsp-mode
       "bd" #'lsp-describe-session)
@@ -687,6 +651,30 @@ except Exception:
     (setq lsp-enable-eldoc nil)
     (setq lsp-eldoc-hook '(lsp-document-highlight))
     (setq lsp-eldoc-render-all nil))
+
+  (with-eval-after-load 'lsp-pyls
+    (defun btw/lsp-pyls-library-folders-fn (_workspace)
+      "Find workspaces based on virtualenvs.  Function which returns the
+ folders that are considered to be not projects but library files.  "
+      (if (fboundp 'spacemacs//run-in-pyvenv)
+          (spacemacs//run-in-pyvenv
+           (if python-shell-virtualenv-root
+               (list python-shell-virtualenv-root)
+             ;; TODO: Could just make this variable buffer-local.
+             lsp-clients-python-library-directories))
+        lsp-clients-python-library-directories))
+    (let ((client
+           (make-lsp-client :new-connection (lsp-stdio-connection
+                                             (lambda () lsp-pyls-server-command))
+                            :priority -1
+                            :major-modes '(python-mode)
+                            :server-id 'pyls
+                            :initialized-fn (lambda (workspace)
+                                              (with-lsp-workspace workspace
+                                                (lsp--set-configuration (lsp-configuration-section "pyls"))))
+                            :library-folders-fn #'btw/lsp-pyls-library-folders-fn)))
+      (puthash (lsp--client-server-id client) client lsp-clients))
+    (setq lsp-pyls-plugins-pylint-enabled nil))
 
   (with-eval-after-load 'lsp-ui
     (setq lsp-eldoc-render-all nil)
