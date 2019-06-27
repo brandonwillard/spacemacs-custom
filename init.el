@@ -802,12 +802,17 @@ except Exception:
                                        'projectile-commander
                                      projectile-switch-project-action)))
         (run-hooks 'projectile-before-switch-project-hook)
-        (let ((default-directory project-to-switch))
+        (let* ((default-directory project-to-switch)
+               (projectile-project-name (funcall projectile-project-name-function
+                                                 project-to-switch)))
           ;; (with-temp-buffer
           ;;   (hack-dir-local-variables-non-file-buffer))
-          (let ((projectile-project-name (funcall projectile-project-name-function
-                                                  project-to-switch)))
-            (funcall switch-project-action)))
+          (funcall switch-project-action)
+          ;; Default to VCS when/if `helm-projectile' is aborted.
+          (if (and (string-prefix-p "helm"
+                                    (symbol-name switch-project-action))
+                   (eq helm-exit-status 1))
+              (projectile-vc project-to-switch)))
         (run-hooks 'projectile-after-switch-project-hook)))
 
     (advice-add #'projectile-switch-project-by-name
