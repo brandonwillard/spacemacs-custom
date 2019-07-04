@@ -216,6 +216,20 @@
   (setq debug-on-error t)
   (setq debug-on-quit nil)
 
+  ;; Helps with delays while handling very long lines.
+  (setq-default bidi-display-reordering nil)
+  (setq debugger-stack-frame-as-list t)
+  (setq edebug-print-circle t)
+  (setq edebug-print-level 20)
+  (setq print-circle t)
+
+  (setq auth-sources '("~/.authinfo.gpg" "~/.authinfo" "~/.netrc"))
+
+  (setq custom-file (concat user-emacs-directory "private/custom-settings.el"))
+
+  ;; Viper is loaded/installed automatically, but we want it disabled.
+  (setq package-load-list '(all (viper nil)))
+
   (defun btw/add-valid-paths-to-list (target-list object-list &optional append)
     (dolist (file (seq-take-while #'file-exists-p object-list))
       (add-to-list target-list (expand-file-name file) append)))
@@ -232,16 +246,13 @@
                                '("/usr/share/info/emacs-27" "/usr/local/share/info"
                                  "/usr/share/info"))
 
-  ;; Viper is loaded/installed automatically, but we want it disabled.
-  (setq package-load-list '(all (viper nil)))
-
   ;; Fix for anaconda env interaction with pyvenv.
   (if (and
        (not (getenv "ANACONDA_HOME"))
        (setq conda-home
              (seq-find #'file-exists-p
-                       (list (getenv "ANACONDA_HOME")
-                             "~/apps/anaconda3"
+                       (list (or (getenv "ANACONDA_HOME")
+                                 "~/apps/anaconda3")
                              "~/anaconda3"))))
       (progn
         (setenv "ANACONDA_HOME" conda-home)
@@ -269,19 +280,10 @@
   ;;             ((file-exists-p bus-path)))
   ;;   (setenv "DBUS_SESSION_BUS_ADDRESS" (concat "unix:path=" bus-path)))
 
-  (setq custom-file (concat user-emacs-directory "private/custom-settings.el"))
-
   (setq browse-url-browser-function '((".*slack.*" . browse-url-chrome)
                                       (".*youtube.*" . browse-url-chrome)
                                       ("." . eww-browse-url)))
   ;; (setq browse-url-browser-function 'xwidget-webkit-browse-url)
-
-  ;; Helps with delays while handling very long lines.
-  (setq-default bidi-display-reordering nil)
-  (setq debugger-stack-frame-as-list t)
-  (setq edebug-print-circle t)
-  (setq edebug-print-level 20)
-  (setq print-circle t)
 
   ;; Be more permissive about the accepted forms of version strings
   (add-to-list 'version-regexp-alist '("^[-._+ ]?dev$" . -4)))
