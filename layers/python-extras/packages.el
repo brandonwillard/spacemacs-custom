@@ -117,11 +117,10 @@
     "De-prioritize internal/private Python variables (e.g. '_blah') in completion list ordering.
 
 See `company-transformers'."
-    candidates
     ;; TODO: Find a replacement for `seq-sort-by'.
     ;; (seq-sort-by #'company-strip-prefix #'python--private-lessp
     ;;              candidates)
-    )
+    (seq-sort-by #'identity #'python--private-lessp candidates))
 
   (defun python-extras/python-company-conf ()
     (add-to-list 'company-transformers #'python-extras/company-transform-python
@@ -161,6 +160,39 @@ See `company-transformers'."
   ;; Enable automatic projectile-based venv activation before the following activities.
   (advice-add #'spacemacs/python-start-or-switch-repl :before #'spacemacs//check-and-activate-projectile-pyvenv)
   (advice-add #'spacemacs/projectile-shell-pop :before #'spacemacs//check-and-activate-projectile-pyvenv)
+
+
+  ;; TODO: `pyvenv-restart-python' checks `pyvenv-virtual-env-name' and
+  ;; `pyvenv-virtual-env' *within* each inferior Python buffer, so we need to [re]set
+  ;; those values there (e.g. using the caller's venv values).
+  (defun btw//pyvenv-restart-python (&rest _)
+    "Restart Python inferior processes (with venv awareness and not cursor jumps)."
+    (interactive)
+    (save-window-excursion
+      (dolist (buf (persp-buffer-list))
+        (set-buffer buf)
+        (spacemacs//run-in-pyvenv
+         (when (and (eq major-mode 'inferior-python-mode)
+                    (get-buffer-process buf))
+           (let ((cmd (combine-and-quote-strings (process-command
+                                                  (get-buffer-process buf))))
+                 (dedicated (if (string-match "\\[.*\\]$" (buffer-name buf))
+                                t
+                              nil))
+                 (show nil))
+             (delete-process (get-buffer-process buf))
+             (insert "\n\n"
+                     "###\n"
+                     (format "### Restarting in virtualenv %s (%s)\n"
+                             pyvenv-virtual-env-name
+                             pyvenv-workon
+                             ;; pyvenv-virtual-env
+                             )
+                     "###\n"
+                     "\n\n")
+             (run-python cmd dedicated show)))))))
+
+  (advice-add #'pyvenv-restart-python :override #'btw//pyvenv-restart-python)
 
   (defun spacemacs//set-project-root (func &rest args)
     "Run the wrapped function in the project root directory."
