@@ -159,8 +159,15 @@ See `company-transformers'."
   ;; (advice-add #'pyvenv-activate :before #'python-extras//track-previous-pyvenv)
 
   ;; Enable automatic projectile-based venv activation before the following activities.
-  (advice-add 'spacemacs/python-start-or-switch-repl :before #'spacemacs//check-and-activate-projectile-pyvenv)
-  (advice-add 'spacemacs/projectile-shell-pop :before #'spacemacs//check-and-activate-projectile-pyvenv)
+  (advice-add #'spacemacs/python-start-or-switch-repl :before #'spacemacs//check-and-activate-projectile-pyvenv)
+  (advice-add #'spacemacs/projectile-shell-pop :before #'spacemacs//check-and-activate-projectile-pyvenv)
+
+  (defun spacemacs//set-project-root (func &rest args)
+    "Run the wrapped function in the project root directory."
+    (let ((default-directory (expand-file-name (or (projectile-project-root) default-directory))))
+      (apply func args)))
+
+  (advice-add #'python-shell-make-comint :around #'spacemacs//set-project-root)
 
   (add-hook 'pyvenv-post-activate-hooks #'spacemacs//pyvenv-conda-activate-additions)
   (add-hook 'pyvenv-post-deactivate-hooks #'spacemacs//pyvenv-conda-deactivate-additions)
