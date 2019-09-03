@@ -698,6 +698,15 @@ except Exception:
     ;; TODO: Consider this...
     ;; (org-babel-make-language-alias "python" "ipython")
 
+    (defun btw//org-show-entry (&rest r)
+      "Expand collapsed blocks when using goto-char."
+      (when (eq major-mode 'org-mode)
+        (save-excursion
+          (org-reveal))))
+
+    (advice-add 'goto-line :after #'btw//org-show-entry)
+    (advice-add 'forward-line :after #'btw//org-show-entry)
+
     ;; This fixes the broken behavior when used within drawers.
     (defun btw--org-babel-result-end ()
       "Return the point at the end of the current set of results."
