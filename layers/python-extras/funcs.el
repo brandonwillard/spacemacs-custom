@@ -36,14 +36,17 @@
     (defmacro spacemacs//run-in-pyvenv (&rest forms)
       "Provides a projectile-specific `pyvenv-workon' environment via
  `dir-locals-class-alist'."
-      `(let* ((project-locals (ignore-errors (alist-get (intern (expand-file-name (projectile-project-root)))
-                                                        dir-locals-class-alist)))
+      `(let* ((project-locals (ignore-errors
+                                (alist-get (intern
+                                            (expand-file-name (projectile-project-root)))
+                                           dir-locals-class-alist)))
               (project-locals-nil (alist-get nil project-locals))
               (pyvenv-workon (or (cdr (assoc 'pyvenv-workon project-locals-nil))
                                  (bound-and-true-p pyvenv-workon)))
               (python-shell-virtualenv-root (or (format "%s/%s" (getenv "WORKON_HOME")
                                                         (bound-and-true-p pyvenv-workon))
                                                 (bound-and-true-p python-shell-virtualenv-root))))
+         (pyvenv-workon pyvenv-workon)
          ,@forms))
     (defun spacemacs//pyvenv-track-projectile-virtualenv (oldfun &rest args)
       "Functions like `pyvenv-track-virtualenv', but only considers changing the
@@ -68,6 +71,7 @@ When projectile is altered to have `persp-mode'-scoped projects, this
       (spacemacs//run-in-pyvenv
        (when (or (and (not pyvenv-virtual-env-name) pyvenv-workon)
                  (not (string-equal pyvenv-virtual-env-name pyvenv-workon)))
+         (message "activating %s" pyvenv-workon)
          (pyvenv-workon pyvenv-workon)))))
   (defun spacemacs//pyvenv-conda-activate-additions ()
     (spacemacs//run-in-pyvenv

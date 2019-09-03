@@ -77,6 +77,9 @@
       (setq python-shell-completion-native-output-timeout 3.0)
       (setq python-pdbtrack-activate nil)
 
+      ;; This calls `ipython --version', which is costly, so disable it.
+      (advice-add #'spacemacs//python-setup-shell :override (lambda (&rest r) nil))
+
       (add-to-list 'python-shell-completion-native-disabled-interpreters "jupyter")
       (add-to-list 'python-shell-completion-native-disabled-interpreters "ipython")
 
