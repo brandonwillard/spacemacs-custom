@@ -867,8 +867,11 @@ except Exception:
       (save-excursion
         (hs-show-block)))
 
-    (advice-add 'goto-line :after #'btw//hs-show-block)
-    (advice-add 'forward-line :after #'btw//hs-show-block)
+    (advice-add #'goto-line :after #'btw//hs-show-block)
+    (advice-add #'goto-char :after #'btw//hs-show-block)
+    (advice-add #'forward-line :after #'btw//hs-show-block)
+    ;; We need this because the function uses `inhibit-point-motion-hooks', I believe.
+    (advice-add #'primitive-undo :after #'btw//hs-show-block)
 
     (setq hs-allow-nesting t)
 
