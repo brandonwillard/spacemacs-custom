@@ -101,6 +101,7 @@
                                       evil-embrace
                                       ox-jira
                                       ;; ox-confluence
+                                      ox-rst
                                       (ox-gfm :location (recipe :fetcher github
                                                                 :repo "larstvei/ox-gfm"))
                                       plantuml-mode
@@ -201,7 +202,7 @@
    dotspacemacs-smartparens-strict-mode nil
    dotspacemacs-smart-closing-parenthesis nil
    dotspacemacs-highlight-delimiters 'all
-   dotspacemacs-enable-server nil
+   dotspacemacs-enable-server t
    dotspacemacs-persistent-server nil
    dotspacemacs-search-tools '("ag" "pt" "ack" "grep")
    dotspacemacs-default-package-repository nil
@@ -286,7 +287,7 @@
   ;; (setq browse-url-browser-function 'xwidget-webkit-browse-url)
 
   ;; Be more permissive about the accepted forms of version strings
-  (add-to-list 'version-regexp-alist '("^[-._+ ]?dev$" . -4)))
+  (add-to-list 'version-regexp-alist '("^[-._+ ]?Devi$" . -4)))
 
 (defun dotspacemacs/user-config ()
 
@@ -379,6 +380,10 @@
     :body (progn (kubernetes-overview)))
 
   ;; (use-package helpful)
+
+  (use-package ox-jira :defer t)
+
+  (use-package ox-rst :defer t)
 
   (use-package ox-pelican
     :commands (org-pelican-publish-to-pelican))
@@ -847,7 +852,20 @@ except Exception:
   %a"))
 
   (with-eval-after-load 'hideshow
+
+    (defun btw//hs-show-block (&rest r)
+      "Expand collapsed blocks when using goto-char."
+      (save-excursion
+        (hs-show-block)))
+
+    (advice-add 'goto-line :after #'btw//hs-show-block)
+    (advice-add 'forward-line :after #'btw//hs-show-block)
+
     (setq hs-allow-nesting t)
+
+    ;; Attempt to open folds when jumping into a folded area.
+    (setq evil-jumps-post-jump-hook (cons #'hs-show-block evil-jumps-post-jump-hook))
+
     ;; Let's not lose the cursor position when folding.
     (advice-add 'hs-hide-block :around #'(lambda (oldfun &rest r)
                                            (save-excursion (apply oldfun r))))
