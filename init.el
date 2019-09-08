@@ -72,7 +72,8 @@
             shell-default-position 'bottom)
 
      spell-checking
-     syntax-checking
+     (syntax-checking :variables
+                      syntax-checking-enable-tooltips nil)
 
      ;; slack
      (erc :variables
@@ -729,6 +730,8 @@ except Exception:
     (setq lsp-pyls-plugins-pylint-enabled nil))
 
   (with-eval-after-load 'lsp-ui
+    (setq lsp-enable-symbol-highlighting nil)
+    (setq lsp-ui-peek-enable nil)
     (setq lsp-eldoc-render-all nil)
     (setq lsp-ui-doc-enable nil)
     (setq lsp-enable-eldoc nil)

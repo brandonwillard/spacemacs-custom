@@ -647,3 +647,12 @@ Defers to standard `conda--find-env-yml' otherwise."
           (insert (format-time-string "[%F %T.%3N] "))))))
 (advice-add 'message :before 'btw/ad-timestamp-message)
 #+END_SRC
+* Utils
+
+** Remove all advice
+#+BEGIN_SRC elisp :eval none
+(defun remove-all-advice (func-symbol)
+  (advice-function-mapc (lambda (f f-alist)
+                          (advice-remove func-symbol f))
+                        (advice--symbol-function func-symbol)))
+#+END_SRC
