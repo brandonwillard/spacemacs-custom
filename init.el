@@ -907,27 +907,44 @@ except Exception:
 
   (with-eval-after-load 'hideshow
 
-    (defun btw//hs-show-block (&rest r)
-      "Expand collapsed blocks when using goto-char."
-      (save-excursion
-        (hs-show-block)))
+    (defun btw//hs-show-block-rec ()
+      "Unfold/show all blocks at point."
+      (while (hs-already-hidden-p)
+        (save-mark-and-excursion
+          (hs-show-block))))
 
-    (advice-add #'goto-line :after #'btw//hs-show-block)
-    (advice-add #'goto-char :after #'btw//hs-show-block)
-    (advice-add #'forward-line :after #'btw//hs-show-block)
-    ;; We need this because the function uses `inhibit-point-motion-hooks', I believe.
-    (advice-add #'primitive-undo :after #'btw//hs-show-block)
+    (when-let ((opt (assoc-if (lambda (x) (memq 'hs-minor-mode x)) evil-fold-list)))
+      (setf (cdr opt) (plist-put (cdr opt) :open-rec #'btw//hs-show-block-rec)))
+
+    ;; (cursor-sensor-mode +1)
+    ;;
+    ;; (defun btw//hs-show-on-jump (window prev-pos motion)
+    ;;   ;; TODO
+    ;;   (when (eq motion 'entered)
+    ;;     (let ((cursor-sensor-inhibit t))
+    ;;       (message "%s" (point))
+    ;;       (save-mark-and-excursion
+    ;;         (hs-show-block))
+    ;;       (message "%s" (point)))))
+    ;;
+    ;; (defun btw//hs-show-on-jump-overlay (ov)
+    ;;   (overlay-put ov 'cursor-sensor-functions '(btw//hs-show-on-jump))
+    ;;   ;; (when (eq 'code (overlay-get ov 'hs))
+    ;;   ;;   (overlay-put ov 'cursor-sensor-functions '(btw//hs-show-on-jump)))
+    ;;   )
+    ;;
+    ;; (setq hs-set-up-overlay #'btw//hs-show-on-jump-overlay)
 
     (setq hs-allow-nesting t)
 
-    ;; Attempt to open folds when jumping into a folded area.
-    (setq evil-jumps-post-jump-hook (cons #'hs-show-block evil-jumps-post-jump-hook))
-
     ;; Let's not lose the cursor position when folding.
-    (advice-add 'hs-hide-block :around #'(lambda (oldfun &rest r)
-                                           (save-excursion (apply oldfun r))))
-    (advice-add 'hs-show-block :around #'(lambda (oldfun &rest r)
-                                           (save-excursion (apply oldfun r))))
+    (defun btw//apply-in-save-mark-excursion (oldfun &rest r)
+      (save-mark-and-excursion
+        (apply oldfun r)))
+
+    (advice-add 'hs-hide-block :around #'btw//apply-in-save-mark-excursion)
+    (advice-add 'hs-show-block :around #'btw//apply-in-save-mark-excursion)
+
     ;; TODO The meaning of "z[r|m]" is "level-folding" in Vim, but `evil-commands' has
     ;; no notion of this.  For `hideshow' we can use `hs-show-level' and `hs-hide-level'
     ;; to better approximate level-folding, but we would still have to work that into
@@ -1070,6 +1087,31 @@ This fixes some `helm' issues."
               'append))
 
   (with-eval-after-load 'evil
+
+    (defun btw//evil-open-on-movement (fn &rest r)
+      "Expand collapsed blocks after FN moves the point."
+      (let ((start-point (point)))
+        (prog1
+            (apply fn r)
+          (unless (eq start-point (point))
+            (evil-open-fold-rec)))))
+
+    ;; XXX: These are too aggressive.
+    ;; (advice-add #'goto-line :after #'btw//evil-open-on-movement)
+    ;; (advice-add #'goto-char :after #'btw//evil-open-on-movement)
+    ;; (advice-add #'forward-line :after #'btw//evil-open-on-movement)
+    ;; (advice-add #'forward-char :after #'btw//evil-open-on-movement)
+
+    (advice-add #'evil-goto-line :around #'btw//evil-open-on-movement)
+    (advice-add #'spacemacs/jump-to-definition :around #'btw//evil-open-on-movement)
+    (advice-add #'primitive-undo :around #'btw//evil-open-on-movement)
+
+    (add-hook 'xref-after-jump-hook #'evil-open-fold-rec)
+
+    ;; Attempt to open folds when jumping into a folded area.
+    (setq evil-jumps-post-jump-hook (cons #'evil-open-fold-rec evil-jumps-post-jump-hook))
+
+
     (setq-default evil-want-visual-char-semi-exclusive t)
     (setq-default evil-move-curser-back nil)
     (setq-default evil-escape-key-sequence nil)
