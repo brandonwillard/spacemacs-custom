@@ -1107,6 +1107,7 @@ This fixes some `helm' issues."
     (advice-add #'evil-goto-line :around #'btw//evil-open-on-movement)
     (advice-add #'spacemacs/jump-to-definition :around #'btw//evil-open-on-movement)
     (advice-add #'primitive-undo :around #'btw//evil-open-on-movement)
+    (advice-add #'helm-ag--find-file-action :around #'btw//evil-open-on-movement)
 
     (add-hook 'xref-after-jump-hook #'evil-open-fold-rec)
 
