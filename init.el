@@ -7,13 +7,13 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(nginx
-     ocaml
+   '(ocaml
      elixir
      javascript
      clojure
      go
      csv
+     restructuredtext
      ;; (javascript :packages (not tern))
      (lsp :packages (not
                      ;; lsp-ui
@@ -58,7 +58,7 @@
                       auto-completion-enable-help-tooltip 'manual)
      emacs-lisp
      git
-     (github :variables magit-gh-pulls-pull-detail-limit 50)
+     (github :variables magit-gh-pulls-pull-detail-limit 10)
      scheme
      racket
      pdf
@@ -613,7 +613,7 @@
     (setq python-shell-completion-setup-code
           (concat
            (eval (car (get 'python-shell-completion-setup-code 'standard-value)))
-                  "\n
+           "\n
 
 from IPython.core.completer import provisionalcompleter
 
@@ -1278,7 +1278,7 @@ From https://emacs.stackexchange.com/a/10698"
                  (display-buffer-in-side-window (messages-buffer) '((side . right)))
                  (balance-windows-area)))
 
-;;; Initialization steps
+  ;;; Initialization steps
 
   (defun btw/after-user-config-setup ()
     ;; (require 'frame-cmds)
