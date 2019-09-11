@@ -343,6 +343,8 @@
   (add-hook 'debugger-mode-hook #'btw//lightweight-debug-settings)
 
   (add-to-list 'debug-ignored-errors 'search-failed)
+  (add-to-list 'debug-ignored-errors 'quit)
+  (add-to-list 'debug-ignored-errors "^Before first heading$")
   (add-to-list 'debug-ignored-errors "^Nothing to complete$")
   (add-to-list 'debug-ignored-errors "^No such page: ")
   (add-to-list 'debug-ignored-errors
@@ -1156,6 +1158,14 @@ This fixes some `helm' issues."
     (setq helm-autoresize-mode nil)
     (setq helm-split-window-inside-p nil)
     (setq helm-split-window-default-side 'below)
+
+    (defun btw//helm-persistent-action-display-window (&optional split-onewindow)
+      "Return the window that will be used for persistent action.
+If SPLIT-ONEWINDOW is non-`nil' window is split in persistent action."
+      (with-helm-window
+        (setq helm-persistent-action-display-window (get-mru-window))))
+
+    (advice-add #'helm-persistent-action-display-window :override #'btw//helm-persistent-action-display-window)
 
     ;; NOTE: `window-purpose-switch' can destroy expected
     ;; pop-up/window placement behavior; look at the default
