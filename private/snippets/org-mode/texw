@@ -10,60 +10,27 @@
 #+DATE: `(format-time-string "%Y-%m-%d")`
 #+EMAIL: brandonwillard@gmail.com
 
-#+OPTIONS: ^:nil toc:nil tex:t d:results
+#+STARTUP: hideblocks indent hidestars
+#+OPTIONS: ^:nil toc:nil d:(not "logbook" "todo" "notes") tex:t |:t broken-links:t
 #+SELECT_TAGS: export
 #+EXCLUDE_TAGS: noexport
 
-#+PROPERTY: header-args :eval never-export :exports both :results output drawer replace
-#+PROPERTY: header-args+ :session
+#+PROPERTY: header-args :session $2 :exports both :eval never-export :results output drawer replace
+#+PROPERTY: header-args:text :eval never
 
 #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="../extra/custom.css" />
+#+STYLE: <link rel="stylesheet" type="text/css" href="../extra/custom.css" />
 
-#+LaTeX_CLASS: article
-#+LaTeX_HEADER: \usepackage{amsfonts}
-#+LaTeX_HEADER: \usepackage{setspace}
-#+LaTeX_HEADER: \usepackage{amsthm}
-#+LaTeX_HEADER: \usepackage{mathtools}
-#+LaTeX_HEADER: \usepackage{subcaption}
-#+LaTeX_HEADER: \usepackage{suffix}
-#+LaTeX_HEADER: \RequirePackage{color}
-#+LaTeX_HEADER: \usepackage{adjustbox}
+#+INCLUDE: latex-setup.org
+#+INCLUDE: org-setup.org
 
-#+LaTeX_HEADER: \include{math-commands}
-
-#+LaTeX_HEADER_EXTRA: \usepackage{todonotes}
-#+LATEX_HEADER_EXTRA: \usepackage{draftwatermark}
-#+LATEX_HEADER_EXTRA: \SetWatermarkScale{1}
-#+LATEX_HEADER_EXTRA: \SetWatermarkLightness{0.90}
-#+LATEX_HEADER_EXTRA: \definecolor{bg}{rgb}{0.95,0.95,0.95}
-
-#+LaTeX_HEADER_EXTRA: \definecolor{bg}{rgb}{0.95,0.95,0.95}
-
-#+LaTeX_HEADER_EXTRA: \usepackage[authoryear]{natbib}
-#+LaTeX_HEADER_EXTRA: \usepackage{cleveref}
-
-#+LaTeX_HEADER_EXTRA: \allowdisplaybreaks
-#+LaTeX_HEADER_EXTRA: \setkeys{Gin}{keepaspectratio}
-#+LaTeX_HEADER_EXTRA: \graphicspath{{../../figures/}{../figures/}{./figures/}{./}}
-
-# Minted should be imported automatically by org-mode when \`org-latex-listings\` is \`minted\`.
-#+LaTeX_HEADER_EXTRA: \setminted{fontsize=\footnotesize, breaklines=true, breakanywhere=false, breakautoindent=false}
-
-# This env is really useful if you want to force tables into the page width.
-#+LaTeX_HEADER_EXTRA: \usepackage{adjustbox}
-#+LaTeX_HEADER_EXTRA: \newenvironment{adjusttabular}[1]{\begin{adjustbox}{max width=\maxtabfigwidth,max totalheight=\maxtabfigheight,center,tabular=#1}}{\end{adjustbox}}
-#+LaTeX_HEADER_EXTRA: \newlength{\maxtabfigwidth}
-#+LaTeX_HEADER_EXTRA: \newlength{\maxtabfigheight}
-
-#+BEGIN_EXPORT latex
-\setlength{\maxtabfigwidth}{\textwidth}
-\setlength{\maxtabfigheight}{\textheight}
-% decrease height a bit to let captions fit on one page
-\addtolength{\maxtabfigheight}{-2.5em}
-#+END_EXPORT
+#+NAME: python-org-imports
+#+BEGIN_SRC python :exports none :results silent :noweb-ref python-imports
+from tabulate import tabulate
+#+END_SRC
 
 #+BEGIN_abstract
-  $2
+  $4
 #+END_abstract
 
 * Introduction
@@ -73,39 +40,5 @@
 * Conclusion
 
 
-# This is a hackish way to get \`org-ref\` working.
-#+BIBLIOGRAPHY: ../tex/bib-file-name
-
-#+NAME: org_ref_bib_settings
-#+BEGIN_SRC elisp :eval t :exports results :results value raw
-(or (when-let* ((project-root (ignore-errors (projectile-project-root)))
-                (file-name (car-safe (ignore-errors (f-glob "src/tex/*.bib" project-root))))
-                (bib-style (if (eq org-export-current-backend 'latex)
-                               "bibliographystyle:plainnat"
-                             (concat "* References\nbibliographystyle:unsrt"))))
-      (concat bib-style
-              "\n"
-              ;; Bug in \`org-ref' requires that we split this string.
-              "bibl" "iography:" (f-filename file-name)))
-    "")
-#+END_SRC
-
-* post-org-setup                                                           :noexport:
-
-#+NAME: org_table_wrap
-#+HEADER: :var data="" :var name="" :var caption=""
-#+BEGIN_SRC elisp :exports none :results value
-;; Example usage:
-;; #+HEADER: :post org_table_wrap(data=*this*, caption="Company name similarity measure example.")
-(let* ((block-name (if (s-blank? name)
-                        (save-excursion
-                          (goto-char org-babel-current-src-block-location)
-                          (nth 4
-                              (org-babel-get-src-block-info)))
-                      name)))
-  (s-join "\n"
-          \`("#+ATTR_LATEX: :mode table :float t :center t :environment adjusttabular"
-            ,(format "#+CAPTION: %s" caption)
-            ,(format "#+NAME: tab:%s" block-name)
-            ,data)))
-#+END_SRC
+#+BIBLIOGRAPHY: $3
+#+BIBLIOGRAPHYSTYLE: plainnat

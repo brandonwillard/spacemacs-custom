@@ -4,6 +4,33 @@
 #+STARTUP: hideblocks indent hidestars
 
 * Tasks
+** TODO Completion for ~org-babel~ header args                     :orgmode:
+The potential headers are stored
+in src_elisp{org-babel-common-header-args-w-values}
+and src_elisp{(intern (concat "org-babel-header-args:" lang))}.  The
+function src_elisp{org-babel-insert-header-arg} uses these to create an
+interactive selection menu.
+
+We need to use those functions in/with ~company~.
+** TODO Get ~yasnippet~ to work with ~surround~
+Would be great if we could call a snippet--like ~org-src-block~--from ~surround~.
+
+The code for the ~org-src-block~ snippet is below:
+#+BEGIN_SRC text :eval never
+# -*- mode: snippet; require-final-newline: nil; mode-require-final-newline: nil -*-
+# name: org-src-block
+# key: #+B
+# expand-env: ((yas/indent-line 'fixed) (yas/wrap-around-region 'nil))
+# condition: (or (= (current-column) 5) (= (current-column) 0))
+# --
+# Check out the function org-babel-insert-header-arg for a header args completion approach
+# based on the following:
+# \${4:$$(unless yas-modified-p (save-mark-and-excursion (org-babel-insert-header-arg "eval")))}
+${2:#+NAME: $3}
+,#+BEGIN_SRC $1 ${4::eval ${5:never}}
+`yas-selected-text`$0
+,#+END_SRC
+#+END_SRC
 ** DONE [#A] Fix src_elisp{org-babel-result-end}                   :orgmode:
 CLOSED: [2019-02-05 Tue 11:55]
 ~org-mode~ source blocks inside drawers will not replace existing results
