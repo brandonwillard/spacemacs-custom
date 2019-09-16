@@ -84,7 +84,7 @@ When projectile is altered to have `persp-mode'-scoped projects, this
   (defun spacemacs//pyvenv-conda-deactivate-additions ()
     (setenv "CONDA_PREFIX" nil)
     (setenv "CONDA_DEFAULT_ENV" nil))
-  (defun spacemacs//pyvenv-conda-env-shell-init (&rest process)
+  (defun spacemacs//pyvenv-conda-env-term-init (send-string-func)
     "Activate the current env in a newly opened shell PROCESS.
 
 Inspired by https://github.com/necaris/conda.el/blob/master/conda.el#L339"
@@ -97,14 +97,10 @@ Inspired by https://github.com/necaris/conda.el/blob/master/conda.el#L339"
                                       '("conda" "activate")))
                   (full-command (append activate-command
                                         `(,pyvenv-env-name "\n")))
-                  (command-string (combine-and-quote-strings full-command))
-                  (buffer-or-process (if (not process)
-                                         (current-buffer)
-                                       process)))
+                  (command-string (combine-and-quote-strings full-command)))
        (progn
-         (message "sending %s to %S" command-string
-                  buffer-or-process)
-         (term-send-string buffer-or-process command-string)))))
+         (message "sending %s to %S" command-string (current-buffer))
+         (funcall send-string-func command-string)))))
   (defun spacemacs//pyvenv-track-buffer-virtualenv (oldfun &rest args)
     "Functions like `pyvenv-track-virtualenv', but only checks when buffers are
  changed."

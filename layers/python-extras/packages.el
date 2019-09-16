@@ -206,7 +206,14 @@ See `company-transformers'."
 
   (add-hook 'pyvenv-post-activate-hooks #'spacemacs//pyvenv-conda-activate-additions)
   (add-hook 'pyvenv-post-deactivate-hooks #'spacemacs//pyvenv-conda-deactivate-additions)
-  (add-hook 'term-exec-hook #'spacemacs//pyvenv-conda-env-shell-init))
+  (with-eval-after-load 'vterm
+    (defun spacemacs//vterm-init-pyvenv ()
+      (spacemacs//pyvenv-conda-env-term-init #'vterm-send-string))
+    (add-hook 'vterm-mode-hook #'spacemacs//vterm-init-pyvenv))
+  (defun spacemacs//term-init-pyvenv ()
+    (spacemacs//pyvenv-conda-env-term-init
+     #'(lambda (command-string) (term-send-string (current-buffer) command-string))))
+  (add-hook 'term-exec-hook #'spacemacs//term-init-pyvenv))
 
 (defun python-extras/post-init-flycheck ()
   ;; (flycheck-add-next-checker 'python-flake8 'python-pylint)
