@@ -545,22 +545,22 @@
     )
 
   (with-eval-after-load 'evil-surround
-    (setq evil-surround-pairs-alist
-          '((?\( . ("(" . ")"))
-            (?\[ . ("[" . "]"))
-            (?\{ . ("{" . "}"))
+    (setq-default evil-surround-pairs-alist
+                  '((?\( . ("(" . ")"))
+                    (?\[ . ("[" . "]"))
+                    (?\{ . ("{" . "}"))
 
-            (?\) . ("( " . " )"))
-            (?\] . ("[ " . " ]"))
-            (?\} . ("{ " . " }"))
+                    (?\) . ("( " . " )"))
+                    (?\] . ("[ " . " ]"))
+                    (?\} . ("{ " . " }"))
 
-            (?# . ("#{" . "}"))
-            (?b . ("(" . ")"))
-            (?B . ("{" . "}"))
-            (?> . ("<" . ">"))
-            (?t . evil-surround-read-tag)
-            (?< . evil-surround-read-tag)
-            (?f . evil-surround-function))))
+                    (?# . ("#{" . "}"))
+                    (?b . ("(" . ")"))
+                    (?B . ("{" . "}"))
+                    (?> . ("<" . ">"))
+                    (?t . evil-surround-read-tag)
+                    (?< . evil-surround-read-tag)
+                    (?f . evil-surround-function))))
 
   (with-eval-after-load 'erc
     (add-to-list 'erc-modules 'notifications)
