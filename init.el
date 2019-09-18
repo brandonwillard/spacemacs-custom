@@ -533,11 +533,11 @@
     (setq-default geiser-default-implementation 'racket))
 
   (with-eval-after-load 'overseer
-    (defun btw-overseer--current-buffer-test-file-p ()
+    (defun btw/overseer--current-buffer-test-file-p ()
       (string-match (rx (seq "-test" (optional "s") "\.el" eol))
                     (or (buffer-file-name) "")))
     (advice-add #'overseer--current-buffer-test-file-p :override
-                #'btw-overseer--current-buffer-test-file-p))
+                #'btw/overseer--current-buffer-test-file-p))
 
   (with-eval-after-load 'semantic
     (setq semanticdb-search-system-databases nil)
@@ -914,6 +914,7 @@ except Exception:
         (save-mark-and-excursion
           (hs-show-block))))
 
+    ;; Add a recursive unfold to `evil''s mappings for `hideshow'
     (when-let ((opt (assoc-if (lambda (x) (memq 'hs-minor-mode x)) evil-fold-list)))
       (setf (cdr opt) (plist-put (cdr opt) :open-rec #'btw//hs-show-block-rec)))
 
