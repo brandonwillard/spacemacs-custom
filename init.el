@@ -858,6 +858,13 @@ except Exception:
     (setq TeX-command-default "Make"))
 
   (with-eval-after-load 'projectile
+    ;; Don't bother us with unsaved files in other projects when we try to compile.
+    ;; TODO: This should probably be set in `projectile--run-project-cmd'.
+    (setq compilation-save-buffers-predicate
+          (lambda ()
+            (when-let ((project-root (projectile-project-root)))
+              (projectile-project-buffer-p (current-buffer) project-root))))
+
     (defun btw/projectile-switch-project-by-name (project-to-switch &optional arg)
       "This version *doesn't* pre-load the dir-locals."
       (unless (projectile-project-p project-to-switch)
