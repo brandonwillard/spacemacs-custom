@@ -68,6 +68,7 @@
      org-extras
 
      (shell :variables
+            shell-default-shell 'vterm
             shell-default-height 30
             shell-default-position 'bottom)
 
@@ -113,7 +114,7 @@
                                       kubernetes-evil
 
                                       ;; emacs-jupyter
-                                      vterm
+
                                       (multi-libvterm :location (recipe :fetcher github
                                                                         :repo "suonlight/multi-libvterm"))
 
@@ -387,43 +388,6 @@
 
   ;; (use-package helpful)
 
-  (use-package vterm
-    :config
-    (add-hook 'vterm-mode-hook
-              (lambda ()
-                (setq-local evil-insert-state-cursor 'box)
-                (evil-insert-state)))
-    (define-key vterm-mode-map [return]                      #'vterm-send-return)
-
-    (setq vterm-keymap-exceptions nil)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-e")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-f")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-a")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-v")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-b")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-w")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-u")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-d")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-n")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-m")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-p")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-j")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-k")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-r")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-t")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-g")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-c")      #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-SPC")    #'vterm--self-insert)
-    (evil-define-key 'normal vterm-mode-map (kbd "C-d")      #'vterm--self-insert)
-    (evil-define-key 'normal vterm-mode-map (kbd ",c")       #'multi-libvterm)
-    (evil-define-key 'normal vterm-mode-map (kbd ",n")       #'multi-libvterm-next)
-    (evil-define-key 'normal vterm-mode-map (kbd ",p")       #'multi-libvterm-prev)
-    (evil-define-key 'normal vterm-mode-map (kbd "i")        #'evil-insert-resume)
-    (evil-define-key 'normal vterm-mode-map (kbd "o")        #'evil-insert-resume)
-    (evil-define-key 'normal vterm-mode-map (kbd "p")        #'vterm-yank)
-    (evil-define-key 'normal vterm-mode-map (kbd "P")        #'vterm-yank)
-    (evil-define-key 'normal vterm-mode-map (kbd "<return>") #'evil-insert-resume))
-
   (use-package multi-libvterm :defer t)
 
   (use-package ox-jira :defer t)
@@ -508,6 +472,40 @@
   ;; (with-eval-after-load 'go-mode
   ;;   (setq godoc-command "godoc")
   ;;   (setq godoc-and-godef-command "godoc"))
+  (with-eval-after-load 'vterm
+    ;; (add-hook 'vterm-mode-hook
+    ;;           (lambda ()
+    ;;             (setq-local evil-insert-state-cursor 'box)
+    ;;             (evil-insert-state)))
+    (setq vterm-keymap-exceptions nil)
+    (define-key vterm-mode-map [return] #'vterm-send-return)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-e") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-f") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-a") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-v") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-b") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-w") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-u") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-d") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-n") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-m") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-p") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-j") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-k") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-r") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-t") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-g") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-c") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-SPC") #'vterm--self-insert)
+    (evil-define-key 'normal vterm-mode-map (kbd "C-d") #'vterm--self-insert)
+    (evil-define-key 'normal vterm-mode-map (kbd ",c") #'multi-libvterm)
+    (evil-define-key 'normal vterm-mode-map (kbd ",n") #'multi-libvterm-next)
+    (evil-define-key 'normal vterm-mode-map (kbd ",p") #'multi-libvterm-prev)
+    (evil-define-key 'normal vterm-mode-map (kbd "i") #'evil-insert-resume)
+    (evil-define-key 'normal vterm-mode-map (kbd "o") #'evil-insert-resume)
+    (evil-define-key 'normal vterm-mode-map (kbd "p") #'vterm-yank)
+    (evil-define-key 'normal vterm-mode-map (kbd "P") #'vterm-yank)
+    (evil-define-key 'normal vterm-mode-map (kbd "<return>") #'evil-insert-resume))
 
   (with-eval-after-load 'utop
     (setq utop-command "opam config exec -- utop -emacs")
@@ -1213,7 +1211,24 @@ If SPLIT-ONEWINDOW is non-`nil' window is split in persistent action."
         (let ((term-char-mode-point-at-process-mark nil))
           (unless (term-after-prompt-p)
             (goto-char (term-process-mark)))
-          (term-char-mode))))
+          ;; TODO: set process mark to the end of any existing text after the prompt.
+
+          ;; Stop the mode initialization code from sending the current input.
+          ;; (flet ((term-send-string (&rest r) nil))
+          ;;   (term-char-mode))
+
+          (term-char-mode)
+
+          ;; (save-mark-and-excursion
+          ;;   (goto-char (point-max))
+          ;;   (when (= (line-beginning-position) (line-end-position))
+          ;;     (ignore-errors (backward-char)))
+          ;;   ;; (set-marker (process-mark (get-buffer-process (current-buffer))) (term-previous-prompt 1))
+          ;;   ;; (set-marker (process-mark (get-buffer-process (current-buffer))) (point))
+          ;;   ;; (setq last-prompt (max (term-bol nil) (line-beginning-position)))
+          ;;
+          ;;   )
+          )))
 
     (add-hook 'evil-insert-state-entry-hook
               #'btw/term-enable-char-mode-maybe-goto-prompt)
