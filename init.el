@@ -63,6 +63,7 @@
      racket
      pdf
      (org :variables
+          org-enable-org-journal-support t
           org-enable-github-support t
           org-projectile-file "TODOs.org")
      org-extras
