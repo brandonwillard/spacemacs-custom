@@ -118,7 +118,7 @@
                                       kubernetes
                                       kubernetes-evil
 
-                                      ;; emacs-jupyter
+                                      jupyter
 
                                       (multi-libvterm :location (recipe :fetcher github
                                                                         :repo "suonlight/multi-libvterm"))
@@ -395,6 +395,44 @@
   ;; (use-package helpful)
 
   (use-package multi-libvterm :defer t)
+
+  (use-package jupyter
+    :defer t
+    :init (progn
+            (spacemacs/set-leader-keys
+              "aja" 'jupyter-repl-associate-buffer
+              "ajc" 'jupyter-connect-repl
+              "ajr" 'jupyter-run-repl
+              "ajs" 'jupyter-server-list-kernels)
+            (spacemacs/set-leader-keys-for-major-mode 'jupyter-repl-mode
+              "i" 'jupyter-inspect-at-point
+              "l" 'jupyter-load-file
+              "s" 'jupyter-repl-scratch-buffer
+              "I" 'jupyter-repl-interrupt-kernel
+              "R" 'jupyter-repl-restart-kernel))
+    :config (progn
+              (when (eq dotspacemacs-editing-style 'vim)
+                (evil-define-key '(insert normal) jupyter-repl-mode-map
+                  (kbd "C-j") 'jupyter-repl-history-next
+                  (kbd "C-k") 'jupyter-repl-history-previous
+                  (kbd "C-l") 'jupyter-repl-clear-cells
+                  (kbd "M-j") 'jupyter-repl-forward-cell
+                  (kbd "M-k") 'jupyter-repl-backward-cell
+                  (kbd "C-s") 'jupyter-repl-scratch-buffer
+                  (kbd "C-R") 'isearch-forward
+                  (kbd "C-r") 'isearch-backward))
+
+              (add-hook 'jupyter-repl-mode-hook #'spacemacs/disable-vi-tilde-fringe)
+
+              (when (fboundp 'purpose-set-extension-configuration)
+                ;; NOTE: To delete this configuration...
+                ;; (purpose-del-extension-configuration :jupyter)
+                (purpose-set-extension-configuration
+                 :jupyter (purpose-conf :mode-purposes
+                                        '((jupyter-repl-mode . repl)
+                                          (jupyter-repl-interaction-mode . repl)))))
+
+              (spacemacs|add-company-backends :backends company-capf :modes jupyter-repl-mode)))
 
   (use-package ox-jira :defer t)
 
@@ -802,12 +840,10 @@ except Exception:
     (defvaralias 'org-plantuml-jar-path 'plantuml-jar-path)
     ;; (setq org-plantuml-jar-path plantuml-jar-path)
 
-    (add-to-list 'org-babel-load-languages
-                 '(plantuml . t))
-    (add-to-list 'org-babel-load-languages
-                 '(dot . t))
-    (add-to-list 'org-babel-load-languages
-                 '(scheme . t))
+    (add-to-list 'org-babel-load-languages '(plantuml . t))
+    (add-to-list 'org-babel-load-languages '(dot . t))
+    (add-to-list 'org-babel-load-languages '(scheme . t))
+    (add-to-list 'org-babel-load-languages '(jupyter . t))
 
     (defun spacemacs//org-latex-pdf-process (file-name)
       "XXX: This will err-out because of org-export's assumption that the output
