@@ -4,6 +4,224 @@
 #+STARTUP: hideblocks indent hidestars
 
 * Tasks
+** TODO Fix ~ox-ipynb~                                             :orgmode:
+*** Links to Listings/Code Blocks
+We need ~org-mode~ links to code blocks to export to links to Jupyter Notebook
+code cells (e.g. like we did for Markdown).  Looks like that only involves
+~a-href~ entries at the start of code cells (see [[https://stackoverflow.com/posts/28080529/revisions][here]]).
+
+#+NAME: org-md-link-customization
+#+BEGIN_SRC elisp :eval never
+(defun btw--org-gfm-src-block (src-block contents info)
+  "Allow attributes (only name, for now) in fenced code block definitions.
+
+E.g., '```{#block-name .python}'
+
+For Pandoc, use with 'fenced_code_attributes'
+"
+  (let* ((lang (org-element-property :language src-block))
+         (code (org-export-format-code-default src-block info))
+         (link-id (org-export-get-reference src-block info))
+         ;; (name (org-element-property :name src-block))
+         ;; "cell1": {"type": "code", "lang": "python", "body": }
+         (prefix (if link-id
+                     ;; TODO: Add a class for result blocks?
+                     (concat "```{#" link-id " ." lang "}\n")
+                   (concat "```{." lang "}\n")))
+         (suffix "```"))
+    (concat prefix code suffix)))
+
+(advice-add #'org-gfm-src-block :override #'btw--org-gfm-src-block)
+#+END_SRC
+
+Since ~ox-ipynb~ is so poorly implemented (e.g. it makes *no* use of the
+standard export-step functions/hooks), it looks like we might be better off
+writing our own Jupyter Notebook exporter.
+
+*** Broken Links
+On a related note, it looks like we also need to
+run src_elisp[:eval never]{(setq org-export-with-broken-links 'mark)} to
+successfully export--even when ~broken-links: t~ is set.
+
+*** "Language Info"
+#+NAME: add-lang-info
+#+BEGIN_SRC elisp :eval never
+(setq ox-ipynb-language-infos
+      (cons `(python . ,(alist-get 'ipython ox-ipynb-language-infos))
+            ox-ipynb-language-infos))
+#+END_SRC
+*** Reimplementation
+
+Overall, it looks easier to write a Jupyter Notebook exporter from scratch.  The
+Notebook format is given [[https://nbformat.readthedocs.io/en/latest/format_description.html#notebook-file-format][here]].
+
+#+NAME: ox-jnb
+#+BEGIN_SRC elisp :eval never
+(require 'ox-gfm)
+
+(org-export-define-derived-backend 'jnb 'gfm
+  :filters-alist '((:filter-parse-tree . org-jnb-separate-elements))
+  :menu-entry
+  '(?g "Export to Jupyter Notebook"
+       ((?G "To temporary buffer"
+            (lambda (a s v b) (org-jnb-export-as-markdown a s v)))
+        (?g "To file" (lambda (a s v b) (org-jnb-export-to-markdown a s v)))
+        (?o "To file and open"
+            (lambda (a s v b)
+              (if a (org-jnb-export-to-markdown t s v)
+                (org-open-file (org-jnb-export-to-markdown nil s v)))))))
+  :filters-alist '((:filter-parse-tree . org-jnb-separate-elements))
+  :translate-alist '((src-block . org-jnb-src-block)
+                     (template . org-jnb-template)))
+
+(defun org-jnb-export-as-markdown (&rest r))
+(defun org-gfm-export-to-markdown (&rest r))
+
+;; NOTES: We could use `org-export-data-with-backend' to pre-convert
+;; sections to Markdown.
+;; FYI: I think `ox-freemind' does a lot of things we might want to do.
+
+;;; Filters
+
+(defun org-jnb-separate-elements (&rest r)
+  (org-element-map tree
+      '(src-block)
+      ;; (remq 'item org-element-all-elements)
+    (lambda (e)
+      ;; TODO: Split code blocks into their own sections (at top level?).
+      ;; Looks like we'll need to use `org-element-adopt-elements'
+
+      ;; (org-element-put-property
+      ;;  e :post-blank
+      ;;  (if (and (eq (org-element-type e) 'paragraph)
+		  ;;           (eq (org-element-type (org-element-property :parent e)) 'item)
+		  ;;           (org-export-first-sibling-p e info)
+		  ;;           (let ((next (org-export-get-next-element e info)))
+		  ;;             (and (eq (org-element-type next) 'plain-list)
+		  ;;                  (not (org-export-get-next-element next info)))))
+	    ;;      0
+	    ;;    1))
+      ))
+  tree)
+
+;;; Translators
+
+(defun org-jnb-template (contents info)
+  ;; Top-level Structure
+  ;; {
+  ;;   "metadata" : {
+  ;;     "kernel_info": {
+  ;;         # if kernel_info is defined, its name field is required.
+  ;;         "name" : "the name of the kernel"
+  ;;     },
+  ;;     "language_info": {
+  ;;         # if language_info is defined, its name field is required.
+  ;;         "name" : "the programming language of the kernel",
+  ;;         "version": "the version of the language",
+  ;;         "codemirror_mode": "The name of the codemirror mode to use [optional]"
+  ;;     }
+  ;;   },
+  ;;   "nbformat": 4,
+  ;;   "nbformat_minor": 0,
+  ;;   "cells" : [
+  ;;       # list of cell dictionaries, see below
+  ;;   ],
+  ;; }
+
+  ;; TODO: contents should be the string list of cells?
+  ;; We could also use `(plist-get info :parse-tree)'
+  )
+
+;; Markdown Cells
+;; {
+;;   "cell_type" : "markdown",
+;;   "metadata" : {},
+;;   "source" : "[multi-line *markdown*]",
+;; }
+;; These can have attachments
+;; {
+;;   "cell_type" : "markdown",
+;;   "metadata" : {},
+;;   "source" : ["Here is an *inline* image ![inline image](attachment:test.png)"],
+;;   "attachments" : {
+;;     "test.png": {
+;;         "image/png" : "base64-encoded-png-data"
+;;     }
+;;   }
+;; }
+
+;; Code Cells
+;; {
+;;   "cell_type" : "code",
+;;   "execution_count": 1, # integer or null
+;;   "metadata" : {
+;;       "collapsed" : True, # whether the output of the cell is collapsed
+;;       "scrolled": False, # any of true, false or "auto"
+;;   },
+;;   "source" : "[some multi-line code]",
+;;   "outputs": [{
+;;       # list of output dicts (described below)
+;;       "output_type": "stream",
+;;       ...
+;;   }],
+;; }
+;; Output Types
+;; {
+;;   "output_type" : "stream",
+;;   "name" : "stdout", # or stderr
+;;   "text" : "[multiline stream text]",
+;; }
+;; {
+;;   "output_type" : "display_data",
+;;   "data" : {
+;;     "text/plain" : "[multiline text data]",
+;;     "image/png": "[base64-encoded-multiline-png-data]",
+;;     "application/json": {
+;;       # JSON data is included as-is
+;;       "json": "data",
+;;     },
+;;   },
+;;   "metadata" : {
+;;     "image/png": {
+;;       "width": 640,
+;;       "height": 480,
+;;     },
+;;   },
+;; }
+;; {
+;;   "output_type" : "execute_result",
+;;   "execution_count": 42,
+;;   "data" : {
+;;     "text/plain" : "[multiline text data]",
+;;     "image/png": "[base64-encoded-multiline-png-data]",
+;;     "application/json": {
+;;       # JSON data is included as-is
+;;       "json": "data",
+;;     },
+;;   },
+;;   "metadata" : {
+;;     "image/png": {
+;;       "width": 640,
+;;       "height": 480,
+;;     },
+;;   },
+;; }
+;; {
+;;   'output_type': 'error',
+;;   'ename' : str,   # Exception name, as a string
+;;   'evalue' : str,  # Exception value, as a string
+;;
+;;   # The traceback will contain a list of frames,
+;;   # represented each as a string.
+;;   'traceback' : list,
+;; }
+
+(defun org-jnb-src-block (&rest r)
+  ;; Use `json-encode-alist'?
+  )
+
+#+END_SRC
+
 ** TODO Completion for ~org-babel~ header args                     :orgmode:
 The potential headers are stored
 in src_elisp{org-babel-common-header-args-w-values}
@@ -12,7 +230,7 @@ function src_elisp{org-babel-insert-header-arg} uses these to create an
 interactive selection menu.
 
 We need to use those functions in/with ~company~.
-** TODO Get ~yasnippet~ to work with ~surround~
+** TODO Get ~yasnippet~ to work with ~surround~                   :snippets:
 Would be great if we could call a snippet--like ~org-src-block~--from ~surround~.
 
 The code for the ~org-src-block~ snippet is below:
@@ -31,136 +249,15 @@ ${2:#+NAME: $3}
 `yas-selected-text`$0
 ,#+END_SRC
 #+END_SRC
-** DONE [#A] Fix src_elisp{org-babel-result-end}                   :orgmode:
-CLOSED: [2019-02-05 Tue 11:55]
-~org-mode~ source blocks inside drawers will not replace existing results
-(themselves in drawers).
-
-The problem: src_elisp{(org-babel-result-end)} isn't working inside drawers.
-
-Specifically, it looks like src_elisp{(org-element-at-point)} returns
-a src_elisp{paragraph} element within a drawer.  Within that is the actual
-nested drawer, but, since src_elisp{(org-babel-result-end)} fails to return
-a recognized element type (i.e. not an element in
-src_elisp{'(drawer example-block export-block fixed-width item plain-list src-block table)})
-it fails.
-
-#+BEGIN_SRC elisp :results drawer replace
-(defun btw--org-babel-result-end ()
-  "Return the point at the end of the current set of results."
-  (cond
-   ((looking-at-p "^[ \t]*$")
-    (point)) ;no result
-   ((looking-at-p (format "^[ \t]*%s[ \t]*$" org-bracket-link-regexp))
-    (line-beginning-position 2))
-   (t (let* ((element (org-element-at-point))
-             (elements (cons element
-                             (if (eq (org-element-type element) 'paragraph)
-                                 (list (org-element-property :parent element))))))
-        (if-let ((element (seq-find (lambda (x)
-                                      (memq (org-element-type x)
-                                            ;; Possible results types.
-                                            '(drawer example-block export-block fixed-width
-                                                     item plain-list src-block table)))
-                                    elements)))
-            (save-excursion
-              (goto-char (min (point-max) ;for narrowed buffers
-                              (org-element-property :end element)))
-              (skip-chars-backward " \r\t\n")
-              (line-beginning-position 2))
-          (point))))))
-
-(advice-add #'org-babel-result-end :override #'btw--org-babel-result-end)
-#+END_SRC
-
-#+RESULTS:
-:RESULTS:
-^[ 	]*:\(\(?:\w\|[-_]\)+\):[ 	]*$
-:END:
-
-# Start a drawer
-:BLAH:
-
-#+BEGIN_SRC elisp :results drawer replace
-(print "hi")
-#+END_SRC
-
-# New, nested drawer
-:BLOG:
-#+BEGIN_SRC elisp :results drawer replace
-(print "hi")
-#+END_SRC
-
-:END:
-
-:END:
 ** TODO [#A] Fix ~spacemacs/symbol-highlight-transient-state/body~
 The function src_elisp{spacemacs/symbol-highlight-transient-state/body} isn't
 created before calls to it via @@html:<kbd>@@ * @@html:</kbd>@@.
 See the calls to it in [[/home/bwillard/.emacs.d/layers/+spacemacs/spacemacs-navigation/funcs.el]].
-** TODO [#A] Create Org LOB file for common export helpers and adjustments
+** TODO [#A] Create Org LOB file for common export helpers and adjustments :orgmode:
 Put code from [[file:../projects/papers/tex-project-templates/src/org/org-export-init.el][=org-export-init.el=]] into an independent, versioned Org file to
 be loaded with ~org-babel-lob-ingest~.
 ** TODO [#A] Slowness with Python file/venv loading                  :python:
 Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
-** DONE [#A] Allow ~persp-mode~ to set ~projectile-mode~ project.
-CLOSED: [2018-09-09 Sun 23:47]
-Viewing a buffer for a file in a different ~projectile-mode~ project from
-within a ~persp-mode~ opened for a different project doesn't prioritize the
-~pesp-mode~-specific project when calling ~projectile-mode~ functions.
-
-If we can get the ~projectile-mode~ project name/location from ~persp-mode~,
-we might only need to set/wrap/override ~projectile-project-root~.
-
-This appears to work:
-#+BEGIN_SRC elisp :eval never
-(defun btw/persp-assign-projectile-root (persp persp-hash)
-  "Add a variable to the perspective tracking the projectile project name
-(if any).
-
-This is run before the buffer is created, so we need to get the project name
-from this perspective's path.  We assume the perspective's name is the project
-path (which it is per Spacemacs)"
-  (let* ((persp-name (safe-persp-name persp))
-         (persp-projectile-dir (when (and (f-dir? persp-name)
-                                          (funcall projectile-project-name-function
-                                                   persp-name))
-                                 persp-name)))
-    (set-persp-parameter 'projectile-project-root
-                         persp-projectile-dir
-                         persp)))
-
-(add-hook 'persp-created-functions #'btw/persp-assign-projectile-root)
-
-(defun btw/persp-projectile-project-root (oldfun &rest r)
-  "Use the perp project name and regular `projectile-project-root' as a
-fallback."
-  (let* ((persp-name (spacemacs//current-layout-name))
-         (persp-projectile-dir (when (and (f-dir? persp-name)
-                                          (funcall projectile-project-name-function
-                                                   persp-name))
-                                 persp-name)))
-    ;; If the persp name is a directory and is mapped to a projectile project,
-    ;; return the directory; otherwise, use the fallback.
-    (or persp-projectile-dir
-        (persp-parameter 'projectile-project-root)
-        (apply oldfun r))))
-
-(advice-add #'projectile-project-root :around #'btw/persp-projectile-project-root)
-
-(defun btw/persp-projectile-project-name (oldfun &rest r)
-  "Query the persp layout for the projectile project name and use projectile
-for the fallback."
-  (let* ((persp-name (spacemacs//current-layout-name))
-         (persp-projectile-name (if (f-dir? persp-name)
-                                    (funcall projectile-project-name-function
-                                             persp-name)
-                                  (persp-parameter 'projectile-project-root))))
-    (or persp-projectile-name (apply oldfun r))))
-
-(advice-add #'projectile-project-name :around #'btw/persp-projectile-project-name)
-#+END_SRC
-
 ** TODO Better window creation and re-use
 Set better =purpose= values, so that new frames are never created, terminals
 are created for each projectile project, etc.
@@ -275,39 +372,6 @@ We could automatically set up sym-links to files from =~/.spacemacs.d=.
   #+END_SRC
 
   There's a push/pull/sync tool for Google Tasks [[https://bitbucket.org/edgimar/michel-orgmode][here]].
-** DONE Fix project-root finding in ~lsp-mode~                          :lsp:
-CLOSED: [2018-08-09 Thu 10:41]
-- Note taken on [2018-08-09 Thu 10:40] \\
-  This seems to be working:
-
-  #+BEGIN_SRC elisp
-  (defun btw/lsp-python-workspace-root ()
-    (or (when (fboundp 'projectile-project-root)
-          (projectile-project-root))
-        (lsp-make-traverser (directory-files dir nil "\\(__init__\\|setup\\)\\.py"))
-        (if lsp-message-project-root-warning
-            (message "Couldn't find project root, using the current directory as the root.")
-          (lsp-warn "Couldn't find project root, using the current directory as the root.")
-          default-directory)))
-  (lsp-define-stdio-client lsp-python "python"
-                           #'btw/lsp-python-workspace-root
-                           '("pyls"))
-  #+END_SRC
-- Note taken on [2018-03-17 Sat 14:03] \\
-  For example, =lsp-python= uses the following to find a project's root directory:
-  #+BEGIN_SRC elisp
-  (lsp-define-stdio-client lsp-python "python"
-                           (lsp-make-traverser #'(lambda (dir)
-                                                   (or (when (fboundp 'projectile-project-root)
-                                                         (projectile-project-root))
-                                                       (directory-files
-                                                        dir nil "\\(__init__\\|setup\\)\\.py"))))
-                           '("pyls"))
-  #+END_SRC
-
-  This only applies to projects that are Python packages.  Even then, I'm not sure it does
-  well, because I'm always getting errors.
-
 ** TODO Set up ~evil-extra-operator~
 ** TODO Set up ~org-mode~ TODOs and GitHub issues sync      :orgmode:syncing:
 [[https://github.com/arbox/org-sync][Here's]] a library that does it.
@@ -414,6 +478,173 @@ appending a space after the end of a sub-form when it's followed by a keyword.
  (semantic-list 116 . 132)
  (close-paren 145 . 146))
 #+END_SRC
+
+** TODO Re-purpose existing =use-package= calls in order to set custom package location.
+[2018-05-30 Wed]
+[[file:~/.spacemacs.d/init.el::;;%20(use-package%20org-ref]]
+
+For example, src_elisp{org-ref}'s src_elisp{use-package} can be found in src_elisp{bibtex/init-org-ref}.
+
+#+BEGIN_SRC elisp
+;; (use-package org-ref
+;;   :defer t
+;;   :load-path ("~/projects/code/emacs/org-ref"))
+
+(symbol-function bibtex/init-org-ref)
+#+END_SRC
+** DONE [#A] Fix src_elisp{org-babel-result-end}                   :orgmode:
+CLOSED: [2019-02-05 Tue 11:55]
+~org-mode~ source blocks inside drawers will not replace existing results
+(themselves in drawers).
+
+The problem: src_elisp{(org-babel-result-end)} isn't working inside drawers.
+
+Specifically, it looks like src_elisp{(org-element-at-point)} returns
+a src_elisp{paragraph} element within a drawer.  Within that is the actual
+nested drawer, but, since src_elisp{(org-babel-result-end)} fails to return
+a recognized element type (i.e. not an element in
+src_elisp{'(drawer example-block export-block fixed-width item plain-list src-block table)})
+it fails.
+
+#+BEGIN_SRC elisp :results drawer replace
+(defun btw--org-babel-result-end ()
+  "Return the point at the end of the current set of results."
+  (cond
+   ((looking-at-p "^[ \t]*$")
+    (point)) ;no result
+   ((looking-at-p (format "^[ \t]*%s[ \t]*$" org-bracket-link-regexp))
+    (line-beginning-position 2))
+   (t (let* ((element (org-element-at-point))
+             (elements (cons element
+                             (if (eq (org-element-type element) 'paragraph)
+                                 (list (org-element-property :parent element))))))
+        (if-let ((element (seq-find (lambda (x)
+                                      (memq (org-element-type x)
+                                            ;; Possible results types.
+                                            '(drawer example-block export-block fixed-width
+                                                     item plain-list src-block table)))
+                                    elements)))
+            (save-excursion
+              (goto-char (min (point-max) ;for narrowed buffers
+                              (org-element-property :end element)))
+              (skip-chars-backward " \r\t\n")
+              (line-beginning-position 2))
+          (point))))))
+
+(advice-add #'org-babel-result-end :override #'btw--org-babel-result-end)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+^[ 	]*:\(\(?:\w\|[-_]\)+\):[ 	]*$
+:END:
+
+# Start a drawer
+:BLAH:
+
+#+BEGIN_SRC elisp :results drawer replace
+(print "hi")
+#+END_SRC
+
+# New, nested drawer
+:BLOG:
+#+BEGIN_SRC elisp :results drawer replace
+(print "hi")
+#+END_SRC
+
+:END:
+
+:END:
+** DONE [#A] Allow ~persp-mode~ to set ~projectile-mode~ project.
+CLOSED: [2018-09-09 Sun 23:47]
+Viewing a buffer for a file in a different ~projectile-mode~ project from
+within a ~persp-mode~ opened for a different project doesn't prioritize the
+~pesp-mode~-specific project when calling ~projectile-mode~ functions.
+
+If we can get the ~projectile-mode~ project name/location from ~persp-mode~,
+we might only need to set/wrap/override ~projectile-project-root~.
+
+This appears to work:
+#+BEGIN_SRC elisp :eval never
+(defun btw/persp-assign-projectile-root (persp persp-hash)
+  "Add a variable to the perspective tracking the projectile project name
+(if any).
+
+This is run before the buffer is created, so we need to get the project name
+from this perspective's path.  We assume the perspective's name is the project
+path (which it is per Spacemacs)"
+  (let* ((persp-name (safe-persp-name persp))
+         (persp-projectile-dir (when (and (f-dir? persp-name)
+                                          (funcall projectile-project-name-function
+                                                   persp-name))
+                                 persp-name)))
+    (set-persp-parameter 'projectile-project-root
+                         persp-projectile-dir
+                         persp)))
+
+(add-hook 'persp-created-functions #'btw/persp-assign-projectile-root)
+
+(defun btw/persp-projectile-project-root (oldfun &rest r)
+  "Use the perp project name and regular `projectile-project-root' as a
+fallback."
+  (let* ((persp-name (spacemacs//current-layout-name))
+         (persp-projectile-dir (when (and (f-dir? persp-name)
+                                          (funcall projectile-project-name-function
+                                                   persp-name))
+                                 persp-name)))
+    ;; If the persp name is a directory and is mapped to a projectile project,
+    ;; return the directory; otherwise, use the fallback.
+    (or persp-projectile-dir
+        (persp-parameter 'projectile-project-root)
+        (apply oldfun r))))
+
+(advice-add #'projectile-project-root :around #'btw/persp-projectile-project-root)
+
+(defun btw/persp-projectile-project-name (oldfun &rest r)
+  "Query the persp layout for the projectile project name and use projectile
+for the fallback."
+  (let* ((persp-name (spacemacs//current-layout-name))
+         (persp-projectile-name (if (f-dir? persp-name)
+                                    (funcall projectile-project-name-function
+                                             persp-name)
+                                  (persp-parameter 'projectile-project-root))))
+    (or persp-projectile-name (apply oldfun r))))
+
+(advice-add #'projectile-project-name :around #'btw/persp-projectile-project-name)
+#+END_SRC
+
+** DONE Fix project-root finding in ~lsp-mode~                          :lsp:
+CLOSED: [2018-08-09 Thu 10:41]
+- Note taken on [2018-08-09 Thu 10:40] \\
+  This seems to be working:
+
+  #+BEGIN_SRC elisp
+  (defun btw/lsp-python-workspace-root ()
+    (or (when (fboundp 'projectile-project-root)
+          (projectile-project-root))
+        (lsp-make-traverser (directory-files dir nil "\\(__init__\\|setup\\)\\.py"))
+        (if lsp-message-project-root-warning
+            (message "Couldn't find project root, using the current directory as the root.")
+          (lsp-warn "Couldn't find project root, using the current directory as the root.")
+          default-directory)))
+  (lsp-define-stdio-client lsp-python "python"
+                           #'btw/lsp-python-workspace-root
+                           '("pyls"))
+  #+END_SRC
+- Note taken on [2018-03-17 Sat 14:03] \\
+  For example, =lsp-python= uses the following to find a project's root directory:
+  #+BEGIN_SRC elisp
+  (lsp-define-stdio-client lsp-python "python"
+                           (lsp-make-traverser #'(lambda (dir)
+                                                   (or (when (fboundp 'projectile-project-root)
+                                                         (projectile-project-root))
+                                                       (directory-files
+                                                        dir nil "\\(__init__\\|setup\\)\\.py"))))
+                           '("pyls"))
+  #+END_SRC
+
+  This only applies to projects that are Python packages.  Even then, I'm not sure it does
+  well, because I'm always getting errors.
 
 ** DONE Stop fill from breaking some syntax elements in ~org-mode~  :orgmode:
 CLOSED: [2018-05-23 Wed 13:24]
@@ -535,19 +766,6 @@ directories?  This fixed it:
      "/usr/share/info/" "/usr/share/info/")))
 #+END_SRC
 
-** TODO Re-purpose existing =use-package= calls in order to set custom package location.
-[2018-05-30 Wed]
-[[file:~/.spacemacs.d/init.el::;;%20(use-package%20org-ref]]
-
-For example, src_elisp{org-ref}'s src_elisp{use-package} can be found in src_elisp{bibtex/init-org-ref}.
-
-#+BEGIN_SRC elisp
-;; (use-package org-ref
-;;   :defer t
-;;   :load-path ("~/projects/code/emacs/org-ref"))
-
-(symbol-function bibtex/init-org-ref)
-#+END_SRC
 * Old Settings
 ** Conda
 #+BEGIN_SRC elisp

@@ -58,7 +58,11 @@
                       auto-completion-enable-help-tooltip 'manual)
      emacs-lisp
      git
-     (github :variables magit-gh-pulls-pull-detail-limit 10)
+     ;; (spacemacs-purpose :packages (not window-purpose))
+     ;; XXX: The `github' layer requires `forge', which requires `closql' and interacts poorly
+     ;; with recent Emacs master branch changes to `eieio' (seen during the
+     ;; loading of `window-purpose' class objects)
+     ;; (github :variables magit-gh-pulls-pull-detail-limit 10)
      scheme
      racket
      pdf
@@ -522,14 +526,14 @@
   (with-eval-after-load 'racket-mode
     (when (fboundp 'purpose-set-extension-configuration)
       (purpose-set-extension-configuration
-       :racket (purpose-conf :mode-purposes
-                             '((racket-repl-mode . repl))))))
+        :racket (purpose-conf :mode-purposes
+                              '((racket-repl-mode . repl))))))
 
   (with-eval-after-load 'geiser
     (when (fboundp 'purpose-set-extension-configuration)
       (purpose-set-extension-configuration
-       :scheme (purpose-conf :mode-purposes
-                             '((geiser-repl-mode . repl)))))
+        :scheme (purpose-conf :mode-purposes
+                              '((geiser-repl-mode . repl)))))
     (setq-default geiser-default-implementation 'racket))
 
   (with-eval-after-load 'overseer
@@ -1157,6 +1161,15 @@ This fixes some `helm' issues."
     (define-key evil-insert-state-map (kbd "C-n") #'company-select-next)
     (define-key evil-insert-state-map (kbd "C-p") #'company-select-previous))
 
+  (with-eval-after-load 'window-purpose
+    ;; This was commented out in `purpose--fix-helm' from `window-purpose-fixes.el'.
+    (with-eval-after-load 'helm
+      (add-to-list 'purpose-action-function-ignore-buffer-names "^\\*Helm"))
+    (with-eval-after-load 'helm
+      (add-to-list 'purpose-action-function-ignore-buffer-names "^\\*helm"))
+    (with-eval-after-load 'helm
+      (purpose-set-extension-configuration :helm purpose--helm-conf)))
+
   (with-eval-after-load 'window-purpose-switch
     (setq purpose-display-at-bottom-height 0.4))
 
@@ -1298,11 +1311,11 @@ From https://emacs.stackexchange.com/a/10698"
     :body (progn (spacemacs/find-dotfile)
                  (set-persp-parameter 'projectile-project-root
                                       (ignore-errors (projectile-project-root)))
-                 (set-window-dedicated-p (get-buffer-window) t)
+                 ;; (set-window-dedicated-p (get-buffer-window) t)
                  (display-buffer-in-side-window (messages-buffer) '((side . right)))
                  (balance-windows-area)))
 
-  ;;; Initialization steps
+  ;; Initialization steps
 
   (defun btw/after-user-config-setup ()
     ;; (require 'frame-cmds)
