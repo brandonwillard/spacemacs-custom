@@ -451,7 +451,7 @@ This is mostly the standard `ox-latex' with only the following differences:
     (or py-buffer-name (format "*%s*" (python-shell-get-process-name nil)))))
 (defun spacemacs//org-babel-scheme-make-session-name (orig-func buffer name impl)
   (funcall orig-func ))
-(defun spacemacs//org-babel-execute-from-here (&optional arg)
+(defun spacemacs/org-babel-execute-from-here (&optional arg)
   "Execute source code blocks from the subtree at the current point upward.
 Call `org-babel-execute-src-block' on every source block in
 the current subtree upward."
