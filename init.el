@@ -894,7 +894,9 @@ except Exception:
     (advice-add #'projectile-switch-project-by-name
                 :override #'btw/projectile-switch-project-by-name)
 
-    (setq projectile-project-search-path '("~/projects"))
+    (setq projectile-project-search-path
+          (mapcar #'expand-file-name
+                  '("~/projects/code/python" "~/projects/code/emacs" "~/projects/citybase" "~/projects/papers")))
     (setq projectile-indexing-method 'hybrid)
 
     (setq projectile-globally-unignored-files '("TODO.org" "TODOs.org"))
