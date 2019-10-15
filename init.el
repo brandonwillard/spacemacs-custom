@@ -115,8 +115,10 @@
                                       org-gcal
                                       dockerfile-mode
                                       evil-extra-operator
+
                                       kubernetes
                                       kubernetes-evil
+                                      kubernetes-tramp
 
                                       jupyter
 
@@ -387,6 +389,10 @@
   (use-package kubernetes-evil
     ;; :ensure t
     :after kubernetes)
+
+  (use-package kubernetes-tramp
+    :defer t
+    :config (setq tramp-remote-shell-executable "sh"))
 
   (spacemacs|define-custom-layout "@Kubernetes"
     :binding "K"
