@@ -135,6 +135,7 @@
                                       (org-ref :location local)
                                       (ob-hy :location local)
                                       sphinx-doc
+                                      yasnippet-snippets
                                       ;; Use a newer version of python.el.
                                       (python :location elpa :min-version "0.26.1"))
    dotspacemacs-frozen-packages '()
@@ -474,9 +475,13 @@
               (sphinx-doc-mode t))
             (add-hook 'python-mode-hook #'btw/setup-sphinx-doc)))
 
+  (use-package yasnippet-snippets
+    :defer t)
+
   ;; (with-eval-after-load 'go-mode
   ;;   (setq godoc-command "godoc")
   ;;   (setq godoc-and-godef-command "godoc"))
+
   (with-eval-after-load 'vterm
     ;; (add-hook 'vterm-mode-hook
     ;;           (lambda ()
@@ -791,6 +796,7 @@ except Exception:
     (add-hook 'org-mode-hook #'btw--org-pcompletions-hook)
 
     (spacemacs|add-company-backends :backends company-yasnippet
+                                    :append-hook t
                                     :modes org-mode)
 
     (defvaralias 'org-plantuml-jar-path 'plantuml-jar-path)
@@ -1146,7 +1152,8 @@ This fixes some `helm' issues."
     (defalias #'forward-evil-word #'forward-evil-symbol))
 
   (with-eval-after-load 'yasnippet
-    (setq yasnippet-snippets-dir (f-join default-directory "private" "snippets")))
+    ;; (setq yasnippet-snippets-dir (f-join default-directory "private" "snippets"))
+    )
 
   (with-eval-after-load 'company
     (setq company-dabbrev-other-buffers nil)
