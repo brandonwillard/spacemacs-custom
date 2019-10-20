@@ -256,7 +256,8 @@ See the calls to it in [[/home/bwillard/.emacs.d/layers/+spacemacs/spacemacs-nav
 ** TODO [#A] Create Org LOB file for common export helpers and adjustments :orgmode:
 Put code from [[file:../projects/papers/tex-project-templates/src/org/org-export-init.el][=org-export-init.el=]] into an independent, versioned Org file to
 be loaded with ~org-babel-lob-ingest~.
-** TODO [#A] Slowness with Python file/venv loading                  :python:
+** DONE [#A] Slowness with Python file/venv loading                 :python:
+CLOSED: [2019-10-16 Wed 14:49]
 Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
 ** TODO Better window creation and re-use
 Set better =purpose= values, so that new frames are never created, terminals

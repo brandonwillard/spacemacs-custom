@@ -1231,14 +1231,6 @@ This fixes some `helm' issues."
     (setq helm-split-window-inside-p nil)
     (setq helm-split-window-default-side 'below)
 
-    (defun btw//helm-persistent-action-display-window (&optional split-onewindow)
-      "Return the window that will be used for persistent action.
-If SPLIT-ONEWINDOW is non-`nil' window is split in persistent action."
-      (with-helm-window
-        (setq helm-persistent-action-display-window (get-mru-window))))
-
-    (advice-add #'helm-persistent-action-display-window :override #'btw//helm-persistent-action-display-window)
-
     ;; NOTE: `window-purpose-switch' can destroy expected
     ;; pop-up/window placement behavior; look at the default
     ;; values for vars like `purpose-display-at-bottom-height'
