@@ -326,7 +326,8 @@
 * TODO Use a function/callable to determine project source and/or resources directories.
   [2018-05-01 Tue]
   [[file:~/.spacemacs.d/layers/org-extras/config.el::"Name%20of%20the%20source%20directory%20for%20a%20projectile%20project.")][=org-projectile-src-dir=]]
-* TODO Better bibliography injection during export
+* DONE Better bibliography injection during export
+  CLOSED: [2019-10-23 Wed 11:20]
   See my comments in [[https://github.com/jkitchin/org-ref/issues/492][=org-ref= issue 492]].
 
   #+BEGIN_SRC elisp

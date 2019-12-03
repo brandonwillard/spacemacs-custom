@@ -14,7 +14,6 @@
 (defconst org-extras-packages
   '(
     org
-    org-ref
     org-agenda
     org-projectile
     f
@@ -56,8 +55,8 @@
       (advice-add 'org-babel-load-session:python :override
                   #'spacemacs//org-babel-load-session:python)
 
-      (with-eval-after-load 'ox-latex
-        (advice-add 'org-latex-src-block :around #'spacemacs//org-latex-src-block))
+      ;; (with-eval-after-load 'ox-latex
+      ;;   (advice-add 'org-latex-src-block :around #'spacemacs//org-latex-src-block))
 
       (spacemacs/toggle-org-highlight-inline-src-on)
 
@@ -68,16 +67,16 @@
             org-latex-packages-alist '(("" "minted")
                                        ("minted, listings, breakable, skins" "tcolorbox")))
 
-      (defun spacemacs//org-export-latex-add-tcolorbox (body backend info)
-        "Add a custom tcolorbox listing environment to the latex-header-extra options."
-        (when (or (eq backend 'latex)
-                  (eq 'latex (org-export-backend-parent (org-export-get-backend backend))))
-          (concat org-latex-tcolorbox-listing-env "\n" body)
-          ;; (plist-put options :latex-header-extra `(,org-latex-tcolorbox-listing-env))
-          ))
-
-      ;; (add-to-list 'org-export-filter-options-functions 'spacemacs//org-export-latex-add-tcolorbox)
-      (add-to-list 'org-export-filter-body-functions 'spacemacs//org-export-latex-add-tcolorbox)
+      ;; (defun spacemacs//org-export-latex-add-tcolorbox (body backend info)
+      ;;   "Add a custom tcolorbox listing environment to the latex-header-extra options."
+      ;;   (when (or (eq backend 'latex)
+      ;;             (eq 'latex (org-export-backend-parent (org-export-get-backend backend))))
+      ;;     (concat org-latex-tcolorbox-listing-env "\n" body)
+      ;;     ;; (plist-put options :latex-header-extra `(,org-latex-tcolorbox-listing-env))
+      ;;     ))
+      ;;
+      ;; ;; (add-to-list 'org-export-filter-options-functions 'spacemacs//org-export-latex-add-tcolorbox)
+      ;; (add-to-list 'org-export-filter-body-functions 'spacemacs//org-export-latex-add-tcolorbox)
 
       (spacemacs/set-leader-keys-for-major-mode 'org-mode
         "bh" #'spacemacs/org-babel-execute-from-here)
@@ -85,14 +84,6 @@
         "bD" #'org-babel-remove-result-one-or-many)
 
       (add-to-list 'org-babel-load-languages '(emacs-lisp . t)))))
-
-(defun org-extras/pre-init-org-ref ()
-  ;; XXX: The following doesn't seem to work (possibly related to https://github.com/syl20bnr/spacemacs/issues/7633)
-  ;; (spacemacs|use-package-add-hook org-ref
-  ;;   :post-config ...)
-  (with-eval-after-load 'org-ref
-    (spacemacs/toggle-org-ref-bib-as-option-on)
-    (setq org-ref-prefer-bracket-links t)))
 
 (defun org-extras/pre-init-ob-hy ()
   (spacemacs|use-package-add-hook org
