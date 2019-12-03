@@ -418,15 +418,17 @@
               "R" 'jupyter-repl-restart-kernel))
     :config (progn
               (when (eq dotspacemacs-editing-style 'vim)
-                (evil-define-key '(insert normal) jupyter-repl-mode-map
+                (evil-define-key 'insert jupyter-repl-mode-map
                   (kbd "C-j") 'jupyter-repl-history-next
                   (kbd "C-k") 'jupyter-repl-history-previous
                   (kbd "C-l") 'jupyter-repl-clear-cells
+                  (kbd "C-R") 'isearch-forward
+                  (kbd "C-r") 'isearch-backward)
+                (evil-define-key 'normal jupyter-repl-mode-map
+                  (kbd "C-l") 'jupyter-repl-clear-cells
                   (kbd "M-j") 'jupyter-repl-forward-cell
                   (kbd "M-k") 'jupyter-repl-backward-cell
-                  (kbd "C-s") 'jupyter-repl-scratch-buffer
-                  (kbd "C-R") 'isearch-forward
-                  (kbd "C-r") 'isearch-backward))
+                  (kbd "C-s") 'jupyter-repl-scratch-buffer))
 
               (add-hook 'jupyter-repl-mode-hook #'spacemacs/disable-vi-tilde-fringe)
 
