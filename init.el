@@ -356,6 +356,8 @@
   (add-to-list 'debug-ignored-errors "^Before first heading$")
   (add-to-list 'debug-ignored-errors "^Nothing to complete$")
   (add-to-list 'debug-ignored-errors "^No such page: ")
+  (add-to-list 'debug-ignored-errors "^Beginning of history$")
+  (add-to-list 'debug-ignored-errors "^End of history$")
   (add-to-list 'debug-ignored-errors
                "^Company: backend \(:?.*?\) error \"Nothing to complete\"")
   (add-to-list 'debug-ignored-errors 'lsp-timed-out-error)
@@ -1159,7 +1161,8 @@ This fixes some `helm' issues."
         (prog1
             (apply fn r)
           (unless (eq start-point (point))
-            (evil-open-fold-rec)))))
+            (ignore-errors
+              (evil-open-fold-rec))))))
 
     ;; XXX: These are too aggressive.
     ;; (advice-add #'goto-line :after #'btw//evil-open-on-movement)
