@@ -161,9 +161,12 @@ See `company-transformers'."
   ;; (advice-add #'pyvenv-activate :before #'python-extras//track-previous-pyvenv)
 
   ;; Enable automatic projectile-based venv activation before the following activities.
-  (advice-add #'spacemacs/python-start-or-switch-repl :before #'spacemacs//check-and-activate-projectile-pyvenv)
-  (advice-add #'spacemacs/projectile-shell-pop :before #'spacemacs//check-and-activate-projectile-pyvenv)
+  (defun spacemacs//run-in-pyvenv-wrapper (oldfun &rest args)
+    (spacemacs//run-in-pyvenv
+     (apply oldfun args)))
 
+  (advice-add #'spacemacs/python-start-or-switch-repl :around #'spacemacs//run-in-pyvenv-wrapper)
+  (advice-add #'spacemacs/projectile-shell-pop :around #'spacemacs//run-in-pyvenv-wrapper)
 
   ;; TODO: `pyvenv-restart-python' checks `pyvenv-virtual-env-name' and
   ;; `pyvenv-virtual-env' *within* each inferior Python buffer, so we need to [re]set

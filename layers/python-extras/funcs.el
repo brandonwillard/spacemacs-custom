@@ -35,7 +35,9 @@
     ;; Re-define macro.
     (defmacro spacemacs//run-in-pyvenv (&rest forms)
       "Provides a projectile-specific `pyvenv-workon' environment via
- `dir-locals-class-alist'."
+ `dir-locals-class-alist'.
+
+This macro searches in dir-locals for a `pyvenv-workon' value."
       `(let* ((project-locals (ignore-errors
                                 (alist-get (intern
                                             (expand-file-name (projectile-project-root)))
@@ -66,13 +68,7 @@ When projectile is altered to have `persp-mode'-scoped projects, this
           (spacemacs//run-in-pyvenv
            (progn
              (setq spacemacs--pyvenv-last-scope proj-name)
-             (apply oldfun args))))))
-    (defun spacemacs//check-and-activate-projectile-pyvenv (&rest args)
-      (spacemacs//run-in-pyvenv
-       (when (or (and (not pyvenv-virtual-env-name) pyvenv-workon)
-                 (not (string-equal pyvenv-virtual-env-name pyvenv-workon)))
-         (message "activating %s" pyvenv-workon)
-         (pyvenv-workon pyvenv-workon)))))
+             (apply oldfun args)))))))
   (defun spacemacs//pyvenv-conda-activate-additions ()
     (spacemacs//run-in-pyvenv
      (setq spacemacs--pyvenv-virtual-env-name-prev pyvenv-virtual-env-name)
