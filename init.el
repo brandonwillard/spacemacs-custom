@@ -7,7 +7,8 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(ocaml
+   '(eww
+     ocaml
      elixir
      javascript
      clojure
