@@ -385,14 +385,13 @@ This is mostly the standard `ox-latex' with only the following differences:
 Call `org-babel-execute-src-block' on every source block in
 the current subtree upward."
   (interactive "P")
-  (save-restriction
-    (save-excursion
-      (narrow-to-region (point-min)
-                        (progn (org-end-of-subtree t t)
-	                             (when (and (org-at-heading-p) (not (eobp))) (backward-char 1))
-	                             (point)))
-      (org-babel-execute-buffer arg)
-      (widen))))
+  (save-mark-and-excursion
+    (let ((p (point-marker)))
+      (catch 'done
+        (org-babel-map-src-blocks nil
+          (when (> (point) p)
+            (throw 'done t))
+          (org-babel-execute-src-block))))))
 (defun spacemacs//org-babel-load-session:python (session body params)
   "Load BODY into SESSION using python-shell-send-string-echo."
   (declare-function python-shell-send-string "python.el")
