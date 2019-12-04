@@ -449,10 +449,26 @@
   (use-package ox-rst :defer t)
 
   (use-package ox-pelican
-    :commands (org-pelican-publish-to-pelican))
+    :defer t
+    :after (ox-gfm))
+
+  (use-package org-ref+
+    :defer t
+    :after (org-ref)
+    :config (progn
+              (org-ref+-mode +1)))
+
+  (use-package ox-latex+
+    :defer t
+    :after (ox-latex))
+
+  (use-package ox-sphinx
+    :defer t
+    :after (org))
 
   (use-package org-gcal
     :disabled t
+    :after (org)
     :config (progn
               (-when-let* ((client-info (cdr (car (json-read-file
                                                    (f-join dotspacemacs-directory
