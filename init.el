@@ -238,6 +238,10 @@
   (setq edebug-print-level 20)
   (setq print-circle t)
 
+  ;; This will help avoid errors with old `ert'-based code
+  (when (> emacs-major-version 26)
+    (defalias 'ert--print-backtrace 'backtrace-to-string))
+
   (setq auth-sources '("~/.authinfo.gpg" "~/.authinfo" "~/.netrc"))
 
   (setq custom-file (concat user-emacs-directory "private/custom-settings.el"))
