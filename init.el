@@ -617,9 +617,33 @@
     (setq-default geiser-default-implementation 'racket))
 
   (with-eval-after-load 'overseer
+
+    ;; Only ask to save file in the current `projectile' project.
+    (setq overseer--save-buffers-predicate compilation-save-buffers-predicate)
+
+    (defun btw/overseer-compilation-run (cmdlist buffer-name)
+      "Run CMDLIST in BUFFER-NAME and returns the compilation buffer."
+
+      (save-some-buffers (not compilation-ask-about-save) overseer--save-buffers-predicate)
+
+      (let* ((overseer--buffer-name buffer-name)
+             (compilation-filter-start (point-min)))
+        (with-current-buffer
+            (compilation-start (mapconcat 'concat cmdlist " ")
+                               'overseer-buffer-mode
+                               (lambda (_b) overseer--buffer-name))
+          (set (make-local-variable 'compilation-error-regexp-alist)
+               (cons 'overseer compilation-error-regexp-alist))
+          ;; TODO: Add an entry to `compilation-error-regexp-alist-alist'!
+          (add-hook 'compilation-filter-hook 'overseer--handle-ansi-color nil t)
+          (add-hook 'compilation-filter-hook 'overseer--remove-header nil t))))
+
+    ;; (advice-add #'overseer-compilation-run :override #'btw/overseer-compilation-run)
+
     (defun btw/overseer--current-buffer-test-file-p ()
       (string-match (rx (seq "-test" (optional "s") "\.el" eol))
                     (or (buffer-file-name) "")))
+
     (advice-add #'overseer--current-buffer-test-file-p :override
                 #'btw/overseer--current-buffer-test-file-p))
 
