@@ -608,6 +608,12 @@
       (purpose-set-extension-configuration
         :scheme (purpose-conf :mode-purposes
                               '((geiser-repl-mode . repl)))))
+
+    ;; Indent special macros/functions
+    (cl-loop
+     for x in '(rewrite-rules fresh match*)
+     do (put x 'scheme-indent-function 1))
+
     (setq-default geiser-default-implementation 'racket))
 
   (with-eval-after-load 'overseer
