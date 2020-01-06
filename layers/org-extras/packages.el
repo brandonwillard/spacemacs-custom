@@ -47,6 +47,9 @@
         (advice-add 'org-export-output-file-name :around
                     #'spacemacs//org-export-output-project-file-name))
 
+      (when (and (configuration-layer/layer-usedp 'python-extras) (fboundp #'spacemacs//set-project-root))
+        (advice-add #'org-babel-python-initiate-session :around #'spacemacs//run-in-pyvenv-wrapper))
+
       ;; TODO: Does this work?
       ;; (declare-function python-shell-calculate-command "ext:python" nil)
       ;; (setq org-babel-python-command (python-shell-calculate-command))
