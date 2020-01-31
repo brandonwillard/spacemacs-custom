@@ -545,8 +545,15 @@
               (sphinx-doc-mode t))
             (add-hook 'python-mode-hook #'btw/setup-sphinx-doc)))
 
+  ;; This is also loaded by the `auto-complete' layer, but the directory
+  ;; addition isn't present.
+  ;; (with-eval-after-load yasnippet-snippets
+  ;;   (add-to-list 'yas-snippet-dirs yasnippet-snippets-dir))
+
   (use-package yasnippet-snippets
-    :defer t)
+    :after (yasnippet)
+    :init (progn
+            (add-to-list 'yas-snippet-dirs yasnippet-snippets-dir)))
 
   ;; (with-eval-after-load 'go-mode
   ;;   (setq godoc-command "godoc")
