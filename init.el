@@ -363,13 +363,14 @@
   (add-to-list 'debug-ignored-errors "^No such page: ")
   (add-to-list 'debug-ignored-errors "^Beginning of history$")
   (add-to-list 'debug-ignored-errors "^End of history$")
+  (add-to-list 'debug-ignored-errors "^No surrounding delimiters found$")
   (add-to-list 'debug-ignored-errors
                "^Company: backend \(:?.*?\) error \"Nothing to complete\"")
   (add-to-list 'debug-ignored-errors 'lsp-timed-out-error)
   (add-to-list 'debug-ignored-errors
-               "Candidates function ‘helm-ag--do-ag-candidate-process’ should run a process")
+               "^Candidates function ‘helm-ag--do-ag-candidate-process’ should run a process")
   (add-to-list 'debug-ignored-errors
-               "Current buffer has no process")
+               "^Current buffer has no process")
 
   (setq-default sentence-end-double-space t)
 
