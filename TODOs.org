@@ -4,6 +4,13 @@
 #+STARTUP: hideblocks indent hidestars
 
 * Tasks
+** TODO Stop ~ob-python~ from stripping initial whitespace from output
+
+See
+[[file:/home/bwillard/.emacs.d/elpa/develop/org-plus-contrib-20200127/ob-python.el:336]]
+; there's an unnecessary src_elisp[:eval never]{org-trim} that ruins Python
+output.
+
 ** TODO Fix ~ox-ipynb~                                             :orgmode:
 *** Links to Listings/Code Blocks
 We need ~org-mode~ links to code blocks to export to links to Jupyter Notebook
