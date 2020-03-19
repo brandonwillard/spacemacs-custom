@@ -391,7 +391,14 @@ the current subtree upward."
         (org-babel-map-src-blocks nil
           (when (> (point) p)
             (throw 'done t))
-          (org-babel-execute-src-block))))))
+          ;; TODO: Ignore `'
+          (condition-case err
+              (org-babel-execute-src-block)
+            (error
+             (unless (s-starts-with? "No org-babel-execute function for" (error-message-string err))
+               ;; We can't handle this type of error, so abort.
+               (message err)
+               (throw 'done t)))))))))
 (defun spacemacs//org-babel-load-session:python (session body params)
   "Load BODY into SESSION using python-shell-send-string-echo."
   (declare-function python-shell-send-string "python.el")
