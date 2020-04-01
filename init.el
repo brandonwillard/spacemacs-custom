@@ -7,7 +7,9 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(eww
+   '(kubernetes
+     eww
+     ess
      ocaml
      elixir
      javascript
@@ -16,9 +18,12 @@
      csv
      restructuredtext
      ;; (javascript :packages (not tern))
-     (lsp :packages (not
-                     ;; lsp-ui
-                     flycheck-lsp))
+     (lsp :variables
+          lsp-ui-doc-enable nil
+          lsp-ui-sideline-enable nil
+          lsp-ui-remap-xref-keybindings t
+      ;; :packages (not flycheck-lsp)
+      )
      html
      markdown
      (latex :variables
@@ -33,7 +38,8 @@
              ;; NOTE: These can also be .dir-local/project specific.
              python-test-runner 'pytest
              python-backend 'lsp
-             ;; python-enable-yapf-format-on-save t
+             python-formatter 'black
+             python-format-on-save nil
              :packages (not live-py-mode))
      python-extras
      (hy :variables hy-shell-spy-delim "\n--spy-output--\n")
@@ -41,6 +47,7 @@
      sql
      ;; noweb
      ;; (c-c++ :variables
+     ;;        c-c++-backend 'lsp-clangd
      ;;        ;; company-c-headers-path-user '("../include" "./include" "." "../../include"
      ;;        ;;                               "../inc" "../../inc")
      ;;        c-c++-enable-clang-support t
@@ -48,8 +55,8 @@
      helm
      (auto-completion :variables
                       ;; auto-completion-enable-sort-by-usage t
-                      ;; :packages (not auto-complete ac-ispell)
-                      spacemacs-default-company-backends '(company-files company-capf)
+                      spacemacs-default-company-backends '(company-files company-capf company-yasnippet)
+                      ;; ((company-semantic company-dabbrev-code company-gtags company-etags company-keywords) company-files company-dabbrev)
                       auto-completion-return-key-behavior nil
                       auto-completion-idle-delay nil
                       auto-completion-tab-key-behavior nil
@@ -110,6 +117,8 @@
                                       ox-jira
                                       ;; ox-confluence
                                       ox-rst
+                                      (ox-ipynb :location (recipe :fetcher github
+                                                                  :repo "jkitchin/ox-ipynb"))
                                       (ox-gfm :location (recipe :fetcher github
                                                                 :repo "larstvei/ox-gfm"))
                                       plantuml-mode
@@ -117,8 +126,6 @@
                                       dockerfile-mode
                                       evil-extra-operator
 
-                                      kubernetes
-                                      kubernetes-evil
                                       kubernetes-tramp
 
                                       jupyter
@@ -226,6 +233,8 @@
 
 (defun dotspacemacs/user-init ()
 
+  ;; (modify-syntax-entry ?_ "w" (standard-syntax-table))
+
   (setq auto-save-timeout nil)
   (setq init-file-debug nil)
   (setq debug-on-error t)
@@ -290,7 +299,7 @@
   ;; Hack for `exec-path' not being used by `shell-command-to-string'.
   ;; We're basically setting `process-environment', which is used by those shell commands.
   ;; (seq-filter (lambda (var) (s-starts-with-p "PATH=" var)) process-environment)
-  (setenv "PATH" (mapconcat #'identity (delete-dups exec-path) ":"))
+  ;; (setenv "PATH" (mapconcat #'identity (delete-dups exec-path) ":"))
 
   ;; Looks like `spacemacs/loadenv' is cutting off DBUS_SESSION_BUS_ADDRESS at the "="!
   ;; FYI: This now happens in `spacemacs/load-spacemacs-env'.
@@ -364,6 +373,7 @@
   (add-to-list 'debug-ignored-errors "^Beginning of history$")
   (add-to-list 'debug-ignored-errors "^End of history$")
   (add-to-list 'debug-ignored-errors "^No surrounding delimiters found$")
+  (add-to-list 'debug-ignored-errors "^Invalid search bound (wrong side of point)$")
   (add-to-list 'debug-ignored-errors
                "^Company: backend \(:?.*?\) error \"Nothing to complete\"")
   (add-to-list 'debug-ignored-errors 'lsp-timed-out-error)
@@ -371,6 +381,8 @@
                "^Candidates function ‘helm-ag--do-ag-candidate-process’ should run a process")
   (add-to-list 'debug-ignored-errors
                "^Current buffer has no process")
+  (add-to-list 'debug-ignored-errors
+               "Attempt to delete minibuffer or sole ordinary window")
 
   (setq-default sentence-end-double-space t)
 
@@ -390,21 +402,9 @@
   (spacemacs/set-leader-keys "kx" 'sp-split-sexp)
   (unbind-key (kbd "nf") spacemacs-default-map)
 
-  (use-package kubernetes
-    ;; :ensure t
-    :commands (kubernetes-overview))
-
-  (use-package kubernetes-evil
-    ;; :ensure t
-    :after kubernetes)
-
   (use-package kubernetes-tramp
     :defer t
     :config (setq tramp-remote-shell-executable "sh"))
-
-  (spacemacs|define-custom-layout "@Kubernetes"
-    :binding "K"
-    :body (progn (kubernetes-overview)))
 
   ;; (use-package helpful)
 
@@ -450,9 +450,42 @@
 
               (spacemacs|add-company-backends :backends company-capf :modes jupyter-repl-mode)))
 
-  (use-package ox-jira :defer t)
+  (use-package ox-ipynb
+    :disabled t
+    :defer t
+    :after (org jupyter)
+    :init (progn
+            (defun jupyter/ox-ipynb-emacs-jupyter ()
+              (cl-loop
+               for (kernel . (_dir . spec)) in (jupyter-available-kernelspecs)
+               for lang = (plist-get spec :language)
+               for display-name = (plist-get spec :display_name)
+               do (cl-pushnew (cons (intern (concat "jupyter-" lang))
+                                    (cons (intern "kernelspec") (list
+                                                                 (cons (intern "display_name") display-name)
+                                                                 (cons (intern "language") lang)
+                                                                 (cons (intern "name") kernel)
+                                                                 )))
+                              ox-ipynb-kernelspecs :test #'equal))
+
+              (cl-loop
+               for (kernel . (_dir . spec)) in (jupyter-available-kernelspecs)
+               for lang = (plist-get spec :language)
+               for display-name = (plist-get spec :display_name)
+               do (cl-pushnew (cons (intern (concat "jupyter-" lang))
+                                    (cons (intern "language_info") (list
+                                                                    (cons (intern "name") lang)
+                                                                    (cons (intern "version") (nth 1 (split-string display-name)))
+                                                                    )))
+                              ox-ipynb-language-infos :test #'equal)))
+
+            (add-hook 'org-mode-hook #'jupyter/ox-ipynb-emacs-jupyter)))
 
   (use-package ox-rst :defer t)
+
+  (use-package ox-jira
+    :defer t
+    :after (org))
 
   (use-package ox-pelican
     :defer t
@@ -470,6 +503,7 @@
 
   (use-package ox-sphinx
     :defer t
+    :commands (org-sphinx-publish-to-rst)
     :after (org))
 
   (use-package org-gcal
@@ -559,6 +593,15 @@
   ;;   (setq godoc-command "godoc")
   ;;   (setq godoc-and-godef-command "godoc"))
 
+  (when (fboundp 'kubernetes-overview)
+    (spacemacs|define-custom-layout "@Kubernetes"
+      :binding "K"
+      :body (progn (kubernetes-overview))))
+
+  (with-eval-after-load 'kubernetes
+    (setq kubernetes-poll-frequency 30)
+    (setq kubernetes-clean-up-interactive-exec-buffers nil))
+
   (with-eval-after-load 'vterm
     ;; (add-hook 'vterm-mode-hook
     ;;           (lambda ()
@@ -567,6 +610,7 @@
     (setq vterm-keymap-exceptions nil)
     (define-key vterm-mode-map [return] #'vterm-send-return)
     (evil-define-key 'insert vterm-mode-map (kbd "C-e") #'vterm--self-insert)
+    (evil-define-key 'insert vterm-mode-map (kbd "C-z") #'vterm--self-insert)
     (evil-define-key 'insert vterm-mode-map (kbd "C-f") #'vterm--self-insert)
     (evil-define-key 'insert vterm-mode-map (kbd "C-a") #'vterm--self-insert)
     (evil-define-key 'insert vterm-mode-map (kbd "C-v") #'vterm--self-insert)
@@ -608,14 +652,14 @@
   (with-eval-after-load 'racket-mode
     (when (fboundp 'purpose-set-extension-configuration)
       (purpose-set-extension-configuration
-        :racket (purpose-conf :mode-purposes
-                              '((racket-repl-mode . repl))))))
+       :racket (purpose-conf :mode-purposes
+                             '((racket-repl-mode . repl))))))
 
   (with-eval-after-load 'geiser
     (when (fboundp 'purpose-set-extension-configuration)
       (purpose-set-extension-configuration
-        :scheme (purpose-conf :mode-purposes
-                              '((geiser-repl-mode . repl)))))
+       :scheme (purpose-conf :mode-purposes
+                             '((geiser-repl-mode . repl)))))
 
     ;; Indent special macros/functions
     (cl-loop
@@ -721,6 +765,8 @@
     ;; TODO: Consider adding logic to `flycheck-python-find-module' that only
     ;; matches checker modules in the virtualenv (if any).
     ;; (add-to-list 'flycheck-disabled-checkers 'python-flake8)
+    ;; (add-hook 'python-mode-hook
+    ;;           #'(lambda () (add-to-list 'flycheck-disabled-checkers 'python-pylint)))
     (setq flycheck-indication-mode 'right-fringe))
 
   (with-eval-after-load 'python
@@ -811,14 +857,16 @@ except Exception:
   (with-eval-after-load 'lsp-mode
 
     ;; Temporary fix (until a PR takes care of this)
-    (spacemacs/set-leader-keys-for-minor-mode 'lsp-mode
-      "bd" #'lsp-describe-session)
+    ;; (spacemacs/set-leader-keys-for-minor-mode 'lsp-mode
+    ;;   "bd" #'lsp-describe-session)
     (setq lsp-auto-guess-root t)
-    (setq lsp-document-sync-method 'incremental)
-    (setq lsp-message-project-root-warning t)
+    (setq lsp-enable-snippet t)
+    (setq lsp-document-sync-method lsp--sync-incremental)
     (setq lsp-enable-on-type-formatting nil)
     (setq lsp-before-save-edits nil)
-    (setq lsp-enable-eldoc nil)
+    (setq lsp-eldoc-enable-hover nil)
+    ;; Was `lsp-hover'
+    (setq lsp-signature-auto-activate nil)
     (setq lsp-eldoc-hook '(lsp-document-highlight))
     (setq lsp-eldoc-render-all nil))
 
@@ -835,7 +883,8 @@ except Exception:
         lsp-clients-python-library-directories))
     (let ((client
            (make-lsp-client :new-connection (lsp-stdio-connection
-                                             (lambda () lsp-pyls-server-command))
+                                             ;; (lambda () lsp-pyls-server-command)
+                                             "pyls")
                             :priority -1
                             :major-modes '(python-mode)
                             :server-id 'pyls
@@ -844,14 +893,13 @@ except Exception:
                                                 (lsp--set-configuration (lsp-configuration-section "pyls"))))
                             :library-folders-fn #'btw/lsp-pyls-library-folders-fn)))
       (puthash (lsp--client-server-id client) client lsp-clients))
-    (setq lsp-pyls-plugins-pylint-enabled nil))
+    ;; (setq lsp-pyls-plugins-pylint-enabled nil)
+    )
 
   (with-eval-after-load 'lsp-ui
     (setq lsp-enable-symbol-highlighting nil)
     (setq lsp-ui-peek-enable nil)
-    (setq lsp-eldoc-render-all nil)
     (setq lsp-ui-doc-enable nil)
-    (setq lsp-enable-eldoc nil)
     (setq lsp-ui-sideline-delay nil)
     (setq lsp-ui-sideline-show-hover nil)
     (setq lsp-ui-sideline-enable nil))
@@ -901,6 +949,14 @@ except Exception:
       (add-hook 'completion-at-point-functions 'pcomplete-completions-at-point nil t))
 
     (add-hook 'org-mode-hook #'btw--org-pcompletions-hook)
+
+    ;; Prevent a stupid eldoc loop when the cursor is on the source in a Python
+    ;; block.
+    (defun btw//org-eldoc-python-cache-stub ()
+      (when (boundp 'org-eldoc-local-functions-cache)
+        (puthash "python" nil org-eldoc-local-functions-cache)))
+
+    (add-hook 'org-mode-hook #'btw//org-eldoc-python-cache-stub)
 
     (spacemacs|add-company-backends :backends company-yasnippet
                                     :append-hook t
@@ -966,6 +1022,14 @@ except Exception:
     (setq org-default-notes-file (f-join user-home-directory "Documents" "notes.org")))
 
   (with-eval-after-load 'tex
+
+    ;; (add-to-list 'preview-default-option-list "amsmath")
+    ;; (add-to-list 'preview-default-option-list "amsfonts")
+    ;; (add-to-list 'preview-default-option-list "amssymb")
+    ;; (add-to-list 'preview-default-option-list "mathtools")
+    ;; (add-to-list 'preview-default-option-list "amsthm")
+    ;; (add-to-list 'preview-default-preamble "\PreviewEnvironment{align}" t)
+
     (defvar TeX-command-list)
     (add-to-list 'TeX-command-list
                  '("Make" "make %o" TeX-run-command nil t))
@@ -1254,6 +1318,7 @@ This fixes some `helm' issues."
     ;; Also in visual mode
     (define-key evil-visual-state-map "j" 'evil-next-visual-line)
     (define-key evil-visual-state-map "k" 'evil-previous-visual-line)
+
     ;; https://emacs.stackexchange.com/questions/9583/how-to-treat-underscore-as-part-of-the-word
     (defalias #'forward-evil-word #'forward-evil-symbol))
 
@@ -1318,6 +1383,7 @@ This fixes some `helm' issues."
     ;; For now, try some of the additions from this PR:
     ;; https://github.com/syl20bnr/spacemacs/pull/10844
     ;; TODO: Remove when merged.
+    (setq shell-default-full-span nil)
 
     (defun btw/term-enable-line-mode ()
       "Enable `term-line-mode' when in `term-mode' buffer."
@@ -1412,6 +1478,39 @@ From https://emacs.stackexchange.com/a/10698"
        (t)))
 
     (advice-add 'term-handle-ansi-escape :before #'btw/term-handle-more-ansi-escapes))
+
+  (with-eval-after-load 'sql
+
+    (setq sqlfmt-options '())
+
+    ;; (defun btw//sql-connect (name)
+    ;;   (interactive (list
+    ;;                 (sql-read-connection "Connection: " nil '(nil))))
+    ;;   (let* ((sql-product
+    ;;           (or (cadadr
+    ;;                (assoc 'sql-product (cdr (assoc name sql-connection-alist))))
+    ;;               sql-product)))
+    ;;     (sql-connect name name)))
+    ;;
+    ;; (advice-add #'sql-connect :override #'btw//sql-connect)
+
+    (setq sql-connection-alist '())
+    (add-to-list 'sql-connection-alist
+                 `("datalake-rw" .
+                   ((sql-product 'postgres)
+                    (sql-database ,(format "postgresql://ds_admin:%s@localhost:54320/datalake"
+                                           (shell-command-to-string "vault kv get -field=password /secret/dev/datascience/data-lake"))))))
+
+    (setq sql-send-terminator t)
+
+    (defvar sql-last-prompt-pos 1
+      "position of last prompt when added recording started")
+    (make-variable-buffer-local 'sql-last-prompt-pos)
+    (put 'sql-last-prompt-pos 'permanent-local t)
+
+    (sql-set-product-feature 'postgres :prompt-regexp "^[-[:alnum:]_]*=[#>] ")
+    (sql-set-product-feature 'postgres :prompt-cont-regexp
+                             "^[-[:alnum:]_]*[-(][#>] "))
 
   (spacemacs|define-custom-layout "@Spacemacs"
     :binding "e"

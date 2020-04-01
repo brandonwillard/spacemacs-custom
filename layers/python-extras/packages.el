@@ -232,9 +232,6 @@ See `company-transformers'."
       (executable-find executable)))
 
   (setq flycheck-executable-find
-        #'python-extras/flycheck-virtualenv-executable-find)
-
-  (add-hook 'python-mode-hook
-            #'(lambda () (add-to-list 'flycheck-disabled-checkers 'python-pylint))))
+        #'python-extras/flycheck-virtualenv-executable-find))
 
 ;;; packages.el ends here
