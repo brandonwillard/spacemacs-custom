@@ -770,28 +770,6 @@
     (setq flycheck-indication-mode 'right-fringe))
 
   (with-eval-after-load 'python
-    ;; Stop-gap fix until https://github.com/ipython/ipython/pull/11803 goes through.
-    (setq python-shell-completion-setup-code
-          (concat
-           (eval (car (get 'python-shell-completion-setup-code 'standard-value)))
-           "\n
-
-from IPython.core.completer import provisionalcompleter
-
-def all_completions(self, text):
-    prefix = text.rpartition('.')[0]
-    with provisionalcompleter():
-        return ['.'.join([prefix, c.text]) if prefix and self.use_jedi else c.text
-                for c in self.completions(text, len(text))]
-
-    return self.complete(text)[1]
-
-try:
-    import types
-    get_ipython().Completer.all_completions = types.MethodType(all_completions, get_ipython().Completer)
-except Exception:
-    pass
-"))
     (when (fboundp 'purpose-set-extension-configuration)
       ;; NOTE: To delete this configuration...
       ;; (purpose-del-extension-configuration :python)
@@ -918,7 +896,7 @@ except Exception:
     (advice-add 'forward-line :after #'btw//org-show-entry)
 
     ;; This fixes the broken behavior when used within drawers.
-    (defun btw--org-babel-result-end ()
+    (defun btw//org-babel-result-end ()
       "Return the point at the end of the current set of results."
       (cond
        ((looking-at-p "^[ \t]*$")
@@ -942,21 +920,13 @@ except Exception:
                   (line-beginning-position 2))
               (point))))))
 
-    (advice-add #'org-babel-result-end :override #'btw--org-babel-result-end)
+    (advice-add #'org-babel-result-end :override #'btw//org-babel-result-end)
 
-    (defun btw--org-pcompletions-hook ()
+    (defun btw//org-pcompletions-hook ()
       "Enable `org-mode' completions in `company'."
       (add-hook 'completion-at-point-functions 'pcomplete-completions-at-point nil t))
 
-    (add-hook 'org-mode-hook #'btw--org-pcompletions-hook)
-
-    ;; Prevent a stupid eldoc loop when the cursor is on the source in a Python
-    ;; block.
-    (defun btw//org-eldoc-python-cache-stub ()
-      (when (boundp 'org-eldoc-local-functions-cache)
-        (puthash "python" nil org-eldoc-local-functions-cache)))
-
-    (add-hook 'org-mode-hook #'btw//org-eldoc-python-cache-stub)
+    (add-hook 'org-mode-hook #'btw//org-pcompletions-hook)
 
     (spacemacs|add-company-backends :backends company-yasnippet
                                     :append-hook t
@@ -968,7 +938,7 @@ except Exception:
     (add-to-list 'org-babel-load-languages '(plantuml . t))
     (add-to-list 'org-babel-load-languages '(dot . t))
     (add-to-list 'org-babel-load-languages '(scheme . t))
-    (add-to-list 'org-babel-load-languages '(jupyter . t))
+    (add-to-list 'org-babel-load-languages '(jupyter . t) t)
 
     (defun spacemacs//org-latex-pdf-process (file-name)
       "XXX: This will err-out because of org-export's assumption that the output
@@ -1020,6 +990,11 @@ except Exception:
     (setq org-link-file-path-type 'relative)
     (setq org-confirm-babel-evaluate nil)
     (setq org-default-notes-file (f-join user-home-directory "Documents" "notes.org")))
+
+  (with-eval-after-load 'org-eldoc
+    ;; Prevent a stupid eldoc loop when the cursor is on the source in a Python
+    ;; block.
+    (puthash "python" nil org-eldoc-local-functions-cache))
 
   (with-eval-after-load 'tex
 
