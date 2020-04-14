@@ -491,6 +491,10 @@
     :defer t
     :after (ox-gfm))
 
+  (use-package org-btw-python
+    :after (org)
+    :commands (org-btw//ob-python-generate-plots))
+
   (use-package org-ref+
     :defer t
     :after (org-ref)

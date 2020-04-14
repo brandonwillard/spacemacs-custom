@@ -50,6 +50,10 @@
       (when (and (configuration-layer/layer-usedp 'python-extras) (fboundp #'spacemacs//set-project-root))
         (advice-add #'org-babel-python-initiate-session :around #'spacemacs//run-in-pyvenv-wrapper))
 
+      ;; Enable graphics output
+      (advice-add #'org-babel-execute:python :around
+                  #'org-btw//ob-python-generate-plots)
+
       ;; TODO: Does this work?
       ;; (declare-function python-shell-calculate-command "ext:python" nil)
       ;; (setq org-babel-python-command (python-shell-calculate-command))
