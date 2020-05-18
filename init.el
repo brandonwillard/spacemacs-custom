@@ -944,6 +944,7 @@
     (add-to-list 'org-babel-load-languages '(dot . t))
     (add-to-list 'org-babel-load-languages '(scheme . t))
     (add-to-list 'org-babel-load-languages '(jupyter . t) t)
+    (add-to-list 'org-babel-load-languages '(latex . t) t)
 
     (defun spacemacs//org-latex-pdf-process (file-name)
       "XXX: This will err-out because of org-export's assumption that the output
@@ -971,7 +972,7 @@
           '(("t" "Tasks" entry
              (file+headline org-default-notes-file "Tasks"))))
 
-    (setq org-highlight-latex-and-related '(latex entities))
+    (setq org-highlight-latex-and-related '(native))
 
     ;; Most often, we'll use inline src statements (e.g. src_python{...}) to
     ;; simply display formatted text.
