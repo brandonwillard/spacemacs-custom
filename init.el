@@ -482,14 +482,14 @@
 
             (add-hook 'org-mode-hook #'jupyter/ox-ipynb-emacs-jupyter)))
 
-  (use-package ox-rst :defer t)
-
-  (use-package ox-jira
-    :defer t
+  (use-package ox-rst
     :after (org))
 
+  ;; (use-package ox-jira
+  ;;   :after (org))
+
   (use-package ox-pelican
-    :defer t
+    :commands (org-pelican-publish-to-pelican)
     :after (ox-gfm))
 
   (use-package org-btw-python
@@ -497,17 +497,14 @@
     :commands (org-btw//ob-python-generate-plots))
 
   (use-package org-ref+
-    :defer t
     :after (org-ref)
     :config (progn
               (org-ref+-mode +1)))
 
   (use-package ox-latex+
-    :defer t
     :after (ox-latex))
 
   (use-package ox-sphinx
-    :defer t
     :commands (org-sphinx-publish-to-rst)
     :after (org))
 
