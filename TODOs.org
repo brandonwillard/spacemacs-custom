@@ -4,6 +4,14 @@
 #+STARTUP: hideblocks indent hidestars
 
 * Tasks
+** DONE Fix Python magics in ~ob-python~                          :orgbabel:
+CLOSED: [2020-06-08 Mon 15:49]
+You can't send magics via ~org-babel~, because they strip the leading src_python[:eval never]{%}.
+
+This is due to src_elisp[:eval never]{adaptive-fill-regexp} containing a src_elisp[:eval never]{"%"}.
+
+For now, we can remove these from the regexes in Python buffers only.
+
 ** TODO Fix ~auctex~ auto-generated file sexp length cut-off issue
 I noticed that an auto-generated ~auctex~ file, e.g. in this case
 ~/home/bwillard/projects/papers/symbolic-stats-ideas/src/tex/auto/symbolic-probability-pymc3.el~,

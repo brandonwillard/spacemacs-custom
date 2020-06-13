@@ -130,8 +130,8 @@
 
                                       jupyter
 
-                                      (multi-libvterm :location (recipe :fetcher github
-                                                                        :repo "suonlight/multi-libvterm"))
+                                      (multi-vterm :location (recipe :fetcher github
+                                                                     :repo "suonlight/multi-vterm"))
 
                                       (ob-racket :location (recipe :fetcher github
                                                                    :repo "wallyqs/ob-racket"))
@@ -409,7 +409,7 @@
 
   ;; (use-package helpful)
 
-  (use-package multi-libvterm :defer t)
+  (use-package multi-vterm)
 
   (use-package jupyter
     :defer t
@@ -611,34 +611,36 @@
     ;;             (evil-insert-state)))
     (setq vterm-keymap-exceptions nil)
     (define-key vterm-mode-map [return] #'vterm-send-return)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-e") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-z") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-f") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-a") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-v") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-b") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-w") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-u") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-d") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-n") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-m") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-p") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-j") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-k") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-r") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-t") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-g") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-c") #'vterm--self-insert)
-    (evil-define-key 'insert vterm-mode-map (kbd "C-SPC") #'vterm--self-insert)
-    (evil-define-key 'normal vterm-mode-map (kbd "C-d") #'vterm--self-insert)
-    (evil-define-key 'normal vterm-mode-map (kbd ",c") #'multi-libvterm)
-    (evil-define-key 'normal vterm-mode-map (kbd ",n") #'multi-libvterm-next)
-    (evil-define-key 'normal vterm-mode-map (kbd ",p") #'multi-libvterm-prev)
-    (evil-define-key 'normal vterm-mode-map (kbd "i") #'evil-insert-resume)
-    (evil-define-key 'normal vterm-mode-map (kbd "o") #'evil-insert-resume)
-    (evil-define-key 'normal vterm-mode-map (kbd "p") #'vterm-yank)
-    (evil-define-key 'normal vterm-mode-map (kbd "P") #'vterm-yank)
-    (evil-define-key 'normal vterm-mode-map (kbd "<return>") #'evil-insert-resume))
+    (evil-define-key 'insert vterm-mode-map
+      (kbd "C-e") #'vterm--self-insert
+      (kbd "C-z") #'vterm--self-insert
+      (kbd "C-f") #'vterm--self-insert
+      (kbd "C-a") #'vterm--self-insert
+      (kbd "C-v") #'vterm--self-insert
+      (kbd "C-b") #'vterm--self-insert
+      (kbd "C-w") #'vterm--self-insert
+      (kbd "C-u") #'vterm--self-insert
+      (kbd "C-d") #'vterm--self-insert
+      (kbd "C-n") #'vterm--self-insert
+      (kbd "C-m") #'vterm--self-insert
+      (kbd "C-p") #'vterm--self-insert
+      (kbd "C-j") #'vterm--self-insert
+      (kbd "C-k") #'vterm--self-insert
+      (kbd "C-r") #'vterm--self-insert
+      (kbd "C-t") #'vterm--self-insert
+      (kbd "C-g") #'vterm--self-insert
+      (kbd "C-c") #'vterm--self-insert
+      (kbd "C-SPC") #'vterm--self-insert)
+    (evil-define-key 'normal vterm-mode-map
+      (kbd "C-d") #'vterm--self-insert
+      (kbd (concat dotspacemacs-major-mode-leader-key "c")) #'multi-vterm
+      (kbd (concat dotspacemacs-major-mode-leader-key "n")) #'multi-vterm-next
+      (kbd (concat dotspacemacs-major-mode-leader-key "p")) #'multi-vterm-prev
+      (kbd "i") #'evil-insert-resume
+      (kbd "o") #'evil-insert-resume
+      (kbd "p") #'vterm-yank
+      (kbd "P") #'vterm-yank
+      (kbd "<return>") #'evil-insert-resume))
 
   (with-eval-after-load 'utop
     (setq utop-command "opam config exec -- utop -emacs")
