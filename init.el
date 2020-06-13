@@ -131,6 +131,7 @@
 
                                       kubernetes-tramp
 
+                                      cython-mode
                                       jupyter
 
                                       (multi-vterm :location (recipe :fetcher github
@@ -406,6 +407,16 @@
   (spacemacs/set-leader-keys "nd" 'narrow-to-defun)
   (spacemacs/set-leader-keys "kx" 'sp-split-sexp)
   (unbind-key (kbd "nf") spacemacs-default-map)
+
+  (use-package cython-mode
+    :defer t
+    :interpreter ("cython" . cython-mode)
+    :mode (("\\.pyx\\'" . cython-mode)
+           ("\\.pxd\\'" . cython-mode)
+           ("\\.pxi\\'" . cython-mode))
+    :config (progn
+              (spacemacs/set-leader-keys-for-major-mode 'cython-mode
+                "cc" #'cython-compile)))
 
   (use-package debbugs :defer t)
 
