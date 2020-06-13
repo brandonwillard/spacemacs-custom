@@ -140,14 +140,11 @@
                                       (ob-racket :location (recipe :fetcher github
                                                                    :repo "wallyqs/ob-racket"))
 
-                                      ;; (helpful :location (recipe :fetcher github
-                                      ;;                            :repo "Wilfred/helpful"))
-                                      ;; Override with local versions.
-                                      ;; XXX: Make sure package locations are on the `load-path'.
-                                      (org-btw :location local)
-                                      (hy-mode :location local)
-                                      (org-ref :location local)
-                                      (ob-hy :location local)
+                                      (org-btw :location "~/projects/code/emacs/org-btw")
+                                      (hy-mode :location "~/projects/code/emacs/hy-mode")
+                                      (org-ref :location "~/projects/code/emacs/org-ref")
+                                      (ob-hy :location "~/projects/code/emacs/ob-hy")
+
                                       sphinx-doc
                                       yasnippet-snippets
                                       ;; Use a newer version of python.el.
@@ -269,10 +266,11 @@
   (btw/add-valid-paths-to-list 'load-path
                                ;; TODO: Use `dotspacemacs-directory'?
                                '("~/.spacemacs.d"
-                                 "~/projects/code/emacs/org-btw"
-                                 "~/projects/code/emacs/ob-hy"
-                                 "~/projects/code/emacs/hy-mode"
-                                 "~/projects/code/emacs/org-ref"))
+                                 ;; "~/projects/code/emacs/org-btw"
+                                 ;; "~/projects/code/emacs/ob-hy"
+                                 ;; "~/projects/code/emacs/hy-mode"
+                                 ;; "~/projects/code/emacs/org-ref"
+                                 ))
 
   (btw/add-valid-paths-to-list 'Info-default-directory-list
                                '("/usr/share/info/emacs-27" "/usr/local/share/info"
