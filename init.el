@@ -378,6 +378,7 @@
   (add-to-list 'debug-ignored-errors "^End of history$")
   (add-to-list 'debug-ignored-errors "^No surrounding delimiters found$")
   (add-to-list 'debug-ignored-errors "^Invalid search bound (wrong side of point)$")
+  (add-to-list 'debug-ignored-errors "^Selecting deleted buffer$")
   (add-to-list 'debug-ignored-errors
                "^Company: backend \(:?.*?\) error \"Nothing to complete\"")
   (add-to-list 'debug-ignored-errors 'lsp-timed-out-error)
