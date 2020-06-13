@@ -7,14 +7,16 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(kubernetes
+   '(;; rust
+     ;; kubernetes
      eww
+     gnus
      ess
-     ocaml
-     elixir
-     javascript
+     ;; ocaml
+     ;; elixir
+     ;; javascript
      clojure
-     go
+     ;; go
      csv
      restructuredtext
      ;; (javascript :packages (not tern))
@@ -22,8 +24,8 @@
           lsp-ui-doc-enable nil
           lsp-ui-sideline-enable nil
           lsp-ui-remap-xref-keybindings t
-      ;; :packages (not flycheck-lsp)
-      )
+          ;; :packages (not flycheck-lsp)
+          )
      html
      markdown
      (latex :variables
@@ -112,9 +114,10 @@
                                       ;; elisp list manipulation library
                                       dash
                                       dash-functional
+                                      debbugs
                                       ;; embrace
                                       evil-embrace
-                                      ox-jira
+                                      ;; ox-jira
                                       ;; ox-confluence
                                       ox-rst
                                       (ox-ipynb :location (recipe :fetcher github
@@ -402,6 +405,8 @@
   (spacemacs/set-leader-keys "nd" 'narrow-to-defun)
   (spacemacs/set-leader-keys "kx" 'sp-split-sexp)
   (unbind-key (kbd "nf") spacemacs-default-map)
+
+  (use-package debbugs :defer t)
 
   (use-package kubernetes-tramp
     :defer t

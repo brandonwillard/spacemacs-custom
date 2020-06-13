@@ -21,7 +21,8 @@
     dash
     ob-async
     ob-hy
-    ob-ipython))
+    ;; ob-ipython
+    ))
 
 (defun org-extras/pre-init-org ()
   (spacemacs|use-package-add-hook org
