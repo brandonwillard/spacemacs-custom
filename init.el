@@ -791,6 +791,13 @@
     (setq flycheck-indication-mode 'right-fringe))
 
   (with-eval-after-load 'python
+
+    (defun btw//python-adjust-adaptive-fill-regexp ()
+      (setq-local adaptive-fill-regexp
+                  (s-replace "%" "" adaptive-fill-regexp)))
+
+    (add-hook 'python-mode-hook #'btw//python-adjust-adaptive-fill-regexp)
+
     (when (fboundp 'purpose-set-extension-configuration)
       ;; NOTE: To delete this configuration...
       ;; (purpose-del-extension-configuration :python)
