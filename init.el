@@ -36,14 +36,14 @@
      ;;      ess-disable-underscore-assign t
      ;;      :packages (not ess-R-object-popup))
      (python :variables
-             python-auto-set-local-pyvenv-virtualenv 'on-visit
              ;; NOTE: These can also be .dir-local/project specific.
              python-test-runner 'pytest
              python-backend 'lsp
              python-formatter 'black
              python-format-on-save nil
              :packages (not live-py-mode))
-     python-extras
+     (python-extras :variables
+                    python-auto-set-local-pyvenv-virtualenv 'on-project-switch)
      (hy :variables hy-shell-spy-delim "\n--spy-output--\n")
      yaml
      sql
