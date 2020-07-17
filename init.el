@@ -236,6 +236,8 @@
 
   ;; (modify-syntax-entry ?_ "w" (standard-syntax-table))
 
+  (setq history-delete-duplicates t)
+
   (setq auto-save-timeout nil)
   (setq init-file-debug nil)
   (setq debug-on-error t)
