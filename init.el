@@ -822,6 +822,7 @@ it is not appropriate in some cases like terminals."
                              ;; '(("^test-.*\\.py$" . test))
                              )))
     (setq-default python-eldoc-get-doc nil))
+    (setq pytest-cmd-flags "-r A --verbose"))
 
   (with-eval-after-load 'hy-mode
     (spacemacs|use-package-add-hook evil-cleverparens
