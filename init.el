@@ -1019,6 +1019,7 @@ it is not appropriate in some cases like terminals."
             (:results . "none")))
 
     (setq org-edit-src-content-indentation 0
+          org-src-ask-before-returning-to-edit-buffer nil
           org-src-tab-acts-natively t
           org-src-window-setup 'current-window
           org-src-fontify-natively t
