@@ -241,7 +241,7 @@ Ignores beginning white-space."
 
 (defun spacemacs//python-help--display-for-string (proc string)
   "Originally from `python-x.el'"
-  (let ((buffer (get-buffer-create "*help[Python]*"))
+  (let ((buffer (help-buffer))
         (output (python-shell-send-string-no-output
                  (format spacemacs--python-help-setup-code string) proc)))
     (unless (s-blank? output)
