@@ -626,6 +626,13 @@
     ;;           (lambda ()
     ;;             (setq-local evil-insert-state-cursor 'box)
     ;;             (evil-insert-state)))
+    (defun evil-collection-vterm-escape-stay ()
+      "Go back to normal state but don't move cursor backwards.
+Moving cursor backwards is the default vim behavior but
+it is not appropriate in some cases like terminals."
+      (setq-local evil-move-cursor-back nil))
+
+    (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
     (setq vterm-keymap-exceptions nil)
     (define-key vterm-mode-map [return] #'vterm-send-return)
     (evil-define-key 'insert vterm-mode-map
@@ -647,8 +654,13 @@
       (kbd "C-t") #'vterm--self-insert
       (kbd "C-g") #'vterm--self-insert
       (kbd "C-c") #'vterm--self-insert
-      (kbd "C-SPC") #'vterm--self-insert)
+      (kbd "C-SPC") #'vterm--self-insert
+      (kbd "<delete>") #'vterm-send-delete)
     (evil-define-key 'normal vterm-mode-map
+      (kbd "[[") #'vterm-previous-prompt
+      (kbd "]]") #'vterm-next-prompt
+      (kbd "p") #'vterm-yank
+      (kbd "u") #'vterm-undo
       (kbd "C-d") #'vterm--self-insert
       (kbd (concat dotspacemacs-major-mode-leader-key "c")) #'multi-vterm
       (kbd (concat dotspacemacs-major-mode-leader-key "n")) #'multi-vterm-next
@@ -657,7 +669,8 @@
       (kbd "o") #'evil-insert-resume
       (kbd "p") #'vterm-yank
       (kbd "P") #'vterm-yank
-      (kbd "<return>") #'evil-insert-resume))
+      ;; (kbd "<return>") #'evil-insert-resume
+      ))
 
   (with-eval-after-load 'utop
     (setq utop-command "opam config exec -- utop -emacs")
