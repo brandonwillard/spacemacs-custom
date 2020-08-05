@@ -235,6 +235,12 @@
 (defun dotspacemacs/user-init ()
 
   ;; (modify-syntax-entry ?_ "w" (standard-syntax-table))
+  ;; (jit-lock-debug-mode +1)
+  (setq jit-lock-defer-time 0)
+
+  (setq comp-async-jobs-number 4
+        comp-deferred-compilation t
+        comp-deferred-compilation-black-list '())
 
   (setq history-delete-duplicates t)
 
