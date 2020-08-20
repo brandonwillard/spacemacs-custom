@@ -231,13 +231,16 @@ Ignores beginning white-space."
     (spacemacs//python-shell-send-string-echo line)))
 
 (defun spacemacs//python-shell-send-region-echo (start end &optional send-main msg)
+  "Send the selected region of text to the Python process.  A new line will be appended if one
+isn't already present in the text region."
   (interactive
     (list (region-beginning) (region-end) current-prefix-arg t))
   (let* ((substring (buffer-substring-no-properties start end))
-          ;; (string (python-shell-buffer-substring start end (not send-main)))
-          (process (python-shell-get-process-or-error msg))
-          (original-string substring))
-    (spacemacs//python-shell-send-string-echo substring process msg)))
+         (process (python-shell-get-process-or-error msg))
+         (send-string (if (s-ends-with? "\n" substring)
+                          substring
+                        (s-append "\n" substring))))
+    (spacemacs//python-shell-send-string-echo send-string process msg)))
 
 (defun spacemacs//python-help--display-for-string (proc string)
   "Originally from `python-x.el'"
