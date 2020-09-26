@@ -1553,6 +1553,27 @@ From https://emacs.stackexchange.com/a/10698"
     (sql-set-product-feature 'postgres :prompt-cont-regexp
                              "^[-[:alnum:]_]*[-(][#>] "))
 
+  (with-eval-after-load 'gnus
+    (setq gnus-select-method
+          '(nntp "news.gmane.io"))
+
+    (setq gnus-secondary-select-methods
+          '(;; (nnimap "gmail"
+            ;;         (nnimap-address
+            ;;          "imap.gmail.com")
+            ;;         (nnimap-server-port 993)
+            ;;         (nnimap-stream ssl))
+            ))
+
+    ;; Archive outgoing email in Sent folder on imap.gmail.com:
+    ;; (setq gnus-message-archive-method '(nnimap "imap.gmail.com")
+    ;;       gnus-message-archive-group "[Gmail]/Sent Mail")
+
+    ;; Store email in ~/gmail directory
+    ;; (setq nnml-directory "~/Documents/gmail")
+    ;; (setq message-directory "~/Documents/gmail")
+    )
+
   (spacemacs|define-custom-layout "@Spacemacs"
     :binding "e"
     :body (progn (spacemacs/find-dotfile)
