@@ -4,14 +4,8 @@
 #+STARTUP: hideblocks indent hidestars
 
 * Tasks
-** DONE Fix Python magics in ~ob-python~                          :orgbabel:
-CLOSED: [2020-06-08 Mon 15:49]
-You can't send magics via ~org-babel~, because they strip the leading src_python[:eval never]{%}.
-
-This is due to src_elisp[:eval never]{adaptive-fill-regexp} containing a src_elisp[:eval never]{"%"}.
-
-For now, we can remove these from the regexes in Python buffers only.
-
+** TODO Make ~:w~ call src_elisp[:eval never]{org-edit-mode-save}  :orgmode:
+See [[https://emacs.stackexchange.com/questions/13186/how-might-i-define-or-fake-a-mode-local-ex-command-with-evil][this comment for a means of defining custom local ex commands]].
 ** TODO Fix ~auctex~ auto-generated file sexp length cut-off issue
 I noticed that an auto-generated ~auctex~ file, e.g. in this case
 ~/home/bwillard/projects/papers/symbolic-stats-ideas/src/tex/auto/symbolic-probability-pymc3.el~,
@@ -486,24 +480,6 @@ Find ~org-ref~ alternative and/or try [[https://github.com/andras-simonyi/citepr
   (org-link-set-parameters "code" :follow follow :export export)
   #+END_SRC
   See [[https://orgmode.org/worg/org-contrib/org-exp-blocks.html][~org-exp-blocks~]] for ways to pre-process blocks on export.
-** TODO Better ~org-babel~ Python interaction               :python:orgbabel:
-  - Note taken on [2018-05-02 Wed 22:01] \\
-    A lot of this has been done in the ~org-extras~ layer.  There are still some
-    completion issues to fix, though.
-  - Note taken on [2018-04-06 Fri 12:41] \\
-    Consider adding a =org-babel-ipython-associate-session=.
-  - Note taken on [2018-04-04 Wed 17:14] \\
-    =ob-ipython='s completion is terribly slow; consider refactoring to keep a
-    low-level network connection, instead of calling a python script that
-    re-connects to the kernel every time =ob-ipython= issues a command.
-
-    @@html:<kbd>@@ , , @@html:</kbd>@@ naively sends buffer lines, which breaks python code sent to
-    the default IPython parser.  The function being called is ~org-babel-load-in-session~
-    and/or ~org-babel-load-session:python~.  There's an ~insert~ line that should probably use
-    ~python-shell-send-string-echo~ instead.
-
-    After making those changes, it seems like ~org-babel-python-evaluate-session~ might also need to
-    be altered.
 
 ** TODO Auto-zoom Based on Current Resolution
 Use functions like =(x-display-pixel-width)= to set the zoom level (with =(spacemacs/zoom-frm-out)=).
@@ -566,6 +542,34 @@ For example, src_elisp{org-ref}'s src_elisp{use-package} can be found in src_eli
 
 (symbol-function bibtex/init-org-ref)
 #+END_SRC
+** DONE Fix Python magics in ~ob-python~                          :orgbabel:
+CLOSED: [2020-06-08 Mon 15:49]
+You can't send magics via ~org-babel~, because they strip the leading src_python[:eval never]{%}.
+
+This is due to src_elisp[:eval never]{adaptive-fill-regexp} containing a src_elisp[:eval never]{"%"}.
+
+For now, we can remove these from the regexes in Python buffers only.
+
+** DONE Better ~org-babel~ interaction with =ob-ipython=   :python:orgbabel:
+CLOSED: [2020-07-08 Wed 19:05]
+  - Note taken on [2018-05-02 Wed 22:01] \\
+    A lot of this has been done in the ~org-extras~ layer.  There are still some
+    completion issues to fix, though.
+  - Note taken on [2018-04-06 Fri 12:41] \\
+    Consider adding a =org-babel-ipython-associate-session=.
+  - Note taken on [2018-04-04 Wed 17:14] \\
+    =ob-ipython='s completion is terribly slow; consider refactoring to keep a
+    low-level network connection, instead of calling a python script that
+    re-connects to the kernel every time =ob-ipython= issues a command.
+
+    @@html:<kbd>@@ , , @@html:</kbd>@@ naively sends buffer lines, which breaks python code sent to
+    the default IPython parser.  The function being called is ~org-babel-load-in-session~
+    and/or ~org-babel-load-session:python~.  There's an ~insert~ line that should probably use
+    ~python-shell-send-string-echo~ instead.
+
+    After making those changes, it seems like ~org-babel-python-evaluate-session~ might also need to
+    be altered.
+
 ** DONE [#A] Slowness with Python file/venv loading                 :python:
 CLOSED: [2019-10-16 Wed 14:49]
 Related to my custom ~projectile~ ~pyvenv~ auto-load settings?
