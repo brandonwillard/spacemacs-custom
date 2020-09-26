@@ -1102,9 +1102,11 @@ it is not appropriate in some cases like terminals."
 
     (setq projectile-project-search-path
           (mapcar #'expand-file-name
-                  '("~/projects/code/python" "~/projects/code/emacs" "~/projects/citybase" "~/projects/papers")))
+                  '("~/projects/code/python" "~/projects/code/emacs" "~/projects/papers")))
     (setq projectile-indexing-method 'hybrid)
-
+    ;; To sort files by recently active buffers and then recently opened files:
+    (setq projectile-sort-order 'recently-active)
+    ;; helm-source-projectile-files-list
     (setq projectile-globally-unignored-files '("TODO.org" "TODOs.org"))
     (setq projectile-globally-ignored-directories
           (delete-dups (append projectile-globally-ignored-directories
