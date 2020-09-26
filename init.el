@@ -814,12 +814,14 @@ it is not appropriate in some cases like terminals."
     (setq flycheck-indication-mode 'right-fringe))
 
   (with-eval-after-load 'python
-
     (defun btw//python-adjust-adaptive-fill-regexp ()
       (setq-local adaptive-fill-regexp
                   (s-replace "%" "" adaptive-fill-regexp)))
 
     (add-hook 'python-mode-hook #'btw//python-adjust-adaptive-fill-regexp)
+
+    ;; Make `breakpoint()' use `ipdb' (if it's installed, of course)
+    (add-to-list 'python-shell-process-environment "PYTHONBREAKPOINT=ipdb.set_trace")
 
     (when (fboundp 'purpose-set-extension-configuration)
       ;; NOTE: To delete this configuration...
@@ -831,7 +833,7 @@ it is not appropriate in some cases like terminals."
                              ;; :regexp-purposes
                              ;; '(("^test-.*\\.py$" . test))
                              )))
-    (setq-default python-eldoc-get-doc nil))
+    (setq-default python-eldoc-get-doc nil)
     (setq pytest-cmd-flags "-r A --verbose"))
 
   (with-eval-after-load 'hy-mode
