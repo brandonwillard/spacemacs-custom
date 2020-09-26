@@ -1352,6 +1352,14 @@ This fixes some `helm' issues."
     (define-key evil-visual-state-map "j" 'evil-next-visual-line)
     (define-key evil-visual-state-map "k" 'evil-previous-visual-line)
 
+    (evil-define-text-object btw//evil-inner-defun (count &optional beg end type)
+      (save-excursion
+        (mark-defun)
+        (evil-range (region-beginning) (region-end) type :expanded t)))
+
+    (define-key evil-inner-text-objects-map "d" 'btw//evil-inner-defun)
+    (define-key evil-outer-text-objects-map "d" 'btw//evil-inner-defun)
+
     ;; https://emacs.stackexchange.com/questions/9583/how-to-treat-underscore-as-part-of-the-word
     (defalias #'forward-evil-word #'forward-evil-symbol))
 
