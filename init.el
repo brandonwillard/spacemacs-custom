@@ -378,6 +378,8 @@
 
   (add-to-list 'debug-ignored-errors 'search-failed)
   (add-to-list 'debug-ignored-errors 'quit)
+  (add-to-list 'debug-ignored-errors "^Invalid register$")
+  (add-to-list 'debug-ignored-errors "^Candidates function .*helm-ag")
   (add-to-list 'debug-ignored-errors "^Before first heading$")
   (add-to-list 'debug-ignored-errors "^Nothing to complete$")
   (add-to-list 'debug-ignored-errors "^No such page: ")
@@ -395,6 +397,8 @@
                "^Current buffer has no process")
   (add-to-list 'debug-ignored-errors
                "Attempt to delete minibuffer or sole ordinary window")
+  (add-to-list 'debug-ignored-errors
+               "Hash table data is not a list of even length")
 
   (setq-default sentence-end-double-space t)
 
