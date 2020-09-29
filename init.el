@@ -643,7 +643,6 @@ it is not appropriate in some cases like terminals."
       (setq-local evil-move-cursor-back nil))
 
     (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
-    (setq vterm-keymap-exceptions nil)
     (define-key vterm-mode-map [return] #'vterm-send-return)
     (evil-define-key 'insert vterm-mode-map
       (kbd "C-e") #'vterm--self-insert
