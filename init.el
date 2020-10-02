@@ -939,14 +939,16 @@ it is not appropriate in some cases like terminals."
     ;; TODO: Consider this...
     ;; (org-babel-make-language-alias "python" "ipython")
 
-    (defun btw//org-show-entry (&rest r)
-      "Expand collapsed blocks when using goto-char."
-      (when (eq major-mode 'org-mode)
-        (save-excursion
-          (org-reveal))))
-
-    (advice-add 'goto-line :after #'btw//org-show-entry)
-    (advice-add 'forward-line :after #'btw//org-show-entry)
+    ;; (setq btw//org-show-entry-active nil)
+    ;;
+    ;; (defun btw//org-show-entry (&rest r)
+    ;;   "Expand collapsed blocks when using goto-char."
+    ;;   (when (and (eq major-mode 'org-mode) (not btw//org-show-entry-active))
+    ;;     (let ((btw//org-show-entry-active t))
+    ;;       (save-excursion
+    ;;         (org-reveal)))))
+    ;; (advice-add 'goto-line :after #'btw//org-show-entry)
+    ;; (advice-add 'forward-line :after #'btw//org-show-entry)
 
     ;; This fixes the broken behavior when used within drawers.
     (defun btw//org-babel-result-end ()
