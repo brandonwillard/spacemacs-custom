@@ -1517,27 +1517,7 @@ From https://emacs.stackexchange.com/a/10698"
     (advice-add 'term-handle-ansi-escape :before #'btw/term-handle-more-ansi-escapes))
 
   (with-eval-after-load 'sql
-
     (setq sqlfmt-options '())
-
-    ;; (defun btw//sql-connect (name)
-    ;;   (interactive (list
-    ;;                 (sql-read-connection "Connection: " nil '(nil))))
-    ;;   (let* ((sql-product
-    ;;           (or (cadadr
-    ;;                (assoc 'sql-product (cdr (assoc name sql-connection-alist))))
-    ;;               sql-product)))
-    ;;     (sql-connect name name)))
-    ;;
-    ;; (advice-add #'sql-connect :override #'btw//sql-connect)
-
-    (setq sql-connection-alist '())
-    (add-to-list 'sql-connection-alist
-                 `("datalake-rw" .
-                   ((sql-product 'postgres)
-                    (sql-database ,(format "postgresql://ds_admin:%s@localhost:54320/datalake"
-                                           (shell-command-to-string "vault kv get -field=password /secret/dev/datascience/data-lake"))))))
-
     (setq sql-send-terminator t)
 
     (defvar sql-last-prompt-pos 1
