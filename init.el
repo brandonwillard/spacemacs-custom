@@ -1048,11 +1048,6 @@ it is not appropriate in some cases like terminals."
     (setq org-confirm-babel-evaluate nil)
     (setq org-default-notes-file (f-join user-home-directory "Documents" "notes.org")))
 
-  (with-eval-after-load 'org-eldoc
-    ;; Prevent a stupid eldoc loop when the cursor is on the source in a Python
-    ;; block.
-    (puthash "python" nil org-eldoc-local-functions-cache))
-
   (with-eval-after-load 'tex
 
     ;; (add-to-list 'preview-default-option-list "amsmath")
