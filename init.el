@@ -1353,22 +1353,34 @@ This fixes some `helm' issues."
             (ignore-errors
               (evil-open-fold-rec))))))
 
-    ;; XXX: These are too aggressive.
-    ;; (advice-add #'goto-line :after #'btw//evil-open-on-movement)
-    ;; (advice-add #'goto-char :after #'btw//evil-open-on-movement)
-    ;; (advice-add #'forward-line :after #'btw//evil-open-on-movement)
-    ;; (advice-add #'forward-char :after #'btw//evil-open-on-movement)
+    (define-minor-mode jumps-open-folds-mode
+      "Toggle jumps-open-folds-mode mode."
+      :require 'evil
+      :init-value nil
+      :global t
+      (if jumps-open-folds-mode
+          (progn
+            ;; XXX: These are too aggressive.
+            ;; (advice-add #'goto-line :after #'btw//evil-open-on-movement)
+            ;; (advice-add #'goto-char :after #'btw//evil-open-on-movement)
+            ;; (advice-add #'forward-line :after #'btw//evil-open-on-movement)
+            ;; (advice-add #'forward-char :after #'btw//evil-open-on-movement)
 
-    (advice-add #'evil-goto-line :around #'btw//evil-open-on-movement)
-    (advice-add #'spacemacs/jump-to-definition :around #'btw//evil-open-on-movement)
-    (advice-add #'primitive-undo :around #'btw//evil-open-on-movement)
-    (advice-add #'helm-ag--find-file-action :around #'btw//evil-open-on-movement)
+            (advice-add #'evil-goto-line :around #'btw//evil-open-on-movement)
+            (advice-add #'spacemacs/jump-to-definition :around #'btw//evil-open-on-movement)
+            (advice-add #'primitive-undo :around #'btw//evil-open-on-movement)
+            (advice-add #'helm-ag--find-file-action :around #'btw//evil-open-on-movement)
+            (add-hook 'xref-after-jump-hook #'evil-open-fold-rec)
+            (add-hook 'evil-jumps-post-jump-hook #'evil-open-fold-rec))
+        (progn
+          (advice-remove #'evil-goto-line #'btw//evil-open-on-movement)
+          (advice-remove #'spacemacs/jump-to-definition #'btw//evil-open-on-movement)
+          (advice-remove #'primitive-undo #'btw//evil-open-on-movement)
+          (advice-remove #'helm-ag--find-file-action #'btw//evil-open-on-movement)
+          (remove-hook 'xref-after-jump-hook #'evil-open-fold-rec)
+          (remove-hook 'evil-jumps-post-jump-hook #'evil-open-fold-rec))))
 
-    (add-hook 'xref-after-jump-hook #'evil-open-fold-rec)
-
-    ;; Attempt to open folds when jumping into a folded area.
-    (setq evil-jumps-post-jump-hook (cons #'evil-open-fold-rec evil-jumps-post-jump-hook))
-
+    (jumps-open-folds-mode +1)
 
     (setq-default evil-want-visual-char-semi-exclusive t)
     (setq-default evil-move-curser-back nil)
