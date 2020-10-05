@@ -1210,10 +1210,8 @@ it is not appropriate in some cases like terminals."
                              persp-projectile-dir
                              persp)))
 
-    (add-hook 'persp-created-functions #'btw/persp-assign-projectile-root)
-
     (defun btw/persp-projectile-project-root (oldfun &rest r)
-      "Use the perp project name and regular `projectile-project-root' as a
+      "Use the persp project name and regular `projectile-project-root' as a
  fallback."
       (let* ((persp-name (spacemacs//current-layout-name))
              (persp-projectile-dir (when (and (f-dir? persp-name)
@@ -1226,8 +1224,6 @@ it is not appropriate in some cases like terminals."
             (persp-parameter 'projectile-project-root)
             (apply oldfun r))))
 
-    (advice-add #'projectile-project-root :around #'btw/persp-projectile-project-root)
-
     (defun btw/persp-projectile-project-name (oldfun &rest r)
       "Query the persp layout for the projectile project name and use projectile
  for the fallback."
@@ -1238,7 +1234,22 @@ it is not appropriate in some cases like terminals."
                                       (persp-parameter 'projectile-project-root))))
         (or persp-projectile-name (apply oldfun r))))
 
-    (advice-add #'projectile-project-name :around #'btw/persp-projectile-project-name)
+    (define-minor-mode persp-projectile-tracking-mode
+      "Toggle persp-projectile-tracking-mode mode."
+      :require 'persp-mode
+      :init-value nil
+      :global t
+      (if persp-projectile-tracking-mode
+          (progn
+            (add-hook 'persp-created-functions #'btw/persp-assign-projectile-root)
+            (advice-add #'projectile-project-root :around #'btw/persp-projectile-project-root)
+            (advice-add #'projectile-project-name :around #'btw/persp-projectile-project-name))
+        (progn
+          (remove-hook 'persp-created-functions #'btw/persp-assign-projectile-root)
+          (advice-remove #'projectile-project-root #'btw/persp-projectile-project-root)
+          (advice-remove #'projectile-project-name #'btw/persp-projectile-project-name))))
+
+    (persp-projectile-tracking-mode +1)
 
     ;; (setq persp-set-ido-hooks nil)
 
