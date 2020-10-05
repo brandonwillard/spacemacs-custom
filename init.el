@@ -1318,6 +1318,32 @@ This fixes some `helm' issues."
 
   (with-eval-after-load 'evil
 
+    (defun btw//scroll-to-top (&rest args)
+      (evil-scroll-line-to-top (line-number-at-pos)))
+
+    (define-minor-mode jumps-scroll-to-top-mode
+      "Toggle jumps-scroll-to-top-mode mode."
+      :require 'evil
+      :init-value nil
+      :global t
+      (if jumps-scroll-to-top-mode
+          (progn
+            (advice-add #'evil-goto-line :after #'btw//scroll-to-top)
+            (advice-add #'spacemacs/jump-to-definition :after #'btw//scroll-to-top)
+            ;; (advice-add #'primitive-undo :after #'btw//scroll-to-top)
+            (advice-add #'helm-ag--find-file-action :after #'btw//scroll-to-top)
+            (add-hook 'xref-after-jump-hook #'btw//scroll-to-top)
+            (add-hook 'evil-jumps-post-jump-hook #'btw//scroll-to-top))
+        (progn
+          (advice-remove #'evil-goto-line #'btw//scroll-to-top)
+          (advice-remove #'spacemacs/jump-to-definition #'btw//scroll-to-top)
+          ;; (advice-remove #'primitive-undo #'btw//scroll-to-top)
+          (advice-remove #'helm-ag--find-file-action #'btw//scroll-to-top)
+          (remove-hook 'xref-after-jump-hook #'btw//scroll-to-top)
+          (remove-hook 'evil-jumps-post-jump-hook #'btw//scroll-to-top))))
+
+    (jumps-scroll-to-top-mode +1)
+
     (defun btw//evil-open-on-movement (fn &rest r)
       "Expand collapsed blocks after FN moves the point."
       (let ((start-point (point)))
