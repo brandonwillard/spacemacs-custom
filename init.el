@@ -320,9 +320,10 @@
   ;;             ((file-exists-p bus-path)))
   ;;   (setenv "DBUS_SESSION_BUS_ADDRESS" (concat "unix:path=" bus-path)))
 
-  (setq browse-url-browser-function '((".*slack.*" . browse-url-chrome)
-                                      (".*youtube.*" . browse-url-chrome)
-                                      ("." . eww-browse-url)))
+  (setq browse-url-browser-function nil)
+  (setq browse-url-handlers '((".*slack.*" . browse-url-chrome)
+                              (".*youtube.*" . browse-url-chrome)
+                              ("." . browse-url-chrome)))
   ;; (setq browse-url-browser-function 'xwidget-webkit-browse-url)
 
   ;; Be more permissive about the accepted forms of version strings
