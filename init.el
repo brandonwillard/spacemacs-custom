@@ -1452,11 +1452,9 @@ This fixes some `helm' issues."
   (with-eval-after-load 'window-purpose
     ;; This was commented out in `purpose--fix-helm' from `window-purpose-fixes.el'.
     (with-eval-after-load 'helm
-      (add-to-list 'purpose-action-function-ignore-buffer-names "^\\*Helm"))
-    (with-eval-after-load 'helm
-      (add-to-list 'purpose-action-function-ignore-buffer-names "^\\*helm"))
-    (with-eval-after-load 'helm
-      (purpose-set-extension-configuration :helm purpose--helm-conf)))
+      (purpose-set-extension-configuration :helm purpose--helm-conf)
+      (add-to-list 'purpose-action-function-ignore-buffer-names "^\\*helm")
+      (add-to-list 'purpose-action-function-ignore-buffer-names "^\\*Helm")))
 
   (with-eval-after-load 'window-purpose-switch
     (setq purpose-display-at-bottom-height 0.4))
