@@ -911,7 +911,8 @@ it is not appropriate in some cases like terminals."
     (setq lsp-eldoc-enable-hover nil)
     ;; Was `lsp-hover'
     (setq lsp-signature-auto-activate nil)
-    (setq lsp-eldoc-hook '(lsp-document-highlight))
+    (setq lsp-eldoc-hook ;'(lsp-document-highlight)
+          nil)
     (setq lsp-eldoc-render-all nil))
 
   (with-eval-after-load 'lsp-pyls
