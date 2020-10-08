@@ -9,9 +9,9 @@
    dotspacemacs-configuration-layers
    '(;; rust
      ;; kubernetes
+     terraform
      eww
      gnus
-     ess
      ;; ocaml
      ;; elixir
      ;; javascript
@@ -32,6 +32,7 @@
             latex-build-command "Make")
      bibtex
      graphviz
+     ess
      ;; (ess :variables
      ;;      ess-disable-underscore-assign t
      ;;      :packages (not ess-R-object-popup))
