@@ -890,6 +890,12 @@ it is not appropriate in some cases like terminals."
     ;; Temporary fix (until a PR takes care of this)
     ;; (spacemacs/set-leader-keys-for-minor-mode 'lsp-mode
     ;;   "bd" #'lsp-describe-session)
+    (add-to-list 'lsp-file-watch-ignored "[/\\\\]doc$")
+    (add-to-list 'lsp-file-watch-ignored "[/\\\\]\\.github$")
+    (add-to-list 'lsp-file-watch-ignored "[/\\\\]__pycache__$")
+    (add-to-list 'lsp-file-watch-ignored "[/\\\\]bin$")
+    (add-to-list 'lsp-file-watch-ignored "[/\\\\]\\.ropeproject$")
+    (add-to-list 'lsp-file-watch-ignored "[/\\\\]\\.pytest_cache$")
     (setq lsp-auto-guess-root t)
     (setq lsp-enable-snippet t)
     (setq lsp-document-sync-method lsp--sync-incremental)
