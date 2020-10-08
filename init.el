@@ -237,7 +237,6 @@
 
 (defun dotspacemacs/user-init ()
 
-  ;; (modify-syntax-entry ?_ "w" (standard-syntax-table))
   ;; (jit-lock-debug-mode +1)
   (setq jit-lock-defer-time 0)
 
@@ -330,6 +329,9 @@
   (add-to-list 'version-regexp-alist '("^[-._+ ]?Devi$" . -4)))
 
 (defun dotspacemacs/user-config ()
+
+  ;; Make word motions include underscores
+  (add-hook 'prog-mode-hook #'(lambda () (modify-syntax-entry ?_ "w")))
 
   ;; Just a helper function for whatever.
   (defun hash-table-to-alist (hash-table)
