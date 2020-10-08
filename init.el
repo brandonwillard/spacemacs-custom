@@ -958,7 +958,7 @@ it is not appropriate in some cases like terminals."
 
   (with-eval-after-load 'org
     ;; TODO: Consider this...
-    ;; (org-babel-make-language-alias "python" "ipython")
+    ;; (org-babel-make-language-alias "python" "jupyter-python")
 
     ;; (setq btw//org-show-entry-active nil)
     ;;
