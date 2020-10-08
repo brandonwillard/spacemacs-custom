@@ -1212,7 +1212,7 @@ it is not appropriate in some cases like terminals."
     )
 
   (with-eval-after-load 'persp-mode
-    (setq persp-autokill-buffer-on-remove t)
+    (setq persp-autokill-buffer-on-remove 'kill-weak)
     ;; Add all opened buffers (filter certain ones below).
     (setq persp-add-buffer-on-after-change-major-mode t)
 
