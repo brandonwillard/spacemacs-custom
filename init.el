@@ -55,7 +55,9 @@
      ;;        ;;                               "../inc" "../../inc")
      ;;        c-c++-enable-clang-support t
      ;;        c-c++-default-mode-for-headers 'c++-mode)
-     helm
+     (helm :variables
+           helm-enable-auto-resize nil
+           helm-position 'bottom)
      (auto-completion :variables
                       ;; auto-completion-enable-sort-by-usage t
                       spacemacs-default-company-backends '(company-files company-capf company-yasnippet)
