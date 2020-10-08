@@ -939,7 +939,14 @@ it is not appropriate in some cases like terminals."
                             :library-folders-fn #'btw/lsp-pyls-library-folders-fn)))
       (puthash (lsp--client-server-id client) client lsp-clients))
     ;; (setq lsp-pyls-plugins-pylint-enabled nil)
-    )
+    (setq lsp-pyls-plugins-jedi-use-pyenv-environment nil
+          lsp-pyls-plugins-jedi-completion-include-params nil
+          lsp-pyls-plugins-pycodestyle-enabled nil
+          lsp-pyls-plugins-autopep8-enabled nil
+          lsp-pyls-plugins-mccabe-enabled nil
+          ;; lsp-pyls-rope-rope-folder ""
+          ;; lsp-pyls-plugins-jedi-environment "..."
+     ))
 
   (with-eval-after-load 'lsp-ui
     (setq lsp-enable-symbol-highlighting nil)
