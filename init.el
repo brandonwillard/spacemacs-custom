@@ -75,7 +75,7 @@
      ;; XXX: The `github' layer requires `forge', which requires `closql' and interacts poorly
      ;; with recent Emacs master branch changes to `eieio' (seen during the
      ;; loading of `window-purpose' class objects)
-     ;; (github :variables magit-gh-pulls-pull-detail-limit 10)
+     (github :variables magit-gh-pulls-pull-detail-limit 10)
      scheme
      racket
      pdf
