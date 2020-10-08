@@ -1601,6 +1601,11 @@ From https://emacs.stackexchange.com/a/10698"
     (sql-set-product-feature 'postgres :prompt-cont-regexp
                              "^[-[:alnum:]_]*[-(][#>] "))
 
+  (with-eval-after-load 'reftex
+    ;; Prevent whatever is setting this.
+    (defun reftex-toggle-auto-view-crossref ()
+      nil))
+
   (with-eval-after-load 'gnus
     (setq gnus-select-method
           '(nntp "news.gmane.io"))
