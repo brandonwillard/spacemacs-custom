@@ -1460,9 +1460,12 @@ This fixes some `helm' issues."
     (setq purpose-display-at-bottom-height 0.4))
 
   (with-eval-after-load 'helm
+
+    ;; Attempt to sort entries based on usage/access.
+    (helm-adaptive-mode +1)
+
     (setq-default helm-follow-mode-persistent nil)
     (setq helm-always-two-windows nil)
-    (setq helm-autoresize-mode nil)
     (setq helm-split-window-inside-p nil)
     (setq helm-split-window-default-side 'below)
 
