@@ -327,7 +327,7 @@
   ;; (setq browse-url-browser-function 'xwidget-webkit-browse-url)
 
   ;; Be more permissive about the accepted forms of version strings
-  (add-to-list 'version-regexp-alist '("^[-._+ ]?Devi$" . -4)))
+  (add-to-list 'version-regexp-alist '("^[-._+ ]?[dD]ev[i]?$" . -4)))
 
 (defun dotspacemacs/user-config ()
 
