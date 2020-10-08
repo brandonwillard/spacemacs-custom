@@ -1014,8 +1014,9 @@ it is not appropriate in some cases like terminals."
     (add-to-list 'org-babel-load-languages '(plantuml . t))
     (add-to-list 'org-babel-load-languages '(dot . t))
     (add-to-list 'org-babel-load-languages '(scheme . t))
-    (add-to-list 'org-babel-load-languages '(jupyter . t) t)
+    ;; (add-to-list 'org-babel-load-languages '(jupyter . t) t)
     (add-to-list 'org-babel-load-languages '(latex . t) t)
+    ;; (org-babel-do-load-languages 'org-babel-load-languages org-babel-load-languages)
 
     (defun spacemacs//org-latex-pdf-process (file-name)
       "XXX: This will err-out because of org-export's assumption that the output
