@@ -1627,6 +1627,10 @@ From https://emacs.stackexchange.com/a/10698"
     ;; (setq message-directory "~/Documents/gmail")
     )
 
+  (with-eval-after-load 'helm-ag
+    (setq helm-ag-command-option "--hidden"
+          helm-ag-use-grep-ignore-list t))
+
   (spacemacs|define-custom-layout "@Spacemacs"
     :binding "e"
     :body (progn (spacemacs/find-dotfile)
