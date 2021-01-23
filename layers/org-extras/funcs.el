@@ -186,31 +186,29 @@ From https://emacs.stackexchange.com/a/9494/19170"
                     org-angle-link-re "\\)\\|\\("
                     org-plain-link-re "\\)"))))
 (defun spacemacs//org-element-inline-src-block-parser (limit)
-  (-when-let* (((let ((case-fold-search nil))
-                  (re-search-forward (rx (seq bow
-                                              (submatch "src_"
-                                                        (one-or-more (not (any blank ?\[ ?\\ ?\{))))))
-                                     limit
-                                     t)))
+  (when-let* (((let ((case-fold-search nil))
+                 (re-search-forward (rx (seq bow (submatch "src_" (one-or-more (not (any blank ?\[ ?\\ ?\{))))))
+                                    limit
+                                    t)))
               ;; Start with the matched 'src_<lang>'
-              (match-data-res (list (copy-marker (match-beginning 1))
+              (match-data-res (list (copy-marker (match-beginning 0))
                                     (point-marker)))
               ;; Add the matched block parameters
               (match-data-res (append match-data-res
                                       (list (point-marker))))
               (params-marker (progn
-                                (org-element--parse-paired-brackets ?\[)
-                                (when (< (point) limit)
-                                    (point-marker))))
+                               (org-element--parse-paired-brackets ?\[)
+                               (when (< (point) limit)
+                                 (point-marker))))
               (match-data-res (append match-data-res
                                       (list params-marker)))
               ;; Add the matched body
               (match-data-res (append match-data-res
                                       (list (point-marker))))
               (body-marker (progn
-                              (org-element--parse-paired-brackets ?\{)
-                              (when (< (point) limit)
-                                (point-marker))))
+                             (org-element--parse-paired-brackets ?\{)
+                             (when (< (point) limit)
+                               (point-marker))))
               ;; Also push ranges for the entire pattern
               (match-data-res (append (list (car match-data-res))
                                       (list body-marker)

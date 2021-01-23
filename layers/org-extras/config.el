@@ -17,9 +17,9 @@
 
 (defvar org-inline-src-keyword
   '(spacemacs//org-element-inline-src-block-parser
-    (1 'org-special-keyword)
-    (2 'org-special-keyword)
-    (3 'org-code))
+    (1 '(face org-target invisible org-link) t)
+    (2 '(face org-target invisible org-link) t)
+    (3 'org-code t))
   "Font-lock keyword for inline org-babel src statements")
 
 (spacemacs|add-toggle org-highlight-inline-src
