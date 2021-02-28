@@ -12,9 +12,12 @@ This layer adds extra configuration and support for Python.
 ** Features:
    - =persp-mode= virtual environment switching
    - Basic support for Anaconda virtual environments
-   - Inferior python shells are made project (via =projectile=) specific
+   - Inferior python shells are made project-specific (via =projectile=)
    - Python REPL send-functions that echo the sent text
    - IPython/Jupyter help pop-ups
+
+The =projectile= and =persp-mode=-related features are provided by the
+[[https://github.com/brandonwillard/pyvenv-extras][=pyvenv-extras=]] and [[https://github.com/brandonwillard/proj-persp-extras][=proj-persp-extras=]] packages.
 
 The =persp-mode= additions piggy-back on the standard python layer's
 =python-auto-set-local-pyvenv-virtualenv= variable; set it to

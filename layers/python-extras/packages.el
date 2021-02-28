@@ -20,9 +20,11 @@
     ;; conda
     f
     s
-    pyvenv
     persp-mode
     hy-mode
+    (pyvenv-extras
+     :location (recipe :fetcher github
+                       :repo "brandonwillard/pyvenv-extras"))
     (company-anaconda :excluded t)
     (anaconda-mode :excluded t)
     (pylookup :excluded t)
@@ -59,9 +61,7 @@
 
 (defun python-extras/post-init-projectile ())
 
-(defun python-extras/post-init-persp-mode ()
-  (when (configuration-layer/package-used-p 'pyvenv)
-    (add-to-list 'persp-activated-functions #'spacemacs//persp-after-switch-set-venv)))
+(defun python-extras/post-init-persp-mode ())
 
 (defun python-extras/post-init-hy-mode ()
   ;; Use projectile-specific Hy REPLs.
@@ -91,10 +91,6 @@
 
       (advice-add #'python-shell-send-string :override
                   #'spacemacs//python-shell-send-string)
-
-      (when (configuration-layer/package-used-p 'projectile)
-        (advice-add #'python-shell-get-process-name :around
-                    #'spacemacs//python-shell-get-process-name))
 
       (when (configuration-layer/package-used-p 'lsp-python)
         (defun spacemacs//python-help-for-region-or-symbol (&rest r)
@@ -137,86 +133,21 @@ See `company-transformers'."
               :after #'(lambda (&rest _)
                          (setq-local company-idle-delay nil))))
 
-(defun python-extras/post-init-pyvenv ()
+(defun python-extras/post-init-pyvenv-extras ()
+  (pyvenv-projectile-tracking-mode +1)
 
-  (defun python-extras//filter-venvwrapper-supported-anaconda-hooks (pyvenv-res &rest r)
-    "If we're using Anaconda envs, do not run virtualenvwrapper hooks."
-    (and pyvenv-res
-         (not (s-contains? (concat (f-path-separator) "anaconda")
-                           pyvenv-res
-                           t))))
+  (defun spacemacs//persp-after-switch-set-venv (orig-func frame-or-window)
+    (when (eq python-auto-set-local-pyvenv-virtualenv 'on-project-switch)
+      (funcall orig-func frame-or-window)))
 
-  (advice-add #'pyvenv-virtualenvwrapper-supported
-              :filter-return #'python-extras//filter-venvwrapper-supported-anaconda-hooks)
+  (advice-add #'pyvenv-extras//persp-after-switch-set-venv :around
+              #'spacemacs//persp-after-switch-set-venv)
 
-  (spacemacs/toggle-pyvenv-track-buffer-changes-off)
-  (spacemacs/toggle-pyvenv-track-projectile-changes-on)
+  (pyvenv-persp-tracking-mode +1)
 
-  ;; If `pyvenv-workon' buffer-local variables is set, activate the corresponding
-  ;; venv when entering the buffer.
-  ;; (pyvenv-tracking-mode +1)
+  (advice-add #'spacemacs/projectile-shell-pop :around #'pyvenv-extras//run-in-pyvenv-wrapper)
 
-  ;; (defun python-extras//track-previous-pyvenv (&res _)
-  ;;   ...)
-  ;; (advice-add #'pyvenv-activate :before #'python-extras//track-previous-pyvenv)
-
-  ;; Enable automatic projectile-based venv activation before the following activities.
-  (defun spacemacs//run-in-pyvenv-wrapper (oldfun &rest args)
-    (spacemacs//run-in-pyvenv
-     (apply oldfun args)))
-
-  (advice-add #'spacemacs/python-start-or-switch-repl :around #'spacemacs//run-in-pyvenv-wrapper)
-  (advice-add #'spacemacs/projectile-shell-pop :around #'spacemacs//run-in-pyvenv-wrapper)
-
-  ;; TODO: `pyvenv-restart-python' checks `pyvenv-virtual-env-name' and
-  ;; `pyvenv-virtual-env' *within* each inferior Python buffer, so we need to [re]set
-  ;; those values there (e.g. using the caller's venv values).
-  (defun btw//pyvenv-restart-python (&rest _)
-    "Restart Python inferior processes (with venv awareness and not cursor jumps)."
-    (interactive)
-    (save-window-excursion
-      (dolist (buf (persp-buffer-list))
-        (set-buffer buf)
-        (spacemacs//run-in-pyvenv
-         (when (and (eq major-mode 'inferior-python-mode)
-                    (get-buffer-process buf))
-           (let ((cmd (combine-and-quote-strings (process-command
-                                                  (get-buffer-process buf))))
-                 (dedicated (if (string-match "\\[.*\\]$" (buffer-name buf))
-                                t
-                              nil))
-                 (show nil))
-             (delete-process (get-buffer-process buf))
-             (insert "\n\n"
-                     "###\n"
-                     (format "### Restarting in virtualenv %s (%s)\n"
-                             pyvenv-virtual-env-name
-                             pyvenv-workon
-                             ;; pyvenv-virtual-env
-                             )
-                     "###\n"
-                     "\n\n")
-             (run-python cmd dedicated show)))))))
-
-  (advice-add #'pyvenv-restart-python :override #'btw//pyvenv-restart-python)
-
-  (defun spacemacs//set-project-root (func &rest args)
-    "Run the wrapped function in the project root directory."
-    (let ((default-directory (expand-file-name (or (projectile-project-root) default-directory))))
-      (apply func args)))
-
-  (advice-add #'python-shell-make-comint :around #'spacemacs//set-project-root)
-
-  (add-hook 'pyvenv-post-activate-hooks #'spacemacs//pyvenv-conda-activate-additions)
-  (add-hook 'pyvenv-post-deactivate-hooks #'spacemacs//pyvenv-conda-deactivate-additions)
-  (with-eval-after-load 'vterm
-    (defun spacemacs//vterm-init-pyvenv ()
-      (spacemacs//pyvenv-conda-env-term-init #'vterm-send-string))
-    (add-hook 'vterm-mode-hook #'spacemacs//vterm-init-pyvenv))
-  (defun spacemacs//term-init-pyvenv ()
-    (spacemacs//pyvenv-conda-env-term-init
-     #'(lambda (command-string) (term-send-string (current-buffer) command-string))))
-  (add-hook 'term-exec-hook #'spacemacs//term-init-pyvenv))
+  (pyvenv-extras-mode +1))
 
 (defun python-extras/post-init-flycheck ()
   ;; (flycheck-add-next-checker 'python-flake8 'python-pylint)
