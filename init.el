@@ -147,6 +147,8 @@
                                       (hy-mode :location "~/projects/code/emacs/hy-mode")
                                       (org-ref :location "~/projects/code/emacs/org-ref")
                                       (ob-hy :location "~/projects/code/emacs/ob-hy")
+                                      (proj-persp-extras :location "~/projects/code/emacs/proj-persp-extras")
+                                      (pyvenv-extras :location "~/projects/code/emacs/pyvenv-extras")
 
                                       sphinx-doc
                                       yasnippet-snippets
@@ -526,6 +528,12 @@
     :commands (org-pelican-publish-to-pelican)
     :after (ox-gfm))
 
+  (use-package pyvenv-extras
+    :after (pyvenv projectile persp-mode))
+
+  (use-package proj-persp-extras
+    :after (projectile persp-mode))
+
   (use-package org-btw-python
     :after (org)
     :commands (org-btw//ob-python-generate-plots))
@@ -820,12 +828,6 @@ it is not appropriate in some cases like terminals."
     (setq flycheck-indication-mode 'right-fringe))
 
   (with-eval-after-load 'python
-    (defun btw//python-adjust-adaptive-fill-regexp ()
-      (setq-local adaptive-fill-regexp
-                  (s-replace "%" "" adaptive-fill-regexp)))
-
-    (add-hook 'python-mode-hook #'btw//python-adjust-adaptive-fill-regexp)
-
     ;; Make `breakpoint()' use `ipdb' (if it's installed, of course)
     (add-to-list 'python-shell-process-environment "PYTHONBREAKPOINT=ipdb.set_trace")
 
@@ -859,11 +861,8 @@ it is not appropriate in some cases like terminals."
 
   (with-eval-after-load 'pyvenv
     ;; Set buffer local `pyvenv-workon' values for automatic activation.
-    (when (fboundp 'pyvenv-tracking-mode)
-      (setq pyvenv-tracking-ask-before-change t)
-      ;; Make these buffer local so that virtualenvs don't creep into other
-      ;; project buffers.
-      (pyvenv-tracking-mode +1)))
+    (setq pyvenv-tracking-ask-before-change nil)
+    (pyvenv-tracking-mode +1))
 
   (with-eval-after-load 'vim-powerline-theme
     ;; Egh, doesn't really work.
