@@ -239,6 +239,7 @@
 
 (defun dotspacemacs/user-init ()
 
+  (setq delete-by-moving-to-trash nil)
   ;; (jit-lock-debug-mode +1)
   (setq jit-lock-defer-time 0)
 
