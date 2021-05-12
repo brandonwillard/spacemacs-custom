@@ -1424,6 +1424,12 @@ This fixes some `helm' issues."
     (advice-add #'spacemacs/projectile-shell-pop :override #'btw/projectile-shell-pop))
 
   (with-eval-after-load 'comint
+
+    (defun btw//comint-set-C-r ()
+      (evil-local-set-key 'insert (kbd "C-r") #'evil-paste-from-register))
+
+    (add-hook 'inferior-python-mode-hook #'btw//comint-set-C-r)
+
     ;; Make terminals and REPLs read-only.
     ;; https://emacs.stackexchange.com/a/2897
     (setq-default comint-prompt-read-only t)
