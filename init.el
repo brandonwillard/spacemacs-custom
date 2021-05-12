@@ -882,6 +882,9 @@
   (with-eval-after-load 'magithub-dash
     (setq magithub-dashboard-show-read-notifications nil))
 
+  (with-eval-after-load 'git-link
+    (setq git-link-default-remote "origin"))
+
   (with-eval-after-load 'editorconfig
     (add-to-list 'editorconfig-exclude-modes 'help-mode)
     (add-to-list 'editorconfig-exclude-modes 'edebug-mode)
