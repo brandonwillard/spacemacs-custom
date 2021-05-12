@@ -133,21 +133,24 @@ See `company-transformers'."
               :after #'(lambda (&rest _)
                          (setq-local company-idle-delay nil))))
 
-(defun python-extras/post-init-pyvenv-extras ()
-  (pyvenv-projectile-tracking-mode +1)
+(defun python-extras/init-pyvenv-extras ()
+  (use-package pyvenv-extras
+    :config
+    (progn
+      (pyvenv-projectile-tracking-mode +1)
 
-  (defun spacemacs//persp-after-switch-set-venv (orig-func frame-or-window)
-    (when (eq python-auto-set-local-pyvenv-virtualenv 'on-project-switch)
-      (funcall orig-func frame-or-window)))
+      (defun spacemacs//persp-after-switch-set-venv (orig-func frame-or-window)
+        (when (eq python-auto-set-local-pyvenv-virtualenv 'on-project-switch)
+          (funcall orig-func frame-or-window)))
 
-  (advice-add #'pyvenv-extras//persp-after-switch-set-venv :around
-              #'spacemacs//persp-after-switch-set-venv)
+      (advice-add #'pyvenv-extras//persp-after-switch-set-venv :around
+                  #'spacemacs//persp-after-switch-set-venv)
 
-  (pyvenv-persp-tracking-mode +1)
+      (pyvenv-persp-tracking-mode +1)
 
-  (advice-add #'spacemacs/projectile-shell-pop :around #'pyvenv-extras//run-in-pyvenv-wrapper)
+      (advice-add #'spacemacs/projectile-shell-pop :around #'pyvenv-extras//run-in-pyvenv-wrapper)
 
-  (pyvenv-extras-mode +1))
+      (pyvenv-extras-mode +1))))
 
 (defun python-extras/post-init-flycheck ()
   ;; (flycheck-add-next-checker 'python-flake8 'python-pylint)
