@@ -259,6 +259,9 @@
   (setq edebug-print-level 20)
   (setq print-circle t)
 
+  ;; Let's not get inundated with pop-ups for warnings
+  (setq warning-minimum-level :error)
+
   ;; This will help avoid errors with old `ert'-based code
   (when (> emacs-major-version 26)
     (defalias 'ert--print-backtrace 'backtrace-to-string))
