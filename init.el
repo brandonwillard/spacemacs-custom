@@ -50,12 +50,12 @@
      yaml
      sql
      ;; noweb
-     ;; (c-c++ :variables
-     ;;        c-c++-backend 'lsp-clangd
-     ;;        ;; company-c-headers-path-user '("../include" "./include" "." "../../include"
-     ;;        ;;                               "../inc" "../../inc")
-     ;;        c-c++-enable-clang-support t
-     ;;        c-c++-default-mode-for-headers 'c++-mode)
+     (c-c++ :variables
+            c-c++-backend 'lsp-clangd
+            ;; company-c-headers-path-user '("../include" "./include" "." "../../include"
+            ;;                               "../inc" "../../inc")
+            c-c++-enable-clang-support t
+            c-c++-default-mode-for-headers 'c++-mode)
      (helm :variables
            helm-enable-auto-resize nil
            helm-position 'bottom)
