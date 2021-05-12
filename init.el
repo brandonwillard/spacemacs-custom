@@ -1262,9 +1262,10 @@
 
     (defun btw//hs-show-block-rec ()
       "Unfold/show all blocks at point."
-      (while (hs-already-hidden-p)
-        (save-mark-and-excursion
-          (hs-show-block))))
+      (ignore-errors
+        (while (hs-already-hidden-p)
+          (save-mark-and-excursion
+            (hs-show-block)))))
 
     ;; Add a recursive unfold to `evil''s mappings for `hideshow'
     (when-let ((opt (assoc-if (lambda (x) (memq 'hs-minor-mode x)) evil-fold-list)))
@@ -1491,8 +1492,9 @@ This fixes some `helm' issues."
         (prog1
             (apply fn r)
           (unless (eq start-point (point))
-            (ignore-errors
-              (evil-open-fold-rec))))))
+            (save-mark-and-excursion
+              (ignore-errors
+                (evil-open-fold-rec)))))))
 
     (define-minor-mode jumps-open-folds-mode
       "Toggle jumps-open-folds-mode mode."
