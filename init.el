@@ -537,6 +537,8 @@
 
   (use-package org-btw-python
     :after (org)
+    :config (progn
+              (org-btw-python-mode +1))
     :commands (org-btw//ob-python-generate-plots))
 
   (use-package org-ref+
