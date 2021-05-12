@@ -780,6 +780,12 @@
     ;; Only ask to save file in the current `projectile' project.
     (setq overseer--save-buffers-predicate compilation-save-buffers-predicate)
 
+    ;; (setq compilation-error-regexp-alist-alist
+    ;;       (assq-delete-all 'overseer compilation-error-regexp-alist-alist))
+
+    ;; This fixes an issue that appears when parsing `ert-runner' output
+    (add-to-list 'compilation-error-regexp-alist-alist '(overseer "(error \\(.*\\))" nil nil nil))
+
     (defun btw/overseer-compilation-run (cmdlist buffer-name)
       "Run CMDLIST in BUFFER-NAME and returns the compilation buffer."
 
