@@ -654,14 +654,60 @@
     ;;           (lambda ()
     ;;             (setq-local evil-insert-state-cursor 'box)
     ;;             (evil-insert-state)))
-    (defun evil-collection-vterm-escape-stay ()
-      "Go back to normal state but don't move cursor backwards.
-Moving cursor backwards is the default vim behavior but
-it is not appropriate in some cases like terminals."
-      (setq-local evil-move-cursor-back nil))
+    ;; (defun evil-collection-vterm-escape-stay ()
+    ;;       "Go back to normal state but don't move cursor backwards.
+    ;; Moving cursor backwards is the default vim behavior but
+    ;; it is not appropriate in some cases like terminals."
+    ;;       (setq-local evil-move-cursor-back nil))
 
-    (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
+    ;; (add-hook 'vterm-mode-hook #'evil-collection-vterm-escape-stay)
+    (defun vterm-evil-insert ()
+      (interactive)
+      (vterm-goto-char (point))
+      (call-interactively #'evil-insert))
+
+    (defun vterm-evil-append ()
+      (interactive)
+      (vterm-goto-char (1+ (point)))
+      (call-interactively #'evil-append))
+
+    (defun vterm-evil-append-line ()
+      (interactive)
+      (vterm-goto-char (vterm--get-end-of-line))
+      (call-interactively #'evil-append))
+
+    (defun vterm-evil-insert-line ()
+      (interactive)
+      (vterm-goto-char (vterm--get-beginning-of-line))
+      (call-interactively #'evil-append))
+
+    (defun vterm-evil-delete ()
+      "Provide similar behavior as `evil-delete'."
+      (interactive)
+      (let ((inhibit-read-only t))
+        (cl-letf (((symbol-function #'delete-region) #'vterm-delete-region))
+          (call-interactively 'evil-delete))))
+
+    (defun vterm-evil-change ()
+      "Provide similar behavior as `evil-change'."
+      (interactive)
+      (let ((inhibit-read-only t))
+        (cl-letf (((symbol-function #'delete-region) #'vterm-delete-region))
+          (call-interactively 'evil-change))))
+
+    (defun my-vterm-hook()
+      (evil-local-mode 1)
+      (evil-define-key 'normal 'local "A" 'vterm-evil-append-line)
+      (evil-define-key 'normal 'local "a" 'vterm-evil-append)
+      (evil-define-key 'normal 'local "d" 'vterm-evil-delete)
+      (evil-define-key 'normal 'local "I" 'vterm-evil-insert-line)
+      (evil-define-key 'normal 'local "i" 'vterm-evil-insert)
+      (evil-define-key 'normal 'local "c" 'vterm-evil-change))
+
+    (add-hook 'vterm-mode-hook 'my-vterm-hook)
+
     (define-key vterm-mode-map [return] #'vterm-send-return)
+
     (evil-define-key 'insert vterm-mode-map
       (kbd "C-e") #'vterm--self-insert
       (kbd "C-z") #'vterm--self-insert
@@ -683,6 +729,7 @@ it is not appropriate in some cases like terminals."
       (kbd "C-c") #'vterm--self-insert
       (kbd "C-SPC") #'vterm--self-insert
       (kbd "<delete>") #'vterm-send-delete)
+
     (evil-define-key 'normal vterm-mode-map
       (kbd "[[") #'vterm-previous-prompt
       (kbd "]]") #'vterm-next-prompt
@@ -692,11 +739,10 @@ it is not appropriate in some cases like terminals."
       (kbd (concat dotspacemacs-major-mode-leader-key "c")) #'multi-vterm
       (kbd (concat dotspacemacs-major-mode-leader-key "n")) #'multi-vterm-next
       (kbd (concat dotspacemacs-major-mode-leader-key "p")) #'multi-vterm-prev
-      (kbd "i") #'evil-insert-resume
-      (kbd "o") #'evil-insert-resume
+      ;; (kbd "i") #'evil-insert-resume
+      ;; (kbd "o") #'evil-insert-resume
       (kbd "p") #'vterm-yank
       (kbd "P") #'vterm-yank
-      ;; (kbd "<return>") #'evil-insert-resume
       ))
 
   (with-eval-after-load 'utop
