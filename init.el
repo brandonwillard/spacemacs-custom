@@ -40,6 +40,7 @@
              ;; NOTE: These can also be .dir-local/project specific.
              python-test-runner 'pytest
              python-backend 'lsp
+             python-lsp-server 'pyls
              python-formatter 'black
              python-format-on-save nil
              :packages (not live-py-mode))
@@ -957,19 +958,72 @@
     (add-to-list 'lsp-file-watch-ignored "[/\\\\]bin$")
     (add-to-list 'lsp-file-watch-ignored "[/\\\\]\\.ropeproject$")
     (add-to-list 'lsp-file-watch-ignored "[/\\\\]\\.pytest_cache$")
+    (setq lsp-response-timeout 180)
+    (setq lsp-enable-imenu nil)
+    (setq lsp-enable-indentation nil)
+    (setq lsp-enable-symbol-highlighting nil)
+    (setq lsp-enable-links nil)
+    (setq lsp-enable-dap-auto-configure nil)
     (setq lsp-auto-guess-root t)
     (setq lsp-enable-snippet t)
     (setq lsp-document-sync-method lsp--sync-incremental)
     (setq lsp-enable-on-type-formatting nil)
     (setq lsp-before-save-edits nil)
+    (setq lsp-headerline-breadcrumb-enable t)
     (setq lsp-eldoc-enable-hover nil)
     ;; Was `lsp-hover'
     (setq lsp-signature-auto-activate nil)
-    (setq lsp-eldoc-hook ;'(lsp-document-highlight)
+    (setq lsp-eldoc-hook                ;'(lsp-document-highlight)
           nil)
     (setq lsp-eldoc-render-all nil))
 
+  (with-eval-after-load 'lsp-pyright
+    (setq lsp-pyright-diagnostic-mode "openFilesOnly" ;; "workspace"
+          lsp-pyright-log-level "warnings"
+          lsp-pyright-typechecking-mode "off")
+
+    (defun btw//lsp-pyright-locate-venv (oldfun &rest r)
+      (if (fboundp 'spacemacs//run-in-pyvenv)
+          (spacemacs//run-in-pyvenv
+           (if python-shell-virtualenv-root
+               (setq-local lsp-pyright-venv-path python-shell-virtualenv-root)
+             (progn
+               (warn "lsp-pyright could not find venv!")
+               (apply oldfun r))))
+        (progn
+          (warn "lsp-pyright could not find venv!")
+          (apply oldfun r))))
+
+    (advice-add #'lsp-pyright-locate-venv :around #'btw//lsp-pyright-locate-venv))
+
   (with-eval-after-load 'lsp-pyls
+    ;; For debugging pyls, set the following
+    ;; (setq lsp-pyls-server-command '("pyls" "-vvv"))
+    (setq lsp-pyls-server-command '("pylsp"))
+    ;; Look for the output in the `*pyls::stderr*' buffer
+    (setq lsp-pyls-plugins-pydocstyle-enabled nil
+          lsp-pyls-plugins-pyflakes-enabled nil
+          lsp-pyls-plugins-yapf-enabled nil
+          lsp-pyls-plugins-pycodestyle-enabled nil
+          lsp-pyls-plugins-pylint-enabled nil
+          lsp-pyls-plugins-preload-enabled nil
+          lsp-pyls-plugins-mccabe-enabled nil
+          lsp-pyls-plugins-jedi-symbols-enabled t
+          lsp-pyls-plugins-jedi-signature-help-enabled nil
+          lsp-pyls-plugins-jedi-hover-enabled t
+          lsp-pyls-plugins-jedi-completion-include-params nil
+          lsp-pyls-plugins-autopep8-enabled nil
+          lsp-pyls-plugins-flake8-enabled t
+          ;; lsp-pyls-plugins-flake8-max-line-length nil
+          lsp-pyls-rename-backend 'jedi ; 'rope
+          ;; lsp-pyls-plugins-jedi-use-pyenv-environment nil
+          ;; lsp-pyls-plugins-jedi-completion-enabled nil
+          ;; lsp-pyls-rope-rope-folder ""
+          ;; lsp-pyls-plugins-jedi-environment "..."
+          )
+    (setq lsp-pyls-configuration-sources ["flake8"])
+    (setq lsp-clients-python-library-directories `(,(or (getenv "ANACONDA_HOME") "/sys")))
+
     (defun btw/lsp-pyls-library-folders-fn (_workspace)
       "Find workspaces based on virtualenvs.  Function which returns the
  folders that are considered to be not projects but library files.  "
@@ -980,10 +1034,10 @@
              ;; TODO: Could just make this variable buffer-local.
              lsp-clients-python-library-directories))
         lsp-clients-python-library-directories))
+
     (let ((client
            (make-lsp-client :new-connection (lsp-stdio-connection
-                                             ;; (lambda () lsp-pyls-server-command)
-                                             "pyls")
+                                             (lambda () lsp-pyls-server-command))
                             :priority -1
                             :major-modes '(python-mode)
                             :server-id 'pyls
@@ -991,19 +1045,9 @@
                                               (with-lsp-workspace workspace
                                                 (lsp--set-configuration (lsp-configuration-section "pyls"))))
                             :library-folders-fn #'btw/lsp-pyls-library-folders-fn)))
-      (puthash (lsp--client-server-id client) client lsp-clients))
-    ;; (setq lsp-pyls-plugins-pylint-enabled nil)
-    (setq lsp-pyls-plugins-jedi-use-pyenv-environment nil
-          lsp-pyls-plugins-jedi-completion-include-params nil
-          lsp-pyls-plugins-pycodestyle-enabled nil
-          lsp-pyls-plugins-autopep8-enabled nil
-          lsp-pyls-plugins-mccabe-enabled nil
-          ;; lsp-pyls-rope-rope-folder ""
-          ;; lsp-pyls-plugins-jedi-environment "..."
-     ))
+      (puthash (lsp--client-server-id client) client lsp-clients)))
 
   (with-eval-after-load 'lsp-ui
-    (setq lsp-enable-symbol-highlighting nil)
     (setq lsp-ui-peek-enable nil)
     (setq lsp-ui-doc-enable nil)
     (setq lsp-ui-sideline-delay nil)
