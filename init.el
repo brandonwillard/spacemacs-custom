@@ -335,6 +335,18 @@
 
 (defun dotspacemacs/user-config ()
 
+  ;; powerline (and potentially other packages) use an old(?)
+  ;; interface to `create-image' that allows `:scale t', but, now
+  ;; `:scale' values must be numeric, so we make `create-image'
+  ;; capable of handling both types of `:scale' values.
+  (defun btw//create-image (orig-fun file-or-data &optional type data-p &rest props)
+    (let* ((scale (plist-get props :format)))
+      (when (booleanp scale)
+        (cl-remf props :scale))
+      (apply orig-fun (append (list file-or-data type data-p) props))))
+
+  (advice-add #'create-image :around #'btw//create-image)
+
   ;; Make word motions include underscores
   (add-hook 'prog-mode-hook #'(lambda () (modify-syntax-entry ?_ "w")))
 
