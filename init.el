@@ -72,10 +72,7 @@
                       auto-completion-enable-help-tooltip 'manual)
      emacs-lisp
      git
-     ;; (spacemacs-purpose :packages (not window-purpose))
-     ;; XXX: The `github' layer requires `forge', which requires `closql' and interacts poorly
-     ;; with recent Emacs master branch changes to `eieio' (seen during the
-     ;; loading of `window-purpose' class objects)
+     (version-control :variables version-control-global-margin nil)
      (github :variables magit-gh-pulls-pull-detail-limit 10)
      scheme
      racket
