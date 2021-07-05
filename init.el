@@ -848,6 +848,18 @@
                     (?< . evil-surround-read-tag)
                     (?f . evil-surround-function))))
 
+  (with-eval-after-load 'evil-embrace
+    ;; Add `yasnippet' integration to `evil-surround' (after `evil-embrace' overrides it)
+    (defun evil-yasnippet-surround-region (oldfun beg end type char &optional force-new-line)
+      (if (eq char ?y)
+          (progn
+            (push-mark beg)
+            (goto-char end)
+            (yas-insert-snippet))
+        (funcall oldfun beg end type char force-new-line)))
+
+    (advice-add 'evil-embrace-evil-surround-region :around 'evil-yasnippet-surround-region))
+
   (with-eval-after-load 'erc
     (add-to-list 'erc-modules 'notifications)
     (setq erc-track-when-inactive t)
