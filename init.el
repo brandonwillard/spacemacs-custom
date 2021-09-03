@@ -658,6 +658,9 @@
       :binding "K"
       :body (progn (kubernetes-overview))))
 
+  (with-eval-after-load 'auto-highlight-symbol
+    (setq ahs-idle-interval 2.0))
+
   (with-eval-after-load 'kubernetes
     (setq kubernetes-poll-frequency 30)
     (setq kubernetes-clean-up-interactive-exec-buffers nil))
