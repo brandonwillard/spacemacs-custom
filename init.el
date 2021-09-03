@@ -914,9 +914,16 @@
   (with-eval-after-load 'flycheck
     ;; TODO: Consider adding logic to `flycheck-python-find-module' that only
     ;; matches checker modules in the virtualenv (if any).
-    ;; (add-to-list 'flycheck-disabled-checkers 'python-flake8)
+    (add-to-list 'flycheck-disabled-checkers 'python-pylint)
+    (add-to-list 'flycheck-disabled-checkers 'python-pyright)
+    (add-to-list 'flycheck-disabled-checkers 'python-mypy)
+    (add-to-list 'flycheck-disabled-checkers 'python-pycompile)
     ;; (add-hook 'python-mode-hook
     ;;           #'(lambda () (add-to-list 'flycheck-disabled-checkers 'python-pylint)))
+
+    ;; This is a little aggressive...
+    ;; (setq flycheck-checker-error-threshold nil)
+    (setq flycheck-display-errors-function nil)
     (setq flycheck-indication-mode 'right-fringe))
 
   (with-eval-after-load 'python
