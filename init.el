@@ -335,6 +335,8 @@
 
 (defun dotspacemacs/user-config ()
 
+  (blink-cursor-mode)
+
   ;; powerline (and potentially other packages) use an old(?)
   ;; interface to `create-image' that allows `:scale t', but, now
   ;; `:scale' values must be numeric, so we make `create-image'
