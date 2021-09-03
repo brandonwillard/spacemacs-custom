@@ -40,7 +40,7 @@
              ;; NOTE: These can also be .dir-local/project specific.
              python-test-runner 'pytest
              python-backend 'lsp
-             python-lsp-server 'pyls
+             python-lsp-server 'pylsp
              python-formatter 'black
              python-format-on-save nil
              :packages (not live-py-mode))
@@ -1023,35 +1023,35 @@
 
     (advice-add #'lsp-pyright-locate-venv :around #'btw//lsp-pyright-locate-venv))
 
-  (with-eval-after-load 'lsp-pyls
-    ;; For debugging pyls, set the following
-    ;; (setq lsp-pyls-server-command '("pyls" "-vvv"))
-    (setq lsp-pyls-server-command '("pylsp"))
-    ;; Look for the output in the `*pyls::stderr*' buffer
-    (setq lsp-pyls-plugins-pydocstyle-enabled nil
-          lsp-pyls-plugins-pyflakes-enabled nil
-          lsp-pyls-plugins-yapf-enabled nil
-          lsp-pyls-plugins-pycodestyle-enabled nil
-          lsp-pyls-plugins-pylint-enabled nil
-          lsp-pyls-plugins-preload-enabled nil
-          lsp-pyls-plugins-mccabe-enabled nil
-          lsp-pyls-plugins-jedi-symbols-enabled t
-          lsp-pyls-plugins-jedi-signature-help-enabled nil
-          lsp-pyls-plugins-jedi-hover-enabled t
-          lsp-pyls-plugins-jedi-completion-include-params nil
-          lsp-pyls-plugins-autopep8-enabled nil
-          lsp-pyls-plugins-flake8-enabled t
-          ;; lsp-pyls-plugins-flake8-max-line-length nil
-          lsp-pyls-rename-backend 'jedi ; 'rope
-          ;; lsp-pyls-plugins-jedi-use-pyenv-environment nil
-          ;; lsp-pyls-plugins-jedi-completion-enabled nil
-          ;; lsp-pyls-rope-rope-folder ""
-          ;; lsp-pyls-plugins-jedi-environment "..."
+  (with-eval-after-load 'lsp-pylsp
+    ;; For debugging `pylsp', set the following
+    ;; (setq lsp-pylsp-server-command '("pylsp" "-vvv"))
+    (setq lsp-pylsp-server-command '("pylsp"))
+    ;; Look for the output in the `*pylsp::stderr*' buffer
+    (setq lsp-pylsp-plugins-pydocstyle-enabled nil
+          lsp-pylsp-plugins-pyflakes-enabled nil
+          lsp-pylsp-plugins-yapf-enabled nil
+          lsp-pylsp-plugins-pycodestyle-enabled nil
+          lsp-pylsp-plugins-pylint-enabled nil
+          lsp-pylsp-plugins-preload-enabled nil
+          lsp-pylsp-plugins-mccabe-enabled nil
+          lsp-pylsp-plugins-autopep8-enabled nil
+          lsp-pylsp-plugins-jedi-symbols-enabled t
+          lsp-pylsp-plugins-jedi-signature-help-enabled nil
+          lsp-pylsp-plugins-jedi-hover-enabled t
+          lsp-pylsp-plugins-jedi-completion-include-params nil
+          ;; lsp-pylsp-plugins-flake8-enabled t
+          ;; lsp-pylsp-plugins-flake8-max-line-length nil
+          lsp-pylsp-rename-backend 'jedi ; 'rope
+          ;; lsp-pylsp-plugins-jedi-use-pyenv-environment nil
+          ;; lsp-pylsp-plugins-jedi-completion-enabled nil
+          ;; lsp-pylsp-rope-rope-folder ""
+          ;; lsp-pylsp-plugins-jedi-environment "..."
           )
-    (setq lsp-pyls-configuration-sources ["flake8"])
-    (setq lsp-clients-python-library-directories `(,(or (getenv "ANACONDA_HOME") "/sys")))
+    (setq lsp-pylsp-configuration-sources ["flake8"])
+    (setq lsp-clients-pylsp-library-directories `(,(or (getenv "ANACONDA_HOME") "/sys")))
 
-    (defun btw/lsp-pyls-library-folders-fn (_workspace)
+    (defun btw/lsp-pylsp-library-folders-fn (_workspace)
       "Find workspaces based on virtualenvs.  Function which returns the
  folders that are considered to be not projects but library files.  "
       (if (fboundp 'spacemacs//run-in-pyvenv)
@@ -1059,19 +1059,19 @@
            (if python-shell-virtualenv-root
                (list python-shell-virtualenv-root)
              ;; TODO: Could just make this variable buffer-local.
-             lsp-clients-python-library-directories))
-        lsp-clients-python-library-directories))
+             lsp-clients-pylsp-library-directories))
+        lsp-clients-pylsp-library-directories))
 
     (let ((client
            (make-lsp-client :new-connection (lsp-stdio-connection
-                                             (lambda () lsp-pyls-server-command))
+                                             (lambda () lsp-pylsp-server-command))
                             :priority -1
-                            :major-modes '(python-mode)
-                            :server-id 'pyls
+                            :major-modes '(python-mode cython-mode)
+                            :server-id 'pylsp
                             :initialized-fn (lambda (workspace)
                                               (with-lsp-workspace workspace
-                                                (lsp--set-configuration (lsp-configuration-section "pyls"))))
-                            :library-folders-fn #'btw/lsp-pyls-library-folders-fn)))
+                                                (lsp--set-configuration (lsp-configuration-section "pylsp"))))
+                            :library-folders-fn #'btw/lsp-pylsp-library-folders-fn)))
       (puthash (lsp--client-server-id client) client lsp-clients)))
 
   (with-eval-after-load 'lsp-ui
