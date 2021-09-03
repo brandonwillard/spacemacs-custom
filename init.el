@@ -886,6 +886,15 @@
     ;; Prevent `magit' from restoring unrelated window configurations (very
     ;; annoying when doing work with `magit' windows open).
     (setq magit-inhibit-save-previous-winconf t)
+
+    (evil-define-key 'normal git-rebase-mode-map
+      (kbd "C-j") 'git-rebase-move-line-down
+      (kbd "C-k") 'git-rebase-move-line-up)
+
+    (put 'git-rebase-move-line-down :advertised-binding (kbd "C-j"))
+    (put 'git-rebase-move-line-up :advertised-binding (kbd "C-k"))
+
+    (setq magit-branch-prefer-remote-upstream '("upstream/master" "origin/master"))
     (setq magit-repository-directories '(("~/" . 1)
                                          ("~/projects/code" . 3)
                                          ("~/projects/papers" . 3)
