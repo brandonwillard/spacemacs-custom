@@ -1488,15 +1488,17 @@ This fixes some `helm' issues."
      :mode 'eshell-mode :tag-symbol 'def-eshell-buffer
      :save-vars '(major-mode default-directory))
 
+    (defun btw//get-persp-idx-for-layout (&optional persp-name)
+      (seq-find #'identity
+                (seq-map-indexed (lambda (name i)
+                                   (if (eq name (or persp-name (spacemacs//current-layout-name)))
+                                       i
+                                     nil))
+                                 (persp-names-current-frame-fast-ordered))))
+
     (defun btw/projectile-shell-pop ()
       "Open a term buffer at projectile project root for the current perspective."
-      (let* ((current-persp-name (spacemacs//current-layout-name))
-             (persp-idx (seq-find #'identity
-                                  (seq-map-indexed (lambda (name i)
-                                                     (if (eq name current-persp-name)
-                                                         i
-                                                       nil))
-                                                   (persp-names-current-frame-fast-ordered))))
+      (let* ((persp-idx (btw//get-persp-idx-for-layout))
              (shell (if (eq 'multi-term shell-default-shell)
                         'multiterm
                       shell-default-shell))
