@@ -236,6 +236,9 @@
 
 (defun dotspacemacs/user-init ()
 
+  ;; Prevent this annoying command from making the Emacs frame disappear
+  (put 'suspend-frame 'disabled t)
+
   (setq delete-by-moving-to-trash nil)
   (setq gc-cons-threshold (* 100 1024 1024))
 
