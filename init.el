@@ -931,7 +931,14 @@
     ;; This is a little aggressive...
     ;; (setq flycheck-checker-error-threshold nil)
     (setq flycheck-display-errors-function nil)
-    (setq flycheck-indication-mode 'right-fringe))
+    (setq flycheck-indication-mode 'right-fringe)
+
+    ;; Without this, Flycheck will raise (nearly) silent errors when LSP is used
+    ;; inside an `org-edit-special' buffer
+    (defun btw//flycheck-python-find-project-root (checker)
+      (projectile-project-root))
+
+    (advice-add #'flycheck-python-find-project-root :override #'btw//flycheck-python-find-project-root))
 
   (with-eval-after-load 'python
     ;; Make `breakpoint()' use `ipdb' (if it's installed, of course)
@@ -1025,7 +1032,44 @@
     (setq lsp-signature-auto-activate nil)
     (setq lsp-eldoc-hook                ;'(lsp-document-highlight)
           nil)
-    (setq lsp-eldoc-render-all nil))
+    (setq lsp-eldoc-render-all nil)
+
+    (with-eval-after-load 'org
+      (cl-defmacro lsp-org-babel-enable (lang)
+        "Support LANG in org source code block.
+
+Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
+        (setq centaur-lsp 'lsp-mode)
+        (cl-check-type lang stringp)
+        (let* ((edit-pre (intern (format "org-babel-edit-prep:%s" lang)))
+               (intern-pre (intern (format "lsp--%s" (symbol-name edit-pre)))))
+          `(progn
+
+             (defun ,intern-pre (info)
+               ;; This is needed to prevent issues with `lsp-breadcrumb' in `org-src-mode'
+               ;; buffers
+               (setq-local header-line-format nil)
+
+               (let ((file-name (->> info caddr (alist-get :file))))
+                 (unless file-name
+                   (setq file-name (make-temp-file "babel-lsp-")))
+                 (setq buffer-file-name file-name)
+                 (lsp-deferred)))
+
+             (put ',intern-pre 'function-documentation
+                  (format "Enable lsp-mode in the buffer of org source block (%s)."
+                          (upcase ,lang)))
+             (if (fboundp ',edit-pre)
+                 (advice-add ',edit-pre :after ',intern-pre)
+               (progn
+                 (defun ,edit-pre (info)
+                   (,intern-pre info))
+                 (put ',edit-pre 'function-documentation
+                      (format "Prepare local buffer environment for org source block (%s)."
+                              (upcase ,lang))))))))
+
+      (pcase-dolist (`(,lang . ,enabled) org-babel-load-languages)
+        (eval `(lsp-org-babel-enable ,(symbol-name lang))))))
 
   (with-eval-after-load 'lsp-pyright
     (setq lsp-pyright-diagnostic-mode "openFilesOnly" ;; "workspace"
@@ -1209,6 +1253,8 @@
           org-support-shift-select 'always)
 
     (setq org-latex-pdf-process #'spacemacs//org-latex-pdf-process)
+
+    (setq org-indirect-buffer-display 'current-window)
 
     ;; What to allow before and after markup
     ;; See https://emacs.stackexchange.com/a/13828
