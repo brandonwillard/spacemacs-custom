@@ -445,6 +445,7 @@
   (define-key minibuffer-local-map (kbd "C-p") #'previous-history-element)
   (spacemacs/set-leader-keys "nd" 'narrow-to-defun)
   (spacemacs/set-leader-keys "kx" 'sp-split-sexp)
+  (spacemacs/set-leader-keys "hds" 'describe-symbol)
   (unbind-key (kbd "nf") spacemacs-default-map)
 
   (use-package cython-mode
