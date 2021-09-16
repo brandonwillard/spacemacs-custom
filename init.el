@@ -146,6 +146,7 @@
                                       (ob-hy :location "~/projects/code/emacs/ob-hy")
                                       (proj-persp-extras :location "~/projects/code/emacs/proj-persp-extras")
                                       (pyvenv-extras :location "~/projects/code/emacs/pyvenv-extras")
+                                      (python-btw :location "~/projects/code/emacs/python-btw")
 
                                       sphinx-doc
                                       yasnippet-snippets
@@ -568,6 +569,11 @@
 
   (use-package ox-latex+
     :after (ox-latex))
+
+  (use-package python-btw
+    :after (python)
+    :config (progn
+              (python-btw-mode +1)))
 
   (use-package ox-sphinx
     :commands (org-sphinx-publish-to-rst)

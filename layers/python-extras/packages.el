@@ -22,6 +22,9 @@
     s
     persp-mode
     hy-mode
+    (python-btw
+     :location (recipe :fetcher github
+                       :repo "brandonwillard/python-btw"))
     (pyvenv-extras
      :location (recipe :fetcher github
                        :repo "brandonwillard/pyvenv-extras"))
@@ -87,20 +90,7 @@
       ;; `hack-local-variables-hook' isn't being called (or is locally
       ;; overwritten, causing the global spacemacs
       ;; `spacemacs//run-local-vars-mode-hook' to be skipped).
-      (spacemacs//python-setup-company)
-
-      (advice-add #'python-shell-send-string :override
-                  #'spacemacs//python-shell-send-string)
-
-      (when (configuration-layer/package-used-p 'lsp-python)
-        (defun spacemacs//python-help-for-region-or-symbol (&rest r)
-          (interactive)
-          (lsp-ui-doc--make-request)))
-
-      (spacemacs/set-leader-keys-for-major-mode 'python-mode
-        "hh" #'spacemacs//python-help-for-region-or-symbol
-        "sr" #'spacemacs//python-shell-send-region-echo
-        "sl" #'spacemacs//python-shell-send-line-echo))))
+      (spacemacs//python-setup-company))))
 
 (defun python-extras/post-init-company ()
 
@@ -152,20 +142,10 @@ See `company-transformers'."
 
       (pyvenv-extras-mode +1))))
 
-(defun python-extras/post-init-flycheck ()
-  ;; (flycheck-add-next-checker 'python-flake8 'python-pylint)
-
-  (defun python-extras/flycheck-virtualenv-executable-find (executable &rest find-any)
-    "Find an EXECUTABLE in the current virtualenv (exclusively) if any."
-    (if (bound-and-true-p python-mode)
-        (if (bound-and-true-p python-shell-virtualenv-root)
-            (let ((exec-path (nth 0 (python-shell-calculate-exec-path))))
-              (executable-find executable))
-          (when find-any
-            (executable-find executable)))
-      (executable-find executable)))
-
-  (setq flycheck-executable-find
-        #'python-extras/flycheck-virtualenv-executable-find))
+(defun python-extras/init-python-btw ()
+  (use-package python-btw
+    :config
+    (progn
+      (python-btw-mode +1))))
 
 ;;; packages.el ends here
