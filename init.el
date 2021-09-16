@@ -1844,6 +1844,21 @@ From https://emacs.stackexchange.com/a/10698"
     (setq helm-ag-command-option "--hidden"
           helm-ag-use-grep-ignore-list t))
 
+  (with-eval-after-load 'pytest
+    ;; Fix for recent `python.el' changes that cause `pytest-start-command' to
+    ;; block indefinitely.
+    (defun btw//python-shell-comint-end-of-output-p (old-fn output)
+      (when python-shell--prompt-calculated-input-regexp
+        (funcall old-fn output)))
+
+    (advice-add #'python-shell-comint-end-of-output-p :around #'btw//python-shell-comint-end-of-output-p)
+
+    (defun btw//pytest-start-command (orig-fn command)
+      (flet ((python-shell-prompt-set-calculated-regexps () nil))
+        (funcall orig-fn command)))
+
+    (advice-add #'pytest-start-command :around #'btw//pytest-start-command))
+
   (spacemacs|define-custom-layout "@Spacemacs"
     :binding "e"
     :body (progn (spacemacs/find-dotfile)
