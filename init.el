@@ -1546,9 +1546,32 @@ This fixes some `helm' issues."
     (defun btw/comint-preoutput-turn-buffer-read-only (text)
       (propertize text 'read-only t))
 
+    (defun btw//comint-output-filter (&rest r)
+      "From https://github.com/michalrus/dotfiles/blob/c4421e361400c4184ea90a021254766372a1f301/.emacs.d/init.d/040-terminal.el.symlink#L33
+
+    This will cause C-c C-c to fail; that seems to be due to `comint-skip-input'.
+    "
+      (with-silent-modifications
+        (-when-let* ((start-marker comint-last-output-start)
+                    (proc (get-buffer-process (current-buffer)))
+                    (end-marker (if proc (process-mark proc) (point-max-marker))))
+          (when (< start-marker end-marker) ;; Account for some of the IELM’s wilderness.
+            (let ((inhibit-read-only t))
+              ;; Disallow interleaving
+              (remove-text-properties start-marker (1- end-marker) '(rear-nonsticky))
+              ;; Make sure that at `max-point' you can always append.
+              ;; Important for bad REPLs that keep writing after giving us prompt .
+              (add-text-properties (1- end-marker) end-marker '(rear-nonsticky t))
+              ;; Protect fence (newline of input, just before output).
+              (when (eq (char-before start-marker) ?\n)
+                (remove-text-properties (1- start-marker) start-marker '(rear-nonsticky))
+                (add-text-properties    (1- start-marker) start-marker '(read-only t))))))))
+
     (add-hook 'comint-output-filter-functions
               #'btw/comint-preoutput-turn-buffer-read-only
-              'append))
+              'append)
+
+    (advice-add #'comint-output-filter :after #'btw//comint-output-filter))
 
   (with-eval-after-load 'evil
 
