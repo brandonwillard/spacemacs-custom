@@ -25,11 +25,10 @@
     ))
 
 (defun org-extras/pre-init-org ()
+
   (spacemacs|use-package-add-hook org
     :post-config
     (progn
-      (add-hook 'org-babel-after-execute-hook #'org-display-inline-images 'append)
-
       (add-hook 'org-mode-hook #'spacemacs//set-nobreak-predicate)
 
       (add-hook 'org-export-before-processing-hook #'spacemacs//org-remove-headlines)
