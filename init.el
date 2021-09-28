@@ -672,6 +672,8 @@
       :body (progn (kubernetes-overview))))
 
   (with-eval-after-load 'auto-highlight-symbol
+    (define-key evil-motion-state-map (kbd "*") 'evil-search-word-forward)
+    (define-key evil-motion-state-map (kbd "#") 'evil-search-word-backward)
     (setq ahs-idle-interval 2.0))
 
   (with-eval-after-load 'kubernetes
