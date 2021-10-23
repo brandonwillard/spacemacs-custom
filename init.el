@@ -1576,6 +1576,10 @@ This fixes some `helm' issues."
     (advice-add #'comint-output-filter :after #'btw//comint-output-filter))
 
   (with-eval-after-load 'evil
+    ;; Fix for https://github.com/Somelauw/evil-org-mode/issues/93
+    (unless (fboundp 'evil-redirect-digit-argument)
+      (defun evil-redirect-digit-argument (&rest r)
+        nil))
 
     (defun btw//scroll-to-top (&rest args)
       (evil-scroll-line-to-top (line-number-at-pos)))
