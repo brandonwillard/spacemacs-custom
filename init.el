@@ -878,6 +878,13 @@
 
     (advice-add 'evil-embrace-evil-surround-region :around 'evil-yasnippet-surround-region))
 
+  (with-eval-after-load 'evil-search
+    (defun btw-evil-ex-hl-match-hook (oldfun hl)
+      (or (funcall oldfun hl)
+          (lambda (_ ov)
+            (overlay-put ov 'priority 0))))
+    (advice-add #'evil-ex-hl-match-hook :around #'btw-evil-ex-hl-match-hook))
+
   (with-eval-after-load 'erc
     (add-to-list 'erc-modules 'notifications)
     (setq erc-track-when-inactive t)
