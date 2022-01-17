@@ -1881,6 +1881,18 @@ From https://emacs.stackexchange.com/a/10698"
           helm-ag-use-grep-ignore-list t))
 
   (with-eval-after-load 'pytest
+
+    (defun pytest-failed-first (&optional flags)
+      "Run the failures first and then the rest of the tests.
+Optional argument FLAGS py.test command line flags."
+      (interactive)
+      (pytest-all (concat "--failed-first " flags)))
+
+    (defun pytest-pdb-last-failed ()
+      "Run the failures first and then the rest of the tests, enter debugger on error."
+      (interactive)
+      (pytest-failed-first (concat "--pdb " pytest-cmd-flags)))
+
     ;; Fix for recent `python.el' changes that cause `pytest-start-command' to
     ;; block indefinitely.
     (defun btw//python-shell-comint-end-of-output-p (old-fn output)
