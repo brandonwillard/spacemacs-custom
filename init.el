@@ -380,7 +380,8 @@
   ;;
   ;;   (advice-add #'window--display-buffer :around #'btw--window--display-buffer)
 
-  (setq default-input-method "TeX")
+  ;; (setq default-input-method "TeX")
+  (setq default-input-method nil)
   (setq comment-empty-lines t)
   (setq evil-move-beyond-eol t)
   (setq evil-search-wrap nil)
