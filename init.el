@@ -236,6 +236,13 @@
 
 (defun dotspacemacs/user-init ()
 
+  ;; A temporary fix for bleeding edge Emacs's dropping `defmethod'
+  (require 'eieio-compat)
+
+  ;; Another temporary fix for bleeding edge Emacs's changes
+  (setq read-symbol-positions-list nil)
+  (setq read-with-symbol-position nil)
+
   ;; Prevent this annoying command from making the Emacs frame disappear
   (put 'suspend-frame 'disabled t)
 
