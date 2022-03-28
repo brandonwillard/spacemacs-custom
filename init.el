@@ -950,8 +950,15 @@
     (add-to-list 'flycheck-disabled-checkers 'python-pyright)
     (add-to-list 'flycheck-disabled-checkers 'python-mypy)
     (add-to-list 'flycheck-disabled-checkers 'python-pycompile)
-    ;; (add-hook 'python-mode-hook
-    ;;           #'(lambda () (add-to-list 'flycheck-disabled-checkers 'python-pylint)))
+
+    (defun btw//disable-python-flycheckers ()
+      (add-to-list 'flycheck-disabled-checkers 'python-pylint)
+      (add-to-list 'flycheck-disabled-checkers 'python-pyright)
+      (add-to-list 'flycheck-disabled-checkers 'python-mypy)
+      (add-to-list 'flycheck-disabled-checkers 'python-pycompile))
+
+    (add-hook 'python-mode-hook #'btw//disable-python-flycheckers)
+
 
     ;; This is a little aggressive...
     ;; (setq flycheck-checker-error-threshold nil)
