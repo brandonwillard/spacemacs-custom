@@ -1349,7 +1349,11 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
                   '("~/projects/code/python" "~/projects/code/emacs" "~/projects/papers")))
     (setq projectile-indexing-method 'hybrid)
     ;; To sort files by recently active buffers and then recently opened files:
-    (setq projectile-sort-order 'recently-active)
+    (setq projectile-sort-order
+          'default
+          ;; XXX: This is really slow
+          ;; 'recently-active
+          )
     ;; helm-source-projectile-files-list
     (setq projectile-globally-unignored-files '("TODO.org" "TODOs.org"))
     (setq projectile-globally-ignored-directories
