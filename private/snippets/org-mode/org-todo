@@ -12,7 +12,7 @@
 #+SELECT_TAGS: export
 #+EXCLUDE_TAGS: noexport
 
-#+STARTUP: hideblocks indent hidestars
+#+STARTUP: overview hideblocks indent hidestars
 
 #+OPTIONS: ':nil *:t -:t ::t <:t H:3 \n:nil ^:t arch:headline author:t
 #+OPTIONS: broken-links:nil c:nil creator:nil d:results date:t e:t
