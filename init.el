@@ -72,7 +72,6 @@
      emacs-lisp
      git
      (version-control :variables version-control-global-margin nil)
-     (github :variables magit-gh-pulls-pull-detail-limit 10)
      scheme
      racket
      pdf
