@@ -1311,6 +1311,10 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
     ;; XXX: Must have this set in the spacemacs tex layer!
     (setq TeX-command-default "Make"))
 
+  (with-eval-after-load 'counsel-projectile
+    ;; This command allows one to easily set arbitrary `ag' options with `C-u'
+    (spacemacs/set-leader-keys "sp" 'counsel-projectile-ag))
+
   (with-eval-after-load 'projectile
     ;; Don't bother us with unsaved files in other projects when we try to compile.
     ;; TODO: This should probably be set in `projectile--run-project-cmd'.
