@@ -346,6 +346,9 @@
 
 (defun dotspacemacs/user-config ()
 
+  ;; This fixes an issue introduced by the new built-in `restart-emacs' function
+  (require 'restart-emacs)
+
   (blink-cursor-mode)
 
   ;; powerline (and potentially other packages) use an old(?)
