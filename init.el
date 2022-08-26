@@ -229,10 +229,11 @@
    dotspacemacs-enable-server t
    dotspacemacs-persistent-server nil
    dotspacemacs-search-tools '("ag" "pt" "ack" "grep")
-   dotspacemacs-default-package-repository nil
    dotspacemacs-whitespace-cleanup 'trailing
    dotspacemacs-import-env-vars-shell-file-name shell-file-name
-   dotspacemacs-switch-to-buffer-prefers-purpose nil))
+   dotspacemacs-switch-to-buffer-prefers-purpose nil
+   dotspacemacs-read-process-output-max (* 1 1024 1024)
+   dotspacemacs-gc-cons `(,(* 100 1024 1024) 0.1)))
 
 (defun dotspacemacs/user-init ()
 
@@ -247,7 +248,6 @@
   (put 'suspend-frame 'disabled t)
 
   (setq delete-by-moving-to-trash nil)
-  (setq gc-cons-threshold (* 100 1024 1024))
 
   ;; (jit-lock-debug-mode +1)
   (setq jit-lock-defer-time 0)
