@@ -1399,6 +1399,7 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
                                      ))))
     (setq projectile-tags-command "/usr/bin/ctags -Re -f \"%s\" %s \"%s\"")
     (setq projectile-tags-file-name ".TAGS")
+    (setq projectile-per-project-compilation-buffer t)
     (setq projectile-use-git-grep nil))
 
   (with-eval-after-load 'org-projectile
