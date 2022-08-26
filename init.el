@@ -977,10 +977,29 @@
     ;; inside an `org-edit-special' buffer
     (defun btw//flycheck-python-find-project-root (checker)
       (projectile-project-root))
-
     (advice-add #'flycheck-python-find-project-root :override #'btw//flycheck-python-find-project-root))
 
   (with-eval-after-load 'python
+
+    (setq python-shell-completion-native-output-timeout 3.0)
+    (setq python-pdbtrack-activate nil)
+
+    (defun btw//set-comint-output-filters ()
+      (add-hook 'comint-output-filter-functions
+                #'btw/comint-preoutput-turn-buffer-read-only
+                nil t)
+      (add-hook 'comint-output-filter-functions
+                #'comint-postoutput-scroll-to-bottom
+                nil t))
+    (add-hook 'inferior-python-mode-hook #'btw//set-comint-output-filters)
+
+    (defun btw//python-util-comint-last-prompt ()
+      (cons
+       (save-excursion (forward-line 0) (point))
+       (save-excursion (comint-previous-prompt 1))))
+
+    (advice-add #'python-util-comint-last-prompt :override #'btw//python-util-comint-last-prompt)
+
     ;; Make `breakpoint()' use `ipdb' (if it's installed, of course)
     (add-to-list 'python-shell-process-environment "PYTHONBREAKPOINT=ipdb.set_trace")
 
