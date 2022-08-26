@@ -926,6 +926,11 @@
       (kbd "C-j") 'git-rebase-move-line-down
       (kbd "C-k") 'git-rebase-move-line-up)
 
+    ;; TODO: Hack fix for https://github.com/magit/magit/issues/4739; consider
+    ;; fixing, and then removing, this.
+    (add-hook 'magit-section-mode-hook (defun btw//disable-truncate-lines ()
+                                         (setq-local truncate-lines nil)))
+
     (put 'git-rebase-move-line-down :advertised-binding (kbd "C-j"))
     (put 'git-rebase-move-line-up :advertised-binding (kbd "C-k"))
 
