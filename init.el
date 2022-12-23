@@ -171,8 +171,8 @@
                          spacemacs-light)
    dotspacemacs-colorize-cursor-according-to-state t
    dotspacemacs-mode-line-theme 'spacemacs
-   dotspacemacs-default-font '("Noto Mono"
-                               :size 13.0
+   dotspacemacs-default-font '("JuliaMono"
+                               :size 12.0
                                :weight normal
                                :width normal
                                :powerline-scale 1.1)
