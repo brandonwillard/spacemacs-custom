@@ -128,7 +128,6 @@
                                       dockerfile-mode
                                       evil-extra-operator
 
-                                      kubernetes-tramp
 
                                       cython-mode
                                       jupyter
