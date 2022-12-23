@@ -7,7 +7,7 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(;; rust
+   '((rust :packages (not flycheck-rust))
      ;; kubernetes
      terraform
      eww
