@@ -103,7 +103,8 @@
 
      ;; FIXME: We get `semantic-idle-scheduler-function' errors in `polymode' modes.
      ;; (semantic :enabled-for emacs-lisp common-lisp python)
-     common-lisp)
+     ;; common-lisp
+     asm)
 
    ;; FYI: You can use MELPA recipes here (i.e. https://github.com/melpa/melpa#recipe-format).
    dotspacemacs-additional-packages '(;; elisp file manipulation library
@@ -128,6 +129,8 @@
                                       dockerfile-mode
                                       evil-extra-operator
 
+
+                                      (llvm-mode :location "~/projects/code/emacs/llvm-mode")
 
                                       cython-mode
                                       jupyter
@@ -351,6 +354,9 @@
   (require 'restart-emacs)
 
   (blink-cursor-mode)
+
+  (with-eval-after-load 'x86-lookup
+    (setq x86-lookup-pdf "~/projects/papers/references/325462-sdm-vol-1-2abcd-3abcd.pdf"))
 
   ;; powerline (and potentially other packages) use an old(?)
   ;; interface to `create-image' that allows `:scale t', but, now
@@ -666,6 +672,11 @@
             (defun btw/setup-sphinx-doc ()
               (sphinx-doc-mode t))
             (add-hook 'python-mode-hook #'btw/setup-sphinx-doc)))
+  (use-package llvm-mode
+    :defer t
+    :interpreter ("llvm" . llvm-mode)
+    ;; :mode (("\\.ll\\'" . llvm-mode))
+    )
 
   ;; This is also loaded by the `auto-complete' layer, but the directory
   ;; addition isn't present.
