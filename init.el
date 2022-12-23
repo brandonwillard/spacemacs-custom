@@ -148,6 +148,8 @@
                                       (python-btw :location "~/projects/code/emacs/python-btw")
 
                                       sphinx-doc
+                                      coterm
+
                                       yasnippet-snippets
                                       ;; Use a newer version of python.el.
                                       (python :location elpa :min-version "0.26.1"))
@@ -583,6 +585,10 @@
     :after (python)
     :config (progn
               (python-btw-mode +1)))
+
+  (use-package coterm
+    :after (python)
+    :config (progn (coterm-mode +1)))
 
   (use-package ox-sphinx
     :commands (org-sphinx-publish-to-rst)
