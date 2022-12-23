@@ -133,8 +133,9 @@
                                       cython-mode
                                       jupyter
 
-                                      (multi-vterm :location (recipe :fetcher github
-                                                                     :repo "suonlight/multi-vterm"))
+                                      multi-vterm
+                                      ;; (multi-vterm :location (recipe :fetcher github
+                                      ;;                                :repo "suonlight/multi-vterm"))
 
                                       (ob-racket :location (recipe :fetcher github
                                                                    :repo "wallyqs/ob-racket"))
@@ -477,7 +478,7 @@
 
   ;; (use-package helpful)
 
-  (use-package multi-vterm)
+  (use-package multi-vterm :ensure t)
 
   (use-package jupyter
     :defer t
