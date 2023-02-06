@@ -7,15 +7,20 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '((rust :packages (not flycheck-rust))
+   '(
+     ;; (rust :packages (not flycheck-rust))
+     ;; javascript
      ;; kubernetes
-     terraform
+     ;; coq
+     sphinx
+     ;; terraform
      eww
      gnus
+     ;; helpful
      ;; ocaml
      ;; elixir
      ;; javascript
-     clojure
+     ;; clojure
      ;; go
      csv
      restructuredtext
@@ -23,7 +28,9 @@
      (lsp :variables
           lsp-ui-doc-enable nil
           lsp-ui-sideline-enable nil
-          lsp-ui-remap-xref-keybindings t
+          ;; lsp-ui-remap-xref-keybindings t
+          lsp-headerline-breadcrumb-segments '(file symbols)
+          lsp-navigation 'simple
           ;; :packages (not flycheck-lsp)
           )
      html
@@ -32,7 +39,7 @@
             latex-build-command "Make")
      bibtex
      graphviz
-     ess
+     ;; ess
      ;; (ess :variables
      ;;      ess-disable-underscore-assign t
      ;;      :packages (not ess-R-object-popup))
@@ -67,6 +74,8 @@
                       auto-completion-tab-key-behavior nil
                       auto-completion-complete-with-key-sequence "C-y"
                       auto-completion-private-snippets-directory nil
+                      auto-completion-use-company-box t
+                      auto-completion-enable-sort-by-usage t
                       auto-completion-enable-snippets-in-popup t
                       auto-completion-enable-help-tooltip 'manual)
      emacs-lisp
@@ -134,6 +143,13 @@
 
                                       cython-mode
                                       jupyter
+                                      ;; importmagic
+                                      python-docstring
+
+                                      geiser-racket
+
+                                      code-review
+                                      ;; evil-textobj-tree-sitter
 
                                       multi-vterm
                                       ;; (multi-vterm :location (recipe :fetcher github
@@ -150,7 +166,6 @@
                                       (pyvenv-extras :location "~/projects/code/emacs/pyvenv-extras")
                                       (python-btw :location "~/projects/code/emacs/python-btw")
 
-                                      sphinx-doc
                                       coterm
 
                                       yasnippet-snippets
@@ -203,7 +218,7 @@
    dotspacemacs-helm-position 'bottom
    dotspacemacs-helm-use-fuzzy 'always
    dotspacemacs-enable-paste-transient-state nil
-   dotspacemacs-which-key-delay 0.4
+   dotspacemacs-which-key-delay 0.7
    dotspacemacs-which-key-position 'bottom
    dotspacemacs-loading-progress-bar t
    dotspacemacs-fullscreen-at-startup nil
@@ -248,6 +263,9 @@
   (setq read-symbol-positions-list nil)
   (setq read-with-symbol-position nil)
 
+  ;; A speed improvement over `hash-table'-usage?
+  ;; (setq lsp-use-plists nil)
+
   ;; Prevent this annoying command from making the Emacs frame disappear
   (put 'suspend-frame 'disabled t)
 
@@ -264,7 +282,7 @@
 
   (setq auto-save-timeout nil)
   (setq init-file-debug nil)
-  (setq debug-on-error t)
+  (setq debug-on-error nil)
   (setq debug-on-quit nil)
 
   ;; Helps with delays while handling very long lines.
@@ -282,6 +300,10 @@
     (defalias 'ert--print-backtrace 'backtrace-to-string))
 
   (setq auth-sources '("~/.authinfo.gpg" "~/.authinfo" "~/.netrc"))
+
+  ;; TODO: Set these for Python venv variables?
+  ;; (setq safe-local-variable-values ...)
+  ;; (setq safe-local-eval-forms ...)
 
   (setq custom-file (concat user-emacs-directory "private/custom-settings.el"))
 
@@ -350,7 +372,7 @@
 
 (defun dotspacemacs/user-config ()
 
-  ;; This fixes an issue introduced by the new built-in `restart-emacs' function
+  ;; TODO: Hack fix; This fixes an issue introduced by the new built-in `restart-emacs' function
   (require 'restart-emacs)
 
   (blink-cursor-mode)
@@ -371,11 +393,16 @@
   (advice-add #'create-image :around #'btw//create-image)
 
   ;; Make word motions include underscores
-  (add-hook 'prog-mode-hook #'(lambda () (modify-syntax-entry ?_ "w")))
+  (add-hook 'prog-mode-hook #'(lambda ()
+                                ;; (modify-syntax-entry ?_ "w")
+                                (superword-mode +1)))
 
   ;; Just a helper function for whatever.
   (defun hash-table-to-alist (hash-table)
     (json-read-from-string (json-encode hash-table)))
+
+  ;; TODO: Hack fix; consider fixing, and then removing, this.
+  (defvar string-edit-mode nil)
 
   ;; TODO: Hack fix; consider fixing, and then removing, this.
   (defun spacemacs/symbol-highlight-transient-state/body ())
@@ -395,6 +422,9 @@
   (setq comment-empty-lines t)
   (setq evil-move-beyond-eol t)
   (setq evil-search-wrap nil)
+  (setq-default evil-symbol-word-search t)
+  (setq-default evil-shift-round nil)
+
   (add-hook 'display-line-numbers-mode-hook
             (lambda ()
               (setq display-line-numbers-width 4)))
@@ -454,7 +484,7 @@
   (setq tab-always-indent t)
   (setq fill-indent-according-to-mode t)
 
-  (spacemacs/toggle-aggressive-indent-on)
+  ;; (spacemacs/toggle-aggressive-indent-on)
 
   (setq compilation-scroll-output #'first-error)
 
@@ -466,15 +496,54 @@
   (spacemacs/set-leader-keys "hds" 'describe-symbol)
   (unbind-key (kbd "nf") spacemacs-default-map)
 
-  (use-package cython-mode
-    :defer t
-    :interpreter ("cython" . cython-mode)
-    :mode (("\\.pyx\\'" . cython-mode)
-           ("\\.pxd\\'" . cython-mode)
-           ("\\.pxi\\'" . cython-mode))
+  ;; (require 'treesit)
+  (add-to-list 'treesit-extra-load-path (f-canonical "~/projects/code/rust/tree-sitter/modules/dist"))
+
+  ;; (with-eval-after-load 'tree-sitter
+  ;;   (global-tree-sitter-mode)
+  ;;   (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
+  ;;
+  ;; (use-package evil-textobj-tree-sitter
+  ;;   :disabled t
+  ;;   :ensure t
+  ;;   :config (progn
+  ;;             ;; bind `function.outer`(entire function block) to `f` for use in things like `vaf`, `yaf`
+  ;;             (define-key evil-outer-text-objects-map "f" (evil-textobj-tree-sitter-get-textobj "function.outer"))
+  ;;             ;; bind `function.inner`(function block without name and args) to `f` for use in things like `vif`, `yif`
+  ;;             (define-key evil-inner-text-objects-map "f" (evil-textobj-tree-sitter-get-textobj "function.inner"))
+  ;;
+  ;;             ;; You can also bind multiple items and we will match the first one we can find
+  ;;             (define-key evil-outer-text-objects-map "a" (evil-textobj-tree-sitter-get-textobj ("conditional.outer" "loop.outer")))))
+
+  (use-package code-review
+    :after (magit forge)
+    :init (with-eval-after-load 'evil-collection-magit
+            ;; From Doom Emacs
+            (dolist (binding evil-collection-magit-mode-map-bindings)
+              (pcase-let* ((`(,states _ ,evil-binding ,fn) binding))
+                (dolist (state states)
+                  (evil-collection-define-key state 'code-review-mode-map evil-binding fn))))
+            (evil-set-initial-state 'code-review-mode evil-default-state))
     :config (progn
-              (spacemacs/set-leader-keys-for-major-mode 'cython-mode
-                "cc" #'cython-compile)))
+              (evil-make-overriding-map code-review-mode-map evil-default-state)
+              (setq code-review-auth-login-marker 'forge)
+              (add-hook 'code-review-mode-hook
+                        (lambda ()
+                          ;; include *Code-Review* buffer into current workspace
+                          (persp-add-buffer (current-buffer))))
+              ;; From Doom Emacs
+              (defun magit/start-code-review (arg)
+                (interactive "P")
+                (call-interactively
+                 (if (or arg (not (featurep 'forge)))
+                     #'code-review-start
+                   #'code-review-forge-pr-at-point)))
+
+              (transient-append-suffix 'magit-merge "i"
+                '("y" "Review pull request" magit/start-code-review))
+              (with-eval-after-load 'forge
+                (transient-append-suffix 'forge-dispatch "c u"
+                  '("c r" "Review pull request" magit/start-code-review)))))
 
   (use-package debbugs :defer t)
 
@@ -482,7 +551,38 @@
     :defer t
     :config (setq tramp-remote-shell-executable "sh"))
 
-  ;; (use-package helpful)
+  (use-package helpful
+    :disabled t
+    :init (progn
+            ;; (defun btw//setup-helpful-mode ()
+            ;;   ;; Make `helpful-mode' hijack `help-mode''s history features
+            ;;   (setq-local revert-buffer-function #'help-mode-revert-buffer)
+            ;;   (help-make-xrefs (current-buffer)))
+            ;;
+            ;; (add-hook 'helpful-mode-hook #'btw//setup-helpful-mode)
+
+            ;; These aren't available yet.  See https://github.com/Wilfred/helpful/issues/250.
+            ;; (spacemacs/set-leader-keys-for-major-mode 'helpful-mode "]" #'help-go-forward)
+            ;; (spacemacs/set-leader-keys-for-major-mode 'helpful-mode "[" #'help-go-back))
+
+            (add-to-list 'editorconfig-exclude-modes 'helpful-mode)
+
+            (add-to-list 'purpose-x-popwin-major-modes 'helpful-mode)
+
+            (setq helpful-max-buffers 1)
+
+            (add-hook 'persp-common-buffer-filter-functions
+                      ;; there is also `persp-add-buffer-on-after-change-major-mode-filter-functions'
+                      #'(lambda (b) (or (string-prefix-p " " (buffer-name b))
+                                        (eq (buffer-local-value 'major-mode b) 'helpful-mode))))
+
+            ;; (defun btw//helpful-switch-to-buffer (buffer-or-name)
+            ;;   (if (eq major-mode 'helpful-mode)
+            ;;       (switch-to-buffer buffer-or-name)
+            ;;     (pop-to-buffer buffer-or-name)))
+
+            ;; (setq helpful-switch-buffer-function #'btw//helpful-switch-to-buffer)
+            ))
 
   (use-package multi-vterm :ensure t)
 
@@ -516,6 +616,8 @@
 
               (add-hook 'jupyter-repl-mode-hook #'spacemacs/disable-vi-tilde-fringe)
 
+              (setq jupyter-repl-echo-eval-p t)
+
               (when (fboundp 'purpose-set-extension-configuration)
                 ;; NOTE: To delete this configuration...
                 ;; (purpose-del-extension-configuration :jupyter)
@@ -525,6 +627,12 @@
                                           (jupyter-repl-interaction-mode . repl)))))
 
               (spacemacs|add-company-backends :backends company-capf :modes jupyter-repl-mode)))
+
+  (use-package ox-json
+    :defer t
+    :after (org)
+    :commands (ox-json-export-to-buffer ox-json-export-to-file)
+    :load-path "~/projects/code/emacs/ox-json")
 
   (use-package ox-ipynb
     :disabled t
@@ -663,20 +771,29 @@
   (use-package dockerfile-mode
     :mode ("Dockerfile\\'" . dockerfile-mode))
 
-  (use-package sphinx-doc
+  (use-package python-docstring
     :defer t
-    :commands (sphinx-doc sphinx-doc-mode)
+    :after (python)
     :init (progn
-            (spacemacs/set-leader-keys-for-major-mode 'python-mode
-              "rd" #'sphinx-doc)
-            (defun btw/setup-sphinx-doc ()
-              (sphinx-doc-mode t))
-            (add-hook 'python-mode-hook #'btw/setup-sphinx-doc)))
+            (defun btw/python-docstring-mode ()
+              (python-docstring-mode t))
+            (add-hook 'python-mode-hook #'btw/python-docstring-mode)))
+
   (use-package llvm-mode
     :defer t
     :interpreter ("llvm" . llvm-mode)
     ;; :mode (("\\.ll\\'" . llvm-mode))
     )
+
+  (use-package cython-mode
+    :defer t
+    :interpreter ("cython" . cython-mode)
+    :mode (("\\.pyx\\'" . cython-mode)
+           ("\\.pxd\\'" . cython-mode)
+           ("\\.pxi\\'" . cython-mode))
+    :config (progn
+              (spacemacs/set-leader-keys-for-major-mode 'cython-mode
+                "cc" #'cython-compile)))
 
   ;; This is also loaded by the `auto-complete' layer, but the directory
   ;; addition isn't present.
@@ -696,6 +813,18 @@
     (spacemacs|define-custom-layout "@Kubernetes"
       :binding "K"
       :body (progn (kubernetes-overview))))
+
+  (with-eval-after-load 'lsp-clangd
+    (setq lsp-clients-clangd-args '("--header-insertion-decorators=0" "-j=4" "-background-index" "-log=error")))
+
+  (with-eval-after-load 'smartparens
+
+    (defun btw//sp-indent-region (start end)
+      (interactive "r")
+      (sp--indent-region start end))
+
+    (spacemacs/set-leader-keys-for-major-mode 'emacs-lisp-mode "=r" #'btw//sp-indent-region)
+    (spacemacs/set-leader-keys-for-major-mode 'emacs-lisp-mode "=d" #'sp-indent-defun))
 
   (with-eval-after-load 'auto-highlight-symbol
     (define-key evil-motion-state-map (kbd "*") 'evil-search-word-forward)
@@ -765,6 +894,8 @@
 
     (define-key vterm-mode-map [return] #'vterm-send-return)
 
+    (keymap-unset vterm-mode-map "M-:")
+
     (evil-define-key 'insert vterm-mode-map
       (kbd "C-e") #'vterm--self-insert
       (kbd "C-z") #'vterm--self-insert
@@ -783,7 +914,7 @@
       (kbd "C-r") #'vterm--self-insert
       (kbd "C-t") #'vterm--self-insert
       (kbd "C-g") #'vterm--self-insert
-      (kbd "C-c") #'vterm--self-insert
+      ;; (kbd "C-c") #'vterm--self-insert
       (kbd "C-SPC") #'vterm--self-insert
       (kbd "<delete>") #'vterm-send-delete)
 
@@ -902,7 +1033,7 @@
             (yas-insert-snippet))
         (funcall oldfun beg end type char force-new-line)))
 
-    (advice-add 'evil-embrace-evil-surround-region :around 'evil-yasnippet-surround-region))
+    (advice-add #'evil-embrace-evil-surround-region :around #'evil-yasnippet-surround-region))
 
   (with-eval-after-load 'evil-search
     (defun btw-evil-ex-hl-match-hook (oldfun hl)
@@ -944,17 +1075,17 @@
 
     ;; TODO: Hack fix for https://github.com/magit/magit/issues/4739; consider
     ;; fixing, and then removing, this.
-    (add-hook 'magit-section-mode-hook (defun btw//disable-truncate-lines ()
-                                         (setq-local truncate-lines nil)))
+    ;; (add-hook 'magit-section-mode-hook (defun btw//disable-truncate-lines ()
+    ;;                                      (setq-local truncate-lines nil)))
 
     (put 'git-rebase-move-line-down :advertised-binding (kbd "C-j"))
     (put 'git-rebase-move-line-up :advertised-binding (kbd "C-k"))
 
-    (setq magit-branch-prefer-remote-upstream '("upstream/master" "origin/master"))
+    (setq magit-branch-prefer-remote-upstream '("upstream/main" "origin/main"))
     (setq magit-repository-directories '(("~/" . 1)
                                          ("~/projects/code" . 3)
                                          ("~/projects/papers" . 3)
-                                         ("~/projects/citybase" . 3))))
+                                         ("~/apps/qtile" . 0))))
 
   (with-eval-after-load 'magithub-dash
     (setq magithub-dashboard-show-read-notifications nil))
@@ -997,6 +1128,11 @@
 
   (with-eval-after-load 'python
 
+    ;; Prevent slow shell/session starts
+    (advice-add #'spacemacs//python-setup-shell :override (lambda (&rest r) nil))
+
+    (setq python-shell-interpreter "ipython"
+          python-shell-interpreter-args "-i --simple-prompt")
     (setq python-shell-completion-native-output-timeout 3.0)
     (setq python-pdbtrack-activate nil)
 
@@ -1030,7 +1166,7 @@
                              ;; '(("^test-.*\\.py$" . test))
                              )))
     (setq-default python-eldoc-get-doc nil)
-    (setq pytest-cmd-flags "-r A --verbose"))
+    (setq pytest-cmd-flags "-r A --verbose --tb=short -x -s --pdbcls=IPython.terminal.debugger:Pdb"))
 
   (with-eval-after-load 'hy-mode
     (spacemacs|use-package-add-hook evil-cleverparens
@@ -1080,6 +1216,10 @@
           org-ref-prefer-bracket-links t))
 
   (with-eval-after-load 'lsp-mode
+    ;; XXX: A temporary work-around for a (likely) local issue
+    (defun lsp-keyword->string (keyword)
+      "Convert a KEYWORD to string."
+      (substring (symbol-name keyword) 1))
 
     ;; Temporary fix (until a PR takes care of this)
     ;; (spacemacs/set-leader-keys-for-minor-mode 'lsp-mode
@@ -1123,6 +1263,7 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
              (defun ,intern-pre (info)
                ;; This is needed to prevent issues with `lsp-breadcrumb' in `org-src-mode'
                ;; buffers
+               (lsp-headerline-breadcrumb-mode -1)
                (setq-local header-line-format nil)
 
                (let ((file-name (->> info caddr (alist-get :file))))
@@ -1152,8 +1293,8 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
           lsp-pyright-typechecking-mode "off")
 
     (defun btw//lsp-pyright-locate-venv (oldfun &rest r)
-      (if (fboundp 'spacemacs//run-in-pyvenv)
-          (spacemacs//run-in-pyvenv
+      (if (fboundp 'pyvenv-extras//run-in-pyvenv)
+          (pyvenv-extras//run-in-pyvenv
            (if python-shell-virtualenv-root
                (setq-local lsp-pyright-venv-path python-shell-virtualenv-root)
              (progn
@@ -1196,8 +1337,8 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
     (defun btw/lsp-pylsp-library-folders-fn (_workspace)
       "Find workspaces based on virtualenvs.  Function which returns the
  folders that are considered to be not projects but library files.  "
-      (if (fboundp 'spacemacs//run-in-pyvenv)
-          (spacemacs//run-in-pyvenv
+      (if (fboundp 'pyvenv-extras//run-in-pyvenv)
+          (pyvenv-extras//run-in-pyvenv
            (if python-shell-virtualenv-root
                (list python-shell-virtualenv-root)
              ;; TODO: Could just make this variable buffer-local.
@@ -1271,13 +1412,14 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
 
     (add-hook 'org-mode-hook #'btw//org-pcompletions-hook)
 
-    (spacemacs|add-company-backends :backends company-yasnippet
-                                    :append-hook t
-                                    :modes org-mode)
+    ;; (spacemacs|add-company-backends :backends company-yasnippet
+    ;;                                 :append-hook t
+    ;;                                 :modes org-mode)
 
     (defvaralias 'org-plantuml-jar-path 'plantuml-jar-path)
     ;; (setq org-plantuml-jar-path plantuml-jar-path)
 
+    ;; (add-to-list 'org-babel-load-languages '(llvm . t))
     (add-to-list 'org-babel-load-languages '(plantuml . t))
     (add-to-list 'org-babel-load-languages '(dot . t))
     (add-to-list 'org-babel-load-languages '(scheme . t))
@@ -1311,7 +1453,7 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
           '(("t" "Tasks" entry
              (file+headline org-default-notes-file "Tasks"))))
 
-    (setq org-highlight-latex-and-related '(native))
+    (setq org-highlight-latex-and-related nil) ;'(native))
 
     ;; Most often, we'll use inline src statements (e.g. src_python{...}) to
     ;; simply display formatted text.
@@ -1330,6 +1472,9 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
     (setq org-latex-pdf-process #'spacemacs//org-latex-pdf-process)
 
     (setq org-indirect-buffer-display 'current-window)
+
+    (setq org-startup-folded 'fold
+          org-hide-block-startup 'hideblocks)
 
     ;; What to allow before and after markup
     ;; See https://emacs.stackexchange.com/a/13828
@@ -1356,6 +1501,7 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
 
   (with-eval-after-load 'counsel-projectile
     ;; This command allows one to easily set arbitrary `ag' options with `C-u'
+    (setq counsel-ag-base-command '("ag" "--vimgrep" "--hidden" "--ignore" ".git/" "--ignore" "*.svg" "--ignore" "*.js" "%s"))
     (spacemacs/set-leader-keys "sp" 'counsel-projectile-ag))
 
   (with-eval-after-load 'projectile
@@ -1456,6 +1602,7 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
     ;; (setq hs-set-up-overlay #'btw//hs-show-on-jump-overlay)
 
     (setq hs-allow-nesting t)
+    (setq hs-hide-comments-when-hiding-all nil)
 
     ;; Let's not lose the cursor position when folding.
     (defun btw//apply-in-save-mark-excursion (oldfun &rest r)
@@ -1561,10 +1708,6 @@ This fixes some `helm' issues."
 
     (advice-add #'persp-restrict-ido-buffers :after #'btw/persp-restrict-ido-buffers)
 
-    ;; (add-hook 'persp-common-buffer-filter-functions
-    ;;           ;; there is also `persp-add-buffer-on-after-change-major-mode-filter-functions'
-    ;;           #'(lambda (b) (string-prefix-p "*" (buffer-name b))))
-
     ;; Restore eshell buffers.
     ;; See https://gist.github.com/Bad-ptr/1aca1ec54c3bdb2ee80996eb2b68ad2d#file-persp-inferior-python-save-load-el
     ;; for more examples (e.g. Python inferior shells).
@@ -1628,8 +1771,8 @@ This fixes some `helm' issues."
     "
       (with-silent-modifications
         (-when-let* ((start-marker comint-last-output-start)
-                    (proc (get-buffer-process (current-buffer)))
-                    (end-marker (if proc (process-mark proc) (point-max-marker))))
+                     (proc (get-buffer-process (current-buffer)))
+                     (end-marker (if proc (process-mark proc) (point-max-marker))))
           (when (< start-marker end-marker) ;; Account for some of the IELM’s wilderness.
             (let ((inhibit-read-only t))
               ;; Disallow interleaving
@@ -1642,11 +1785,22 @@ This fixes some `helm' issues."
                 (remove-text-properties (1- start-marker) start-marker '(rear-nonsticky))
                 (add-text-properties    (1- start-marker) start-marker '(read-only t))))))))
 
-    (add-hook 'comint-output-filter-functions
-              #'btw/comint-preoutput-turn-buffer-read-only
-              'append)
+    ;; (add-hook 'comint-output-filter-functions
+    ;;           #'btw/comint-preoutput-turn-buffer-read-only
+    ;;           'append)
+    ;; (advice-add #'comint-output-filter :after #'btw//comint-output-filter)
 
-    (advice-add #'comint-output-filter :after #'btw//comint-output-filter))
+    ;; Workaround for read-only issues
+    ;; TODO: Remove when this is fixed upstream.
+    ;; (defun btw//python-shell-font-lock-post-command-hook (fn &rest args)
+    ;;   (with-silent-modifications
+    ;;     (let ((inhibit-read-only t))
+    ;;       (apply fn args)))
+    ;;   )
+
+    ;; (advice-add #'python-shell-font-lock-post-command-hook :around #'btw//python-shell-font-lock-post-command-hook)
+    ;; (advice-remove #'python-shell-font-lock-post-command-hook #'btw//python-shell-font-lock-post-command-hook)
+    )
 
   (with-eval-after-load 'evil
     ;; Fix for https://github.com/Somelauw/evil-org-mode/issues/93
@@ -1751,7 +1905,7 @@ This fixes some `helm' issues."
 
   (with-eval-after-load 'company
     (setq company-dabbrev-other-buffers nil)
-    (setq company-search-filtering t)
+    (setq-local company-search-filtering t)
     (setq company-idle-delay nil)
     ;; (setq company-backends-emacs-lisp-mode
     ;;       (cons '(company-elisp :with company-yasnippet)
@@ -1761,6 +1915,8 @@ This fixes some `helm' issues."
                                     :modes emacs-lisp-mode)
     (define-key company-active-map (kbd "C-w") 'evil-delete-backward-word)
     (define-key company-active-map (kbd "C-y") 'company-complete-selection)
+    ;; This doesn't work.  See https://github.com/syl20bnr/spacemacs/issues/4242
+    ;; (define-key company-active-map (kbd "ESC") 'company-abort)
     (define-key evil-insert-state-map (kbd "C-n") #'company-select-next)
     (define-key evil-insert-state-map (kbd "C-p") #'company-select-previous))
 
@@ -1793,6 +1949,9 @@ This fixes some `helm' issues."
 
   (with-eval-after-load 'evil-jumps
     (setq evil-jumps-cross-buffers nil))
+
+  (with-eval-after-load 'clang-format
+    (setq clang-format-style "Google"))
 
   (with-eval-after-load 'c++-mode
     (defun btw/clang-format-bindings ()
@@ -1906,6 +2065,7 @@ From https://emacs.stackexchange.com/a/10698"
   (with-eval-after-load 'sql
     (setq sqlfmt-options '())
     (setq sql-send-terminator t)
+    (setq sql-connection-alist '())
 
     (defvar sql-last-prompt-pos 1
       "position of last prompt when added recording started")
@@ -1972,6 +2132,24 @@ Optional argument FLAGS py.test command line flags."
         (funcall orig-fn command)))
 
     (advice-add #'pytest-start-command :around #'btw//pytest-start-command))
+
+  (with-eval-after-load 'ob-shell
+    ;; TODO FIXME: Prompts are not handled well and it has to do with the prompt
+    ;; regex used by `shell-mode'.
+    ;; (defun btw//org-babel-sh-initiate-session (old-fn session _params)
+    ;;   (let ((shell-prompt-pattern "$ "))
+    ;;     (funcall old-fn session _params)))
+    ;;
+    ;; (advice-add #'org-babel-sh-initiate-session :around #'btw//org-babel-sh-initiate-session)
+    )
+
+  (with-eval-after-load 'forge-db
+    (setq-default forge-topic-list-limit '(40 . 0))
+    ;; This is a workaround for some code that keeps overwriting
+    ;; with a value containing tildes that aren't supported by
+    ;; `call-process'
+    (when (boundp 'forge-database-file)
+      (setq forge-database-file (f-expand forge-database-file))))
 
   (spacemacs|define-custom-layout "@Spacemacs"
     :binding "e"
