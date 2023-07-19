@@ -1913,6 +1913,9 @@ This fixes some `helm' issues."
     )
 
   (with-eval-after-load 'company
+    ;; Disable inline previews
+    (delq 'company-preview-if-just-one-frontend company-frontends)
+
     (setq company-dabbrev-other-buffers nil)
     (setq-local company-search-filtering t)
     (setq company-idle-delay nil)
