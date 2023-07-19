@@ -35,6 +35,8 @@
 
       ;; Create a function that can wrap the process-name function and
       ;; prepend a session (if present).
+      (setq org-babel-python-buffers nil)
+
       (spacemacs//session-and-process-name org-babel-python-buffers nil)
       (advice-add 'python-shell-get-process-name :around
                   #'spacemacs//org-babel-python-buffers-process-name)

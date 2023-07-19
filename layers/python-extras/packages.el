@@ -47,7 +47,7 @@
 
 (defun python-extras/init-evil-text-object-python ()
   (use-package evil-text-object-python
-    :init (add-hook 'python-mode-hook #'evil-text-object-python-add-bindings)))
+    :init (add-hook 'python-base-mode-hook #'evil-text-object-python-add-bindings)))
 
 (defun python-extras/post-init-editorconfig ()
 
@@ -116,7 +116,7 @@ See `company-transformers'."
                  t))
 
   (spacemacs/add-to-hooks 'python-extras/python-company-conf
-                          '(python-mode-hook inferior-python-mode-hook))
+                          '(python-base-mode-hook inferior-python-mode-hook))
 
   ;; Disable company idle/automatic completion.
   (advice-add #'spacemacs//init-company-vars-inferior-python-mode

@@ -498,6 +498,7 @@
 
   ;; (require 'treesit)
   (add-to-list 'treesit-extra-load-path (f-canonical "~/projects/code/rust/tree-sitter/modules/dist"))
+  ;; (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode))
 
   ;; (with-eval-after-load 'tree-sitter
   ;;   (global-tree-sitter-mode)
@@ -777,7 +778,7 @@
     :init (progn
             (defun btw/python-docstring-mode ()
               (python-docstring-mode t))
-            (add-hook 'python-mode-hook #'btw/python-docstring-mode)))
+            (add-hook 'python-base-mode-hook #'btw/python-docstring-mode)))
 
   (use-package llvm-mode
     :defer t
@@ -1112,7 +1113,7 @@
       (add-to-list 'flycheck-disabled-checkers 'python-mypy)
       (add-to-list 'flycheck-disabled-checkers 'python-pycompile))
 
-    (add-hook 'python-mode-hook #'btw//disable-python-flycheckers)
+    (add-hook 'python-base-mode-hook #'btw//disable-python-flycheckers)
 
 
     ;; This is a little aggressive...
@@ -1128,8 +1129,13 @@
 
   (with-eval-after-load 'python
 
-    ;; Prevent slow shell/session starts
+    ;; TODO: Prevent use of tree-sitter until some things are worked out
+    (defalias 'python-ts-mode 'python-mode)
+
+    ;; TODO: Prevent slow shell/session starts
     (advice-add #'spacemacs//python-setup-shell :override (lambda (&rest r) nil))
+    ;; TODO: Prevent `flycheck' failures during shell initialization
+    (advice-add #'spacemacs/python-setup-everything :override (lambda (&rest r) nil))
 
     (setq python-shell-interpreter "ipython"
           python-shell-interpreter-args "-i --simple-prompt")
@@ -1160,7 +1166,7 @@
       ;; (purpose-del-extension-configuration :python)
       (purpose-set-extension-configuration
        :python (purpose-conf :mode-purposes
-                             '((python-mode . python)
+                             '((python-base-mode . python)
                                (inferior-python-mode . repl))
                              ;; :regexp-purposes
                              ;; '(("^test-.*\\.py$" . test))
@@ -1248,13 +1254,13 @@
     (setq lsp-eldoc-hook                ;'(lsp-document-highlight)
           nil)
     (setq lsp-eldoc-render-all nil)
+    (setq lsp-disabled-clients '(pyright))
 
     (with-eval-after-load 'org
       (cl-defmacro lsp-org-babel-enable (lang)
         "Support LANG in org source code block.
 
 Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
-        (setq centaur-lsp 'lsp-mode)
         (cl-check-type lang stringp)
         (let* ((edit-pre (intern (format "org-babel-edit-prep:%s" lang)))
                (intern-pre (intern (format "lsp--%s" (symbol-name edit-pre)))))
@@ -1345,17 +1351,11 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
              lsp-clients-pylsp-library-directories))
         lsp-clients-pylsp-library-directories))
 
-    (let ((client
-           (make-lsp-client :new-connection (lsp-stdio-connection
-                                             (lambda () lsp-pylsp-server-command))
-                            :priority -1
-                            :major-modes '(python-mode cython-mode)
-                            :server-id 'pylsp
-                            :initialized-fn (lambda (workspace)
-                                              (with-lsp-workspace workspace
-                                                (lsp--set-configuration (lsp-configuration-section "pylsp"))))
-                            :library-folders-fn #'btw/lsp-pylsp-library-folders-fn)))
-      (puthash (lsp--client-server-id client) client lsp-clients)))
+    ;; Update the existing client object.
+    ;; (declare-function lsp--client-library-folders-fn "ext:lsp-mode" nil t)
+    ;; (let ((client (gethash 'pylsp lsp-clients)))
+    ;;   (setf (lsp--client-library-folders-fn client) #'btw/lsp-pylsp-library-folders-fn))
+    )
 
   (with-eval-after-load 'lsp-ui
     (setq lsp-ui-peek-enable nil)
