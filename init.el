@@ -1369,6 +1369,11 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
     (setq lsp-ui-sideline-enable nil))
 
   (with-eval-after-load 'org
+
+    ;; Remove this "functionality" that Spacemacs adds.  I really need to
+    ;; switch to Doom.
+    (advice-remove #'org-export-output-file-name #'spacemacs//org-export-output-project-file-name)
+
     ;; TODO: Consider this...
     ;; (org-babel-make-language-alias "python" "jupyter-python")
 
