@@ -815,6 +815,10 @@
       :binding "K"
       :body (progn (kubernetes-overview))))
 
+  (with-eval-after-load 'undo-tree
+    ;; Disabling for now, because it takes seconds to save a file.
+    (setq undo-tree-auto-save-history nil))
+
   (with-eval-after-load 'lsp-clangd
     (setq lsp-clients-clangd-args '("--header-insertion-decorators=0" "-j=4" "-background-index" "-log=error")))
 
