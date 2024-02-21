@@ -1843,44 +1843,52 @@ This fixes some `helm' issues."
 
     (jumps-scroll-to-top-mode +1)
 
-    (defun btw//evil-open-on-movement (fn &rest r)
-      "Expand collapsed blocks after FN moves the point."
-      (let ((start-point (point)))
-        (prog1
-            (apply fn r)
-          (unless (eq start-point (point))
-            (save-mark-and-excursion
-              (ignore-errors
-                (evil-open-fold-rec)))))))
+    (when nil
+      ;; All this should be obviated by `reveal-mode'
 
-    (define-minor-mode jumps-open-folds-mode
-      "Toggle jumps-open-folds-mode mode."
-      :require 'evil
-      :init-value nil
-      :global t
-      (if jumps-open-folds-mode
+      (defun btw//evil-open-on-movement (fn &rest r)
+        "Expand collapsed blocks after FN moves the point."
+        (let ((start-point (point)))
+          (prog1
+              (apply fn r)
+            (unless (eq start-point (point))
+              (save-mark-and-excursion
+                (ignore-errors
+                  (evil-open-fold-rec)))))))
+
+      (define-minor-mode jumps-open-folds-mode
+        "Toggle jumps-open-folds-mode mode."
+        :require 'evil
+        :init-value nil
+        :global t
+        (if jumps-open-folds-mode
+            (progn
+              ;; XXX: These are too aggressive.
+              ;; (advice-add #'goto-line :after #'btw//evil-open-on-movement)
+              ;; (advice-add #'goto-char :after #'btw//evil-open-on-movement)
+              ;; (advice-add #'forward-line :after #'btw//evil-open-on-movement)
+              ;; (advice-add #'forward-char :after #'btw//evil-open-on-movement)
+
+              (advice-add #'evil-goto-line :around #'btw//evil-open-on-movement)
+              (advice-add #'spacemacs/jump-to-definition :around #'btw//evil-open-on-movement)
+              (advice-add #'primitive-undo :around #'btw//evil-open-on-movement)
+              (advice-add #'helm-ag--find-file-action :around #'btw//evil-open-on-movement)
+              (add-hook 'xref-after-jump-hook #'evil-open-fold-rec)
+              (add-hook 'evil-jumps-post-jump-hook #'evil-open-fold-rec))
           (progn
-            ;; XXX: These are too aggressive.
-            ;; (advice-add #'goto-line :after #'btw//evil-open-on-movement)
-            ;; (advice-add #'goto-char :after #'btw//evil-open-on-movement)
-            ;; (advice-add #'forward-line :after #'btw//evil-open-on-movement)
-            ;; (advice-add #'forward-char :after #'btw//evil-open-on-movement)
+            (advice-remove #'evil-goto-line #'btw//evil-open-on-movement)
+            (advice-remove #'spacemacs/jump-to-definition #'btw//evil-open-on-movement)
+            (advice-remove #'primitive-undo #'btw//evil-open-on-movement)
+            (advice-remove #'helm-ag--find-file-action #'btw//evil-open-on-movement)
+            (remove-hook 'xref-after-jump-hook #'evil-open-fold-rec)
+            (remove-hook 'evil-jumps-post-jump-hook #'evil-open-fold-rec))))
 
-            (advice-add #'evil-goto-line :around #'btw//evil-open-on-movement)
-            (advice-add #'spacemacs/jump-to-definition :around #'btw//evil-open-on-movement)
-            (advice-add #'primitive-undo :around #'btw//evil-open-on-movement)
-            (advice-add #'helm-ag--find-file-action :around #'btw//evil-open-on-movement)
-            (add-hook 'xref-after-jump-hook #'evil-open-fold-rec)
-            (add-hook 'evil-jumps-post-jump-hook #'evil-open-fold-rec))
-        (progn
-          (advice-remove #'evil-goto-line #'btw//evil-open-on-movement)
-          (advice-remove #'spacemacs/jump-to-definition #'btw//evil-open-on-movement)
-          (advice-remove #'primitive-undo #'btw//evil-open-on-movement)
-          (advice-remove #'helm-ag--find-file-action #'btw//evil-open-on-movement)
-          (remove-hook 'xref-after-jump-hook #'evil-open-fold-rec)
-          (remove-hook 'evil-jumps-post-jump-hook #'evil-open-fold-rec))))
+      (jumps-open-folds-mode +1))
 
-    (jumps-open-folds-mode +1)
+    (defun btw//enable-reveal-mode ()
+      (reveal-mode +1))
+
+    (add-hook 'prog-mode-hook #'btw//enable-reveal-mode)
 
     (setq-default evil-want-visual-char-semi-exclusive t)
     (setq-default evil-move-curser-back nil)
