@@ -2225,8 +2225,12 @@ Optional argument FLAGS py.test command line flags."
     ;; (advice-add #'org-babel-sh-initiate-session :around #'btw//org-babel-sh-initiate-session)
     )
 
-  (with-eval-after-load 'forge-db
+  (with-eval-after-load 'forge-topics
     (setq-default forge-topic-list-limit '(40 . 0))
+    (setq forge-status-buffer-default-topic-filters
+          (forge--topics-spec :type 'topic :active nil :state 'open :order 'newest)))
+
+  (with-eval-after-load 'forge-db
     ;; This is a workaround for some code that keeps overwriting
     ;; with a value containing tildes that aren't supported by
     ;; `call-process'
