@@ -4,6 +4,19 @@
 #+STARTUP: hideblocks indent hidestars
 
 * Tasks
+** TODO Make completions work in ~pytest.el~ ~ipdb~ buffers
+
+Looks like we need to set up ~python-shell--prompt-calculated-input-regexp~
+~python-shell--prompt-calculated-output-regexp~ like
+~python-shell-prompt-set-calculated-regexps~ does (e.g. using
+~python-shell-prompt-pdb-regexp~ and ~""~ , respectively).
+I guess we also need ~python-shell-prompt-block-regexp~ for ~python-shell--block-prompt~.
+
+Overriding ~python-shell-prompt-detect~ so that it returns the triple
+~(list python-shell-prompt-pdb-regexp python-shell-prompt-block-regexp "")~ might do the trick.
+
+Actually, see the old ~pytest~ issue below.
+
 ** TODO Try Treesitter
 [[https://blog.markhepburn.com/posts/experimenting-with-the-built-in-treesitter-support-in-emacs/][Blog post]]
 
@@ -1149,6 +1162,25 @@ Defers to standard `conda--find-env-yml' otherwise."
 (advice-add 'message :before 'btw/ad-timestamp-message)
 #+END_SRC
 * Utils
+** Get build settings
+#+BEGIN_SRC bash :eval none
+emacs -nw -q --batch --eval '(message system-configuration-options)'
+#+END_SRC
+** Update/clear compiled code
+
+#+BEGIN_SRC bash :eval none
+find ~/.emacs.d/ -name "*.elc" -type f -delete
+# FYI: The `-q` option avoids loading the init file
+# Maybe add a load path: e.g. `-L ~/.emacs.d/elpa/`
+emacs -q --batch -f batch-byte-compile ~/.emacs.d/elpa/
+#+END_SRC
+
+See https://emacs.stackexchange.com/a/186/19170
+
+#+BEGIN_SRC elisp :eval none
+(auto-compile-on-load-mode +1)
+(setq load-prefer-newer t)
+#+END_SRC
 
 ** Remove all advice
 #+BEGIN_SRC elisp :eval none

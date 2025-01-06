@@ -7,14 +7,15 @@
    dotspacemacs-ask-for-lazy-installation t
    dotspacemacs-configuration-layer-path '("~/.spacemacs.d/layers/")
    dotspacemacs-configuration-layers
-   '(
+   '(javascript
+     rust
      ;; (rust :packages (not flycheck-rust))
      ;; javascript
      ;; kubernetes
-     ;; coq
+     coq
      sphinx
      ;; terraform
-     eww
+     ;; eww
      gnus
      ;; helpful
      ;; ocaml
@@ -33,6 +34,12 @@
           lsp-navigation 'simple
           ;; :packages (not flycheck-lsp)
           )
+
+     (spacemacs-evil :variables
+                     spacemacs-evil-collection-allowed-list
+                     '((buff-menu "buff-menu") forge magit vterm eww dired quickrun ediff info
+                                        ; company debug edebug debbugs
+                       ))
      html
      markdown
      (latex :variables
@@ -67,7 +74,7 @@
      (ivy :variables ivy-enable-advanced-buffer-information t)
      (auto-completion :variables
                       ;; auto-completion-enable-sort-by-usage t
-                      spacemacs-default-company-backends '(company-files company-capf company-yasnippet)
+                      spacemacs-default-company-backends '((:separate company-capf company-yasnippet company-files))
                       ;; ((company-semantic company-dabbrev-code company-gtags company-etags company-keywords) company-files company-dabbrev)
                       auto-completion-return-key-behavior nil
                       auto-completion-idle-delay nil
@@ -86,6 +93,8 @@
      pdf
      (org :variables
           org-enable-org-journal-support t
+          org-journal-dir "~/Documents/journal"
+          org-journal-file-format "%Y%m%d.org"
           org-enable-github-support t
           org-projectile-file "TODOs.org")
      org-extras
@@ -120,6 +129,7 @@
                                       f
                                       ;; elisp string manipulation library
                                       s
+                                      string-inflection
                                       ;; elisp list manipulation library
                                       dash
                                       dash-functional
@@ -148,7 +158,9 @@
 
                                       geiser-racket
 
-                                      code-review
+                                      ;; TODO: Broken; see https://github.com/doomemacs/doomemacs/issues/7191
+                                      ;; code-review
+
                                       ;; evil-textobj-tree-sitter
 
                                       multi-vterm
@@ -166,11 +178,21 @@
                                       (pyvenv-extras :location "~/projects/code/emacs/pyvenv-extras")
                                       (python-btw :location "~/projects/code/emacs/python-btw")
 
-                                      coterm
+                                      ;; coterm
+
+                                      ;; TODO: This is a temporary fix for a
+                                      ;; `forge' dependency; remove me.
+                                      sqlite3
+
+                                      ;; (copilot :location (recipe
+                                      ;;                     :fetcher github
+                                      ;;                     :repo "zerolfx/copilot.el"
+                                      ;;                     :files ("*.el" "dist")))
 
                                       yasnippet-snippets
                                       ;; Use a newer version of python.el.
                                       (python :location elpa :min-version "0.26.1"))
+   dotspacemacs-undo-system 'undo-tree
    dotspacemacs-frozen-packages '()
    dotspacemacs-excluded-packages '(hl-todo company-emoji emoji-cheat-sheet-plus emojify)
    dotspacemacs-install-packages 'used-only))
@@ -287,6 +309,8 @@
 
   ;; Helps with delays while handling very long lines.
   (setq-default bidi-display-reordering nil)
+  (setq-default bidi-paragraph-direction 'left-to-right)
+  (setq-default bidi-inhibit-bpa t)
   (setq debugger-stack-frame-as-list t)
   (setq edebug-print-circle t)
   (setq edebug-print-level 20)
@@ -346,7 +370,7 @@
     (and (not (getenv "ANACONDA_HOME"))
          (display-warning 'conda-home "Couldn't find anaconda home directory!")))
 
-  (add-to-list 'exec-path (expand-file-name (concat user-home-directory
+  (add-to-list 'exec-path (expand-file-name (concat (expand-file-name "~")
                                                     ".cask" "/" "bin")))
 
   ;; Hack for `exec-path' not being used by `shell-command-to-string'.
@@ -516,7 +540,13 @@
   ;;             ;; You can also bind multiple items and we will match the first one we can find
   ;;             (define-key evil-outer-text-objects-map "a" (evil-textobj-tree-sitter-get-textobj ("conditional.outer" "loop.outer")))))
 
+  ;; (with-eval-after-load 'copilot
+  ;;   (add-hook 'prog-mode-hook 'copilot-mode)
+  ;;   (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
+  ;;   (define-key evil-insert-state-map (kbd "C-y") 'copilot-accept-completion-by-word))
+
   (use-package code-review
+    :disabled t
     :after (magit forge)
     :init (with-eval-after-load 'evil-collection-magit
             ;; From Doom Emacs
@@ -566,7 +596,8 @@
             ;; (spacemacs/set-leader-keys-for-major-mode 'helpful-mode "]" #'help-go-forward)
             ;; (spacemacs/set-leader-keys-for-major-mode 'helpful-mode "[" #'help-go-back))
 
-            (add-to-list 'editorconfig-exclude-modes 'helpful-mode)
+            ;; (with-eval-after-load 'editorconfig
+            ;;   (add-to-list 'editorconfig-exclude-modes 'helpful-mode))
 
             (add-to-list 'purpose-x-popwin-major-modes 'helpful-mode)
 
@@ -584,6 +615,9 @@
 
             ;; (setq helpful-switch-buffer-function #'btw//helpful-switch-to-buffer)
             ))
+
+  ;; TODO: This is a temporary fix for a `forge' dependency; remove me.
+  (use-package sqlite3 :ensure t)
 
   (use-package multi-vterm :ensure t)
 
@@ -627,7 +661,8 @@
                                         '((jupyter-repl-mode . repl)
                                           (jupyter-repl-interaction-mode . repl)))))
 
-              (spacemacs|add-company-backends :backends company-capf :modes jupyter-repl-mode)))
+              ;; (spacemacs|add-company-backends :backends company-capf :modes jupyter-repl-mode)
+              ))
 
   (use-package ox-json
     :defer t
@@ -701,9 +736,10 @@
     :config (progn
               (python-btw-mode +1)))
 
-  (use-package coterm
-    :after (python)
-    :config (progn (coterm-mode +1)))
+  ;; Disabled because it's adding superfluous spacing to Python output
+  ;; (use-package coterm
+  ;;   :after (python)
+  ;;   :config (progn (coterm-mode +1)))
 
   (use-package ox-sphinx
     :commands (org-sphinx-publish-to-rst)
@@ -815,6 +851,22 @@
       :binding "K"
       :body (progn (kubernetes-overview))))
 
+  (with-eval-after-load 'lsp-rust
+    ;; (setq lsp-rust-analyzer-library-directories ...)
+    ;; (setq lsp-rust-analyzer-call-info-full nil)
+    ;; We need this; otherwise, we'll ignore files and get "file not included in
+    ;; crate" warnings when something is an optional feature
+    (setq lsp-rust-all-features t))
+
+  (with-eval-after-load 'rustic-cargo
+    ;; Allows output from Rust tests in compilation buffers
+    (add-hook 'rustic-cargo-test-mode-hook (lambda () (setenv "RUST_TEST_NOCAPTURE" "1")))
+    ;; (add-hook 'rustic-mode-hook
+    ;;              (lambda ()
+    ;;                (setq lsp-inlay-hint-enable t)
+    ;;                (lsp-inlay-hints-mode t)))
+    )
+
   (with-eval-after-load 'undo-tree
     ;; Disabling for now, because it takes seconds to save a file.
     (setq undo-tree-auto-save-history nil))
@@ -841,6 +893,7 @@
     (setq kubernetes-clean-up-interactive-exec-buffers nil))
 
   (with-eval-after-load 'vterm
+    (setq vterm-shell "/bin/zsh")
     ;; (add-hook 'vterm-mode-hook
     ;;           (lambda ()
     ;;             (setq-local evil-insert-state-cursor 'box)
@@ -919,7 +972,7 @@
       (kbd "C-r") #'vterm--self-insert
       (kbd "C-t") #'vterm--self-insert
       (kbd "C-g") #'vterm--self-insert
-      ;; (kbd "C-c") #'vterm--self-insert
+      (kbd "C-c") #'vterm--self-insert
       (kbd "C-SPC") #'vterm--self-insert
       (kbd "<delete>") #'vterm-send-delete)
 
@@ -1098,10 +1151,10 @@
   (with-eval-after-load 'git-link
     (setq git-link-default-remote "origin"))
 
-  (with-eval-after-load 'editorconfig
-    (add-to-list 'editorconfig-exclude-modes 'help-mode)
-    (add-to-list 'editorconfig-exclude-modes 'edebug-mode)
-    (add-to-list 'editorconfig-exclude-modes 'debugger-mode))
+  ;; (with-eval-after-load 'editorconfig
+  ;;   (add-to-list 'editorconfig-exclude-modes 'help-mode)
+  ;;   (add-to-list 'editorconfig-exclude-modes 'edebug-mode)
+  ;;   (add-to-list 'editorconfig-exclude-modes 'debugger-mode))
 
   (with-eval-after-load 'flycheck
     ;; TODO: Consider adding logic to `flycheck-python-find-module' that only
@@ -1234,12 +1287,23 @@
     ;; Temporary fix (until a PR takes care of this)
     ;; (spacemacs/set-leader-keys-for-minor-mode 'lsp-mode
     ;;   "bd" #'lsp-describe-session)
-    (add-to-list 'lsp-file-watch-ignored "[/\\\\]doc$")
-    (add-to-list 'lsp-file-watch-ignored "[/\\\\]\\.github$")
-    (add-to-list 'lsp-file-watch-ignored "[/\\\\]__pycache__$")
-    (add-to-list 'lsp-file-watch-ignored "[/\\\\]bin$")
-    (add-to-list 'lsp-file-watch-ignored "[/\\\\]\\.ropeproject$")
-    (add-to-list 'lsp-file-watch-ignored "[/\\\\]\\.pytest_cache$")
+
+    ;; https://github.com/emacs-lsp/lsp-mode/issues/2910#issue-908672841
+    ;; E.g. Add the following to a `.dir-locals.el' file:
+    ;; ((nil . ((lsp-file-watch-ignored-directories-additional . ("[\////]ignore-this\\'")))))
+    (defvar lsp-file-watch-ignored-directories-additional nil
+      "Additional ignored directories added to lsp-file-watch-ignored-directories.")
+    (put 'lsp-file-watch-ignored-directories-additional 'safe-local-variable #'lsp--string-listp)
+    (add-function :around (symbol-function 'lsp-file-watch-ignored-directories)
+                  (lambda (orig)
+                    (append lsp-file-watch-ignored-directories-additional (funcall orig))))
+
+    (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]doc\\'")
+    (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]bin\\'")
+    (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\\.ropeproject\\'")
+    (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\\.benchmarks\\'")
+    (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\w+\\.egg-info\\'")
+    (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]\\.asv\\'")
     (setq lsp-response-timeout 180)
     (setq lsp-enable-imenu nil)
     (setq lsp-enable-indentation nil)
@@ -1491,7 +1555,7 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
     ;;         (concat (nth 0 org-emphasis-regexp-components) "s"))
     (setq org-link-file-path-type 'relative)
     (setq org-confirm-babel-evaluate nil)
-    (setq org-default-notes-file (f-join user-home-directory "Documents" "notes.org")))
+    (setq org-default-notes-file (f-join (expand-file-name "~") "Documents" "notes.org")))
 
   (with-eval-after-load 'tex
 
@@ -1588,7 +1652,7 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
             (hs-show-block)))))
 
     ;; Add a recursive unfold to `evil''s mappings for `hideshow'
-    (when-let ((opt (assoc-if (lambda (x) (memq 'hs-minor-mode x)) evil-fold-list)))
+    (when-let ((opt (cl-assoc-if (lambda (x) (memq 'hs-minor-mode x)) evil-fold-list)))
       (setf (cdr opt) (plist-put (cdr opt) :open-rec #'btw//hs-show-block-rec)))
 
     ;; (cursor-sensor-mode +1)
@@ -1931,8 +1995,6 @@ This fixes some `helm' issues."
     ;;       (cons '(company-elisp :with company-yasnippet)
     ;;             (seq-remove (lambda (x) (eq (car x) 'company-capf))
     ;;                         company-backends-emacs-lisp-mode)))
-    (spacemacs|add-company-backends :backends (company-elisp)
-                                    :modes emacs-lisp-mode)
     (define-key company-active-map (kbd "C-w") 'evil-delete-backward-word)
     (define-key company-active-map (kbd "C-y") 'company-complete-selection)
     ;; This doesn't work.  See https://github.com/syl20bnr/spacemacs/issues/4242
@@ -2170,6 +2232,14 @@ Optional argument FLAGS py.test command line flags."
     ;; `call-process'
     (when (boundp 'forge-database-file)
       (setq forge-database-file (f-expand forge-database-file))))
+
+  (with-eval-after-load 'isearch
+    (setq search-invisible t))
+
+  (with-eval-after-load 'org-journal
+    (setq org-journal-enable-encryption nil
+          org-journal-encrypt-journal nil)
+    (add-to-list 'org-agenda-files org-journal-dir))
 
   (spacemacs|define-custom-layout "@Spacemacs"
     :binding "e"
