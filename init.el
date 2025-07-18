@@ -85,7 +85,8 @@
                       auto-completion-enable-sort-by-usage t
                       auto-completion-enable-snippets-in-popup t
                       auto-completion-enable-help-tooltip 'manual)
-     emacs-lisp
+     (emacs-lisp :variables
+                 emacs-lisp-format-on-save nil)
      git
      (version-control :variables version-control-global-margin nil)
      scheme
@@ -270,7 +271,7 @@
    dotspacemacs-enable-server t
    dotspacemacs-persistent-server nil
    dotspacemacs-search-tools '("ag" "pt" "ack" "grep")
-   dotspacemacs-whitespace-cleanup 'trailing
+   dotspacemacs-whitespace-cleanup 'nil
    dotspacemacs-import-env-vars-shell-file-name shell-file-name
    dotspacemacs-switch-to-buffer-prefers-purpose nil
    dotspacemacs-read-process-output-max (* 1 1024 1024)
