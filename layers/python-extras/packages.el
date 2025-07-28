@@ -129,9 +129,9 @@ See `company-transformers'."
     (progn
       (pyvenv-projectile-tracking-mode +1)
 
-      (defun spacemacs//persp-after-switch-set-venv (orig-func frame-or-window)
+      (defun spacemacs//persp-after-switch-set-venv (orig-func frame frame-or-window persp)
         (when (eq python-auto-set-local-pyvenv-virtualenv 'on-project-switch)
-          (funcall orig-func frame-or-window)))
+          (funcall orig-func frame frame-or-window persp)))
 
       (advice-add #'pyvenv-extras//persp-after-switch-set-venv :around
                   #'spacemacs//persp-after-switch-set-venv)
