@@ -1464,7 +1464,7 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
        (t (let* ((element (org-element-at-point))
                  (elements (cons element (if (eq (org-element-type element) 'paragraph)
                                              (list (org-element-property :parent element))))))
-            (if-let ((element (seq-find (lambda (x)
+            (if-let* ((element (seq-find (lambda (x)
                                           (memq (org-element-type x)
                                                 ;; Possible results types.
 
@@ -1583,7 +1583,7 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
     ;; TODO: This should probably be set in `projectile--run-project-cmd'.
     (setq compilation-save-buffers-predicate
           (lambda ()
-            (when-let ((project-root (projectile-project-root)))
+            (when-let* ((project-root (projectile-project-root)))
               (projectile-project-buffer-p (current-buffer) project-root))))
 
     (defun btw/projectile-switch-project-by-name (project-to-switch &optional arg)
@@ -1653,7 +1653,7 @@ Taken from https://tecosaur.github.io/emacs-config/config.html#lsp-support-src"
             (hs-show-block)))))
 
     ;; Add a recursive unfold to `evil''s mappings for `hideshow'
-    (when-let ((opt (cl-assoc-if (lambda (x) (memq 'hs-minor-mode x)) evil-fold-list)))
+    (when-let* ((opt (cl-assoc-if (lambda (x) (memq 'hs-minor-mode x)) evil-fold-list)))
       (setf (cdr opt) (plist-put (cdr opt) :open-rec #'btw//hs-show-block-rec)))
 
     ;; (cursor-sensor-mode +1)
